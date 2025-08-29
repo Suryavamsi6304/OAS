@@ -48,27 +48,41 @@ async function loadSystemBanner() {
         console.log('Banner data:', announcement);
         
         if (announcement && announcement.message) {
-            console.log('Showing banner with message:', announcement.message);
-            const banner = document.getElementById('systemBanner');
-            const message = document.getElementById('bannerMessage');
+            const bannerId = `banner_${announcement.created_at}`;
+            const isDismissed = localStorage.getItem(bannerId);
             
-            console.log('Banner element:', banner);
-            console.log('Message element:', message);
+            console.log('Banner ID:', bannerId);
+            console.log('Is dismissed:', isDismissed);
             
-            if (banner && message) {
-                message.textContent = announcement.message;
-                message.className = 'banner-message';
-                banner.className = `system-banner banner-${announcement.type || 'info'}`;
-                banner.style.display = 'block';
-                document.querySelector('.admin-main').classList.add('with-banner');
-                console.log('Banner displayed successfully');
+            if (!isDismissed) {
+                console.log('Showing banner with message:', announcement.message);
+                const banner = document.getElementById('systemBanner');
+                const message = document.getElementById('bannerMessage');
                 
-                document.getElementById('closeBanner').onclick = () => {
-                    banner.style.display = 'none';
-                    document.querySelector('.admin-main').classList.remove('with-banner');
-                };
+                if (banner && message) {
+                    message.textContent = announcement.message;
+                    message.className = 'banner-message';
+                    banner.className = `system-banner banner-${announcement.type || 'info'}`;
+                    banner.style.display = 'block';
+                    document.querySelector('.admin-main').classList.add('with-banner');
+                    console.log('Banner displayed successfully');
+                    
+                    const closeBtn = document.getElementById('closeBanner');
+                    if (closeBtn) {
+                        closeBtn.onclick = () => {
+                            banner.style.display = 'none !important';
+                            banner.style.visibility = 'hidden';
+                            banner.style.opacity = '0';
+                            document.querySelector('.admin-main').classList.remove('with-banner');
+                            localStorage.setItem(bannerId, 'dismissed');
+                            console.log('Banner closed and dismissed, saved to localStorage:', bannerId);
+                        };
+                    }
+                } else {
+                    console.error('Banner or message element not found');
+                }
             } else {
-                console.error('Banner or message element not found');
+                console.log('Banner already dismissed by user');
             }
         } else {
             console.log('No announcement to display');

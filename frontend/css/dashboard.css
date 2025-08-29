@@ -101,8 +101,8 @@
 }
 
 .stat-content p {
-    color: #64748b;
-    font-size: 0.85rem;
+    color: #374151;
+    font-size: 0.9rem;
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.05em;
@@ -203,14 +203,16 @@
 }
 
 .test-name {
-    font-weight: 600;
-    color: #2c3e50;
+    font-weight: 700;
+    color: #1f2937;
     margin-bottom: 0.25rem;
+    font-size: 1.1rem;
 }
 
 .test-meta {
-    font-size: 0.85rem;
-    color: #6c757d;
+    font-size: 0.9rem;
+    color: #374151;
+    font-weight: 500;
 }
 
 .test-actions {
@@ -228,7 +230,8 @@
 .empty-state {
     text-align: center;
     padding: 2rem;
-    color: #6c757d;
+    color: #374151;
+    font-weight: 500;
 }
 
 .empty-state-icon {
@@ -273,10 +276,11 @@
     border: none;
     font-size: 1.5rem;
     cursor: pointer;
-    color: #6b7280;
-    opacity: 0.7;
+    color: #374151;
+    opacity: 0.8;
     margin-left: 1rem;
     flex-shrink: 0;
+    font-weight: bold;
 }
 
 .banner-close:hover {
@@ -422,14 +426,17 @@
 .sidebar-menu a {
     display: block;
     padding: 1rem 1.5rem;
-    color: #374151;
+    color: #1f2937;
     text-decoration: none;
     transition: all 0.3s ease;
+    font-weight: 500;
+    font-size: 1rem;
 }
 
 .sidebar-menu a:hover {
-    background: #f8fafc;
+    background: #e0f2fe;
     color: #0070ad;
+    font-weight: 600;
 }
 
 .sidebar-menu a.active {

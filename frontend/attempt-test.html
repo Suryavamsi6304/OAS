@@ -31,20 +31,20 @@
 
     <div class="dashboard-container">
         <div class="card">
-            <div class="card-header">
-                <h2 class="card-title">Available Test</h2>
+            <div class="card-header" style="position: relative !important; z-index: 9999 !important; background: #ffffff !important; padding: 1rem !important;">
+                <h2 class="card-title" style="color: #000000 !important; font-weight: 700 !important; font-size: 1.5rem !important; margin: 0 !important; position: relative !important; z-index: 9999 !important;">Available Test</h2>
             </div>
             
-            <div class="form-group">
-                <label>Search Test:</label>
-                <div style="position: relative;">
-                    <input type="text" id="searchTest" placeholder="Search for test..">
-                    <button type="button" style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); border: none; background: none; cursor: pointer;">🔍</button>
+            <div class="form-group" style="position: relative !important; z-index: 9999 !important;">
+                <label style="color: #000000 !important; font-weight: 600 !important; font-size: 16px !important; position: relative !important; z-index: 9999 !important;">Search Test:</label>
+                <div style="position: relative; z-index: 9999 !important;">
+                    <input type="text" id="searchTest" placeholder="Search for test.." style="color: #000000 !important; background: #ffffff !important; border: 2px solid #0070ad !important; padding: 10px !important; font-size: 16px !important; font-weight: 500 !important; width: 100% !important; border-radius: 4px !important; position: relative !important; z-index: 9999 !important;">
+                    <button type="button" style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); border: none; background: none; cursor: pointer; color: #0070ad !important; font-size: 18px !important; z-index: 9999 !important;">🔍</button>
                 </div>
             </div>
 
-            <div class="form-group">
-                <label>Select Test:</label>
+            <div class="form-group" style="position: relative !important; z-index: 9999 !important;">
+                <label style="color: #000000 !important; font-weight: 600 !important; font-size: 16px !important; position: relative !important; z-index: 9999 !important;">Select Test:</label>
                 <div id="testList" class="test-selection">
                     <!-- Dynamic test list -->
                 </div>
@@ -96,7 +96,7 @@
             } catch (error) {
                 console.error('Failed to load system banner:', error);
             }
-        });
+        }
 
         let allTests = [];
         let selectedTestId = null;

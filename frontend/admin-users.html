@@ -29,14 +29,13 @@
         
         <div class="card">
             <div class="card-header">
-                <h3>All Users</h3>
                 <div class="search-filter">
-                    <input type="text" id="searchUsers" placeholder="Search users...">
-                    <select id="roleFilter">
-                        <option value="">All Roles</option>
-                        <option value="admin">Admin</option>
-                        <option value="teacher">Teacher</option>
-                        <option value="student">Student</option>
+                    <input type="text" id="searchUsers" placeholder="Search users..." style="color: #000000 !important; background: #ffffff !important; border: 2px solid #0070ad !important; padding: 8px !important; font-size: 14px !important; font-weight: 500 !important; width: 200px !important; position: relative !important; z-index: 1000 !important; border-radius: 4px !important;">
+                    <select id="roleFilter" style="color: #000000 !important; background: #ffffff !important; border: 2px solid #0070ad !important; padding: 8px !important; font-size: 14px !important; font-weight: 500 !important; width: 150px !important; position: relative !important; z-index: 1000 !important; border-radius: 4px !important;">
+                        <option value="" style="color: #000000;">All Roles</option>
+                        <option value="admin" style="color: #000000;">Admin</option>
+                        <option value="teacher" style="color: #000000;">Teacher</option>
+                        <option value="student" style="color: #000000;">Student</option>
                     </select>
                 </div>
             </div>
@@ -231,9 +230,47 @@
             align-items: center;
             margin-bottom: 2rem;
         }
+        .page-header h1 {
+            color: #000000;
+            font-weight: 800;
+            font-size: 2rem;
+        }
+        .card-header {
+            padding: 1.5rem;
+            background: #f8fafc;
+            border: 2px solid #e5e7eb;
+            border-radius: 8px;
+            margin-bottom: 1rem;
+        }
+        .card-header h3 {
+            color: #000000;
+            font-weight: 800;
+            font-size: 1.3rem;
+            margin: 0;
+        }
         .search-filter {
             display: flex;
             gap: 1rem;
+        }
+        .search-filter input, .search-filter select {
+            padding: 0.75rem;
+            border: 2px solid #374151;
+            border-radius: 6px;
+            font-size: 1rem;
+            color: #000000;
+            background: #ffffff;
+            font-weight: 600;
+            min-width: 200px;
+        }
+        .search-filter input:focus, .search-filter select:focus {
+            outline: none;
+            border-color: #0070ad;
+            box-shadow: 0 0 0 3px rgba(0,112,173,0.3);
+            background: #f8fafc;
+        }
+        .search-filter input::placeholder {
+            color: #6b7280;
+            font-weight: 500;
         }
         .table-container {
             overflow-x: auto;
@@ -248,13 +285,30 @@
             border-bottom: 1px solid #ddd;
         }
         th {
-            background-color: #f8f9fa;
+            background-color: #e2e8f0;
+            font-weight: 800;
+            color: #000000;
+            font-size: 1rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        td {
+            color: #000000;
             font-weight: 600;
+            font-size: 0.95rem;
+        }
+        table {
+            border: 2px solid #374151;
+        }
+        th, td {
+            border-bottom: 2px solid #d1d5db;
         }
         .role-badge {
-            padding: 0.2rem 0.5rem;
-            border-radius: 3px;
+            padding: 0.3rem 0.6rem;
+            border-radius: 4px;
             font-size: 0.8rem;
+            font-weight: 600;
+            text-transform: uppercase;
         }
         .role-badge.admin { background: #dc3545; color: white; }
         .role-badge.teacher { background: #007bff; color: white; }
