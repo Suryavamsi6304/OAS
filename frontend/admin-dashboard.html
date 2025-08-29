@@ -146,7 +146,7 @@
         function updateStatistics(data) {
             document.getElementById('testsDesigned').textContent = data.totalAssessments || 0;
             document.getElementById('testsConducted').textContent = data.totalResults || 0;
-            document.getElementById('testTakers').textContent = data.totalUsers || 0;
+            document.getElementById('testTakers').textContent = data.totalStudents || 0;
             document.getElementById('testDesigners').textContent = data.usersByRole?.find(r => r.role === 'teacher')?.count || 0;
         }
 

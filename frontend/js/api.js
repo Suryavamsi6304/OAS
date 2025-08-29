@@ -114,6 +114,15 @@ class API {
     static async getAssessmentQuestions(assessmentId) {
         return this.get(`/questions/assessment/${assessmentId}`);
     }
+
+    // Admin endpoints
+    static async getAdminReports() {
+        return this.get('/admin/reports');
+    }
+
+    static async getAuditLogs() {
+        return this.get('/admin/audit-logs');
+    }
 }
 
 // Utility functions

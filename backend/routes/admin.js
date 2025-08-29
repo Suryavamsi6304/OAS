@@ -43,18 +43,92 @@ router.get('/analytics', authenticateToken, authorizeRoles('admin'), async (req,
     const stats = await Promise.all([
       db.query('SELECT COUNT(*) as total_assessments FROM assessments'),
       db.query('SELECT COUNT(*) as total_results FROM results'),
-      db.query('SELECT COUNT(*) as total_users FROM users'),
+      db.query('SELECT COUNT(*) as total_students FROM users WHERE role = $1', ['student']),
       db.query('SELECT role, COUNT(*) as count FROM users GROUP BY role')
     ]);
 
     res.json({
       totalAssessments: stats[0].rows[0].total_assessments,
       totalResults: stats[1].rows[0].total_results,
-      totalUsers: stats[2].rows[0].total_users,
+      totalStudents: stats[2].rows[0].total_students,
       usersByRole: stats[3].rows
     });
   } catch (error) {
     console.error('Get analytics error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Get comprehensive reports
+router.get('/reports', authenticateToken, authorizeRoles('admin'), async (req, res) => {
+  try {
+    const reports = await Promise.all([
+      // Assessment performance
+      db.query(`
+        SELECT a.title, a.total_marks, COUNT(r.id) as attempts,
+               AVG(r.percentage) as avg_percentage, MAX(r.percentage) as max_percentage,
+               MIN(r.percentage) as min_percentage
+        FROM assessments a
+        LEFT JOIN results r ON a.id = r.assessment_id
+        GROUP BY a.id, a.title, a.total_marks
+        ORDER BY attempts DESC
+      `),
+      // User activity
+      db.query(`
+        SELECT u.role, COUNT(r.id) as total_attempts,
+               AVG(r.percentage) as avg_performance
+        FROM users u
+        LEFT JOIN results r ON u.id = r.student_id
+        GROUP BY u.role
+      `),
+      // Recent activity
+      db.query(`
+        SELECT r.submitted_at, u.first_name, u.last_name, a.title, r.percentage
+        FROM results r
+        JOIN users u ON r.student_id = u.id
+        JOIN assessments a ON r.assessment_id = a.id
+        ORDER BY r.submitted_at DESC
+        LIMIT 10
+      `),
+      // Top performers
+      db.query(`
+        SELECT u.first_name, u.last_name, AVG(r.percentage) as avg_score,
+               COUNT(r.id) as total_tests
+        FROM users u
+        JOIN results r ON u.id = r.student_id
+        WHERE u.role = 'student'
+        GROUP BY u.id, u.first_name, u.last_name
+        HAVING COUNT(r.id) > 0
+        ORDER BY avg_score DESC
+        LIMIT 10
+      `)
+    ]);
+
+    res.json({
+      assessmentPerformance: reports[0].rows,
+      userActivity: reports[1].rows,
+      recentActivity: reports[2].rows,
+      topPerformers: reports[3].rows
+    });
+  } catch (error) {
+    console.error('Get reports error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Get audit logs
+router.get('/audit-logs', authenticateToken, authorizeRoles('admin'), async (req, res) => {
+  try {
+    const result = await db.query(`
+      SELECT al.*, u.first_name, u.last_name, u.email
+      FROM audit_logs al
+      LEFT JOIN users u ON al.user_id = u.id
+      ORDER BY al.created_at DESC
+      LIMIT 50
+    `);
+    res.json(result.rows);
+  } catch (error) {
+    console.error('Get audit logs error:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
