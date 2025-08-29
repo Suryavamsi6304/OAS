@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Instructions - OAS</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/dashboard.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-brand">
+            <img src="images/logo.png" alt="Logo" class="nav-logo">
+        </div>
+        <ul class="nav-menu">
+            <li><a href="dashboard.html">🏠 Home</a></li>
+            <li><a href="attempt-test.html">📝 Attempt Test</a></li>
+            <li><a href="result.html">📊 Result</a></li>
+            <li><a href="practice.html">🎯 Practice Platform</a></li>
+            <li><a href="#" class="logout-btn">⚙️ Logout</a></li>
+        </ul>
+    </nav>
+
+    <div class="dashboard-container">
+        <div class="instructions-container">
+            <div class="instructions-header">
+                <h2>Test Instructions</h2>
+                <div class="oas-logo">
+                    <img src="images/logo.png" alt="OAS Logo">
+                    <span>Online<br><strong>ASSESSMENT SYSTEM</strong></span>
+                </div>
+            </div>
+
+            <div class="test-details">
+                <div class="detail-item">
+                    <strong>★ Test Name:</strong>
+                    <span id="testName">Loading...</span>
+                </div>
+                <div class="detail-item">
+                    <strong>★ No of Questions:</strong>
+                    <span id="questionCount">0</span>
+                </div>
+                <div class="detail-item">
+                    <strong>★ Allocated Time:</strong>
+                    <span id="timeLimit">0 Minutes</span>
+                </div>
+                <div class="detail-item">
+                    <strong>★ Negative Marking:</strong>
+                    <span id="negativeMarking">NA</span>
+                </div>
+            </div>
+
+            <div class="instructions-content">
+                <h3>Instructions</h3>
+                <div class="navigation-tools">
+                    <h4>Navigation Tools</h4>
+                    <div class="tool-buttons">
+                        <button class="btn btn-success">Next ></button>
+                        <p><strong>Next:</strong> By clicking Next button the next question will appear to the User.</p>
+                        
+                        <button class="btn btn-secondary">< Previous</button>
+                        <p><strong>Previous:</strong> By clicking Previous button the previous question will appear to the User.</p>
+                        
+                        <button class="btn" style="background: #f39c12; color: white;">🏳️ Flag</button>
+                        <p><strong>Flag:</strong> To flag a question (To Respond Later), choose an answer and click on flag button.</p>
+                        
+                        <button class="btn btn-danger">End Test</button>
+                        <p><strong>End Test:</strong> By clicking End Test Button the test gets submitted.</p>
+                    </div>
+                </div>
+
+                <div class="agreement">
+                    <label>
+                        <input type="checkbox" id="agreementCheck">
+                        I have gone through the instructions, understood legends and will hereby follow the same.
+                    </label>
+                </div>
+            </div>
+
+            <div class="action-buttons">
+                <button class="btn btn-secondary" onclick="goBack()">Back ⬅</button>
+                <button class="btn btn-success" id="startTestBtn" disabled onclick="startTest()">Start Test ✓</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/auth.js"></script>
+    <script src="js/api.js"></script>
+    <script>
+        let currentTest = null;
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            if (!Auth.requireAuth()) return;
+
+            document.querySelector('.logout-btn').addEventListener('click', (e) => {
+                e.preventDefault();
+                if (confirm('Are you sure you want to logout?')) {
+                    Auth.logout();
+                }
+            });
+
+            const agreementCheck = document.getElementById('agreementCheck');
+            const startTestBtn = document.getElementById('startTestBtn');
+
+            agreementCheck.addEventListener('change', () => {
+                startTestBtn.disabled = !agreementCheck.checked;
+            });
+
+            await loadTestDetails();
+        });
+
+        async function loadTestDetails() {
+            const storedTest = localStorage.getItem('selectedTest');
+            
+            if (storedTest) {
+                currentTest = JSON.parse(storedTest);
+            } else {
+                const urlParams = new URLSearchParams(window.location.search);
+                let testId = urlParams.get('id') || '1';
+                
+                const sampleTests = {
+                    '1': { id: 1, title: 'JavaScript Fundamentals', time_limit: 60, total_marks: 100, negative_marking: false },
+                    '2': { id: 2, title: 'HTML & CSS Basics', time_limit: 45, total_marks: 80, negative_marking: false }
+                };
+                
+                currentTest = sampleTests[testId] || sampleTests['1'];
+            }
+            
+            displayTestDetails(currentTest);
+        }
+
+        function displayTestDetails(test) {
+            document.getElementById('testName').textContent = test.title;
+            document.getElementById('questionCount').textContent = '25';
+            document.getElementById('timeLimit').textContent = `${test.time_limit} Minutes`;
+            document.getElementById('negativeMarking').textContent = test.negative_marking ? 'Yes' : 'NA';
+        }
+
+        function goBack() {
+            window.location.href = 'attempt-test.html';
+        }
+
+        function startTest() {
+            if (!currentTest) return;
+            window.location.href = `test-taking.html?id=${currentTest.id}`;
+        }
+    </script>
+
+    <style>
+        .instructions-container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 10px;
+            padding: 2rem;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .instructions-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+            padding-bottom: 1rem;
+            border-bottom: 2px solid #eee;
+        }
+
+        .instructions-header h2 {
+            color: #ff6b35;
+            margin: 0;
+        }
+
+        .oas-logo {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .oas-logo img {
+            height: 50px;
+        }
+
+        .oas-logo span {
+            font-size: 1.2rem;
+            color: #333;
+        }
+
+        .test-details {
+            margin-bottom: 2rem;
+        }
+
+        .detail-item {
+            display: flex;
+            margin-bottom: 0.5rem;
+            font-size: 1.1rem;
+        }
+
+        .detail-item strong {
+            min-width: 200px;
+            color: #333;
+        }
+
+        .instructions-content h3 {
+            color: #ff6b35;
+            margin-bottom: 1rem;
+        }
+
+        .navigation-tools h4 {
+            color: #ff6b35;
+            margin-bottom: 1rem;
+        }
+
+        .tool-buttons {
+            display: grid;
+            gap: 1rem;
+        }
+
+        .tool-buttons button {
+            width: fit-content;
+            margin-bottom: 0.5rem;
+        }
+
+        .agreement {
+            margin: 2rem 0;
+            padding: 1rem;
+            background: #f8f9fa;
+            border-radius: 5px;
+        }
+
+        .agreement label {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            cursor: pointer;
+        }
+
+        .action-buttons {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 2rem;
+        }
+
+        @media (max-width: 768px) {
+            .instructions-header {
+                flex-direction: column;
+                gap: 1rem;
+            }
+            
+            .action-buttons {
+                flex-direction: column;
+                gap: 1rem;
+            }
+        }
+    </style>
+</body>
+</html>

@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Available Tests - OAS</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/dashboard.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-brand">
+            <img src="images/logo.png" alt="Logo" class="nav-logo">
+        </div>
+        <ul class="nav-menu">
+            <li><a href="dashboard.html">🏠 Home</a></li>
+            <li><a href="attempt-test.html" class="active">📝 Attempt Test</a></li>
+            <li><a href="result.html">📊 Result</a></li>
+            <li><a href="practice.html">🎯 Practice Platform</a></li>
+            <li><a href="#" class="logout-btn">⚙️ Logout</a></li>
+        </ul>
+    </nav>
+
+    <div class="dashboard-container">
+        <div class="card">
+            <div class="card-header">
+                <h2 class="card-title">Available Test</h2>
+            </div>
+            
+            <div class="form-group">
+                <label>Search Test:</label>
+                <div style="position: relative;">
+                    <input type="text" id="searchTest" placeholder="Search for test..">
+                    <button type="button" style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); border: none; background: none; cursor: pointer;">🔍</button>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label>Select Test:</label>
+                <div id="testList" class="test-selection">
+                    <!-- Dynamic test list -->
+                </div>
+            </div>
+
+            <div id="continueSection" class="continue-section" style="display: none;">
+                <button id="continueBtn" class="btn btn-primary continue-btn">Continue to Instructions</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/auth.js"></script>
+    <script src="js/api.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', async () => {
+            if (!Auth.requireAuth()) return;
+
+            document.querySelector('.logout-btn').addEventListener('click', (e) => {
+                e.preventDefault();
+                if (confirm('Are you sure you want to logout?')) {
+                    Auth.logout();
+                }
+            });
+
+            await loadAvailableTests();
+
+            const searchInput = document.getElementById('searchTest');
+            searchInput.addEventListener('input', debounce(filterTests, 300));
+        });
+
+        let allTests = [];
+        let selectedTestId = null;
+
+        function debounce(func, wait) {
+            let timeout;
+            return function executedFunction(...args) {
+                const later = () => {
+                    clearTimeout(timeout);
+                    func(...args);
+                };
+                clearTimeout(timeout);
+                timeout = setTimeout(later, wait);
+            };
+        }
+
+        async function loadAvailableTests() {
+            try {
+                const response = await fetch('http://localhost:3000/api/assessments', {
+                    headers: {
+                        'Authorization': `Bearer ${Auth.getToken()}`
+                    }
+                });
+                
+                if (!response.ok) {
+                    throw new Error('Failed to load tests');
+                }
+                
+                const tests = await response.json();
+                allTests = tests;
+                displayTests(tests);
+            } catch (error) {
+                console.error('Failed to load tests:', error);
+                // Fallback to sample data
+                const sampleTests = [
+                    {
+                        id: 1,
+                        title: 'JavaScript Fundamentals',
+                        course_code: 'JS101',
+                        start_time: null,
+                        end_time: null,
+                        time_limit: 60,
+                        total_marks: 100,
+                        attempted: false
+                    },
+                    {
+                        id: 2,
+                        title: 'HTML & CSS Basics',
+                        course_code: 'WEB101',
+                        start_time: null,
+                        end_time: null,
+                        time_limit: 45,
+                        total_marks: 80,
+                        attempted: false
+                    }
+                ];
+                allTests = sampleTests;
+                displayTests(sampleTests);
+            }
+        }
+
+        function displayTests(tests) {
+            const container = document.getElementById('testList');
+            
+            if (tests.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon">📝</div>
+                        <p>No tests available</p>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = tests.map(test => `
+                <div class="test-card" onclick="selectTest(${test.id})" data-test-id="${test.id}">
+                    <div class="test-header">
+                        <h3>${test.title}</h3>
+                        <span class="course-code">${test.course_code || 'N/A'}</span>
+                    </div>
+                    <div class="test-details">
+                        <p><strong>Start:</strong> ${test.start_time ? new Date(test.start_time).toLocaleString() : 'Anytime'}</p>
+                        <p><strong>End:</strong> ${test.end_time ? new Date(test.end_time).toLocaleString() : 'No limit'}</p>
+                        <p><strong>Duration:</strong> ${test.time_limit} minutes</p>
+                        <p><strong>Total Marks:</strong> ${test.total_marks}</p>
+                    </div>
+                    ${test.attempted ? '<div class="attempted-badge">Already Attempted</div>' : ''}
+                    <div class="selection-indicator">✓</div>
+                </div>
+            `).join('');
+        }
+
+        function filterTests() {
+            const searchTerm = document.getElementById('searchTest').value.toLowerCase();
+            const filteredTests = allTests.filter(test => 
+                test.title.toLowerCase().includes(searchTerm) ||
+                (test.course_code && test.course_code.toLowerCase().includes(searchTerm))
+            );
+            displayTests(filteredTests);
+        }
+
+        function selectTest(testId) {
+            document.querySelectorAll('.test-card').forEach(card => {
+                card.classList.remove('selected');
+            });
+            
+            const selectedCard = document.querySelector(`[data-test-id="${testId}"]`);
+            if (selectedCard) {
+                selectedCard.classList.add('selected');
+            }
+            
+            selectedTestId = testId;
+            const selectedTest = allTests.find(test => test.id == testId);
+            localStorage.setItem('selectedTest', JSON.stringify(selectedTest));
+            
+            document.getElementById('continueSection').style.display = 'block';
+            
+            document.getElementById('continueBtn').onclick = function() {
+                window.location.href = `test-instructions.html?id=${testId}`;
+            };
+        }
+    </script>
+
+    <style>
+        .test-selection {
+            display: grid;
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+
+        .test-card {
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 1rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            position: relative;
+        }
+
+        .test-card:hover {
+            border-color: #007bff;
+            box-shadow: 0 2px 8px rgba(0,123,255,0.2);
+        }
+
+        .test-card.selected {
+            border-color: #28a745;
+            background-color: #f8fff9;
+            box-shadow: 0 2px 8px rgba(40,167,69,0.3);
+        }
+
+        .test-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.5rem;
+        }
+
+        .test-header h3 {
+            margin: 0;
+            color: #333;
+        }
+
+        .course-code {
+            background: #f8f9fa;
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            color: #666;
+        }
+
+        .test-details p {
+            margin: 0.25rem 0;
+            font-size: 0.9rem;
+            color: #666;
+        }
+
+        .attempted-badge {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: #28a745;
+            color: white;
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.7rem;
+        }
+
+        .continue-section {
+            margin-top: 2rem;
+            text-align: center;
+            padding: 1rem;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border: 2px dashed #28a745;
+        }
+
+        .continue-btn {
+            background: #28a745;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .continue-btn:hover {
+            background: #218838;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(40,167,69,0.3);
+        }
+
+        .selection-indicator {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background: #28a745;
+            color: white;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 14px;
+        }
+
+        .test-card.selected .selection-indicator {
+            display: flex;
+        }
+    </style>
+</body>
+</html>

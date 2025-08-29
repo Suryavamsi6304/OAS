@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - OAS</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/dashboard.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-brand">
+            <img src="images/logo.png" alt="Logo" class="nav-logo" onerror="this.style.display='none'">
+        </div>
+        <ul class="nav-menu">
+            <li><a href="dashboard.html" class="active">🏠 Home</a></li>
+            <li><a href="attempt-test.html">📝 Attempt Test</a></li>
+            <li><a href="result.html">📊 Result</a></li>
+            <li><a href="practice.html">🎯 Practice Platform</a></li>
+            <li><a href="#" class="logout-btn">🚪 Logout</a></li>
+        </ul>
+    </nav>
+
+    <div class="dashboard-container">
+        <!-- Statistics Cards -->
+        <div class="stats-grid">
+            <div class="stat-card red">
+                <div class="stat-icon">📋</div>
+                <div class="stat-content">
+                    <h3 id="testsDesigned">0</h3>
+                    <p>Tests Designed</p>
+                </div>
+            </div>
+            
+            <div class="stat-card blue">
+                <div class="stat-icon">📝</div>
+                <div class="stat-content">
+                    <h3 id="testsConducted">0</h3>
+                    <p>Tests Conducted</p>
+                </div>
+            </div>
+            
+            <div class="stat-card green">
+                <div class="stat-icon">👥</div>
+                <div class="stat-content">
+                    <h3 id="testTakers">0</h3>
+                    <p>Test Takers</p>
+                </div>
+            </div>
+            
+            <div class="stat-card orange">
+                <div class="stat-icon">👨‍🏫</div>
+                <div class="stat-content">
+                    <h3 id="testDesigners">0</h3>
+                    <p>Test Designers</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="content-grid">
+            <!-- Today's Tests -->
+            <div class="content-card">
+                <div class="card-header red">
+                    <h3>📋 Today's Tests</h3>
+                </div>
+                <div class="card-body">
+                    <div id="todayTests" class="test-list">
+                        <!-- Dynamic content -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Recently Attempted Tests -->
+            <div class="content-card">
+                <div class="card-header green">
+                    <h3>✅ Recently Attempted Tests</h3>
+                </div>
+                <div class="card-body">
+                    <div id="recentTests" class="test-list">
+                        <!-- Dynamic content -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/auth.js"></script>
+    <script src="js/api.js"></script>
+    <script src="js/dashboard.js"></script>
+</body>
+</html>

@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard - OAS</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/dashboard.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-brand">
+            <img src="images/logo.png" alt="Logo" class="nav-logo" onerror="this.style.display='none'">
+        </div>
+        <ul class="nav-menu">
+            <li><a href="admin-dashboard.html" class="active">🏠 Home</a></li>
+            <li><a href="admin-users.html">👥 User Management</a></li>
+            <li><a href="admin-assessments.html">📝 Assessment Management</a></li>
+            <li><a href="admin-reports.html">📊 Reports & Analytics</a></li>
+            <li><a href="admin-settings.html">⚙️ System Settings</a></li>
+            <li><a href="#" class="logout-btn">🚪 Logout</a></li>
+        </ul>
+    </nav>
+
+    <div class="dashboard-container">
+        <h1>Admin Dashboard</h1>
+        
+        <!-- Statistics Cards -->
+        <div class="stats-grid">
+            <div class="stat-card red">
+                <div class="stat-icon">📋</div>
+                <div class="stat-content">
+                    <h3 id="testsDesigned">0</h3>
+                    <p>Tests Designed</p>
+                </div>
+            </div>
+            
+            <div class="stat-card blue">
+                <div class="stat-icon">📝</div>
+                <div class="stat-content">
+                    <h3 id="testsConducted">0</h3>
+                    <p>Tests Conducted</p>
+                </div>
+            </div>
+            
+            <div class="stat-card green">
+                <div class="stat-icon">👥</div>
+                <div class="stat-content">
+                    <h3 id="testTakers">0</h3>
+                    <p>Test Takers</p>
+                </div>
+            </div>
+            
+            <div class="stat-card orange">
+                <div class="stat-icon">👨🏫</div>
+                <div class="stat-content">
+                    <h3 id="testDesigners">0</h3>
+                    <p>Test Designers</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Admin Actions -->
+        <div class="content-grid">
+            <div class="content-card">
+                <div class="card-header red">
+                    <h3>👥 User Management</h3>
+                </div>
+                <div class="card-body">
+                    <button class="btn btn-primary" onclick="location.href='admin-users.html'">Manage Users</button>
+                    <button class="btn btn-success" onclick="createUser()">Create New User</button>
+                    <div id="recentUsers" class="mt-3">
+                        <!-- Recent users list -->
+                    </div>
+                </div>
+            </div>
+
+            <div class="content-card">
+                <div class="card-header blue">
+                    <h3>📝 Assessment Oversight</h3>
+                </div>
+                <div class="card-body">
+                    <button class="btn btn-primary" onclick="location.href='admin-assessments.html'">View All Assessments</button>
+                    <div id="pendingApprovals" class="mt-3">
+                        <!-- Pending assessments -->
+                    </div>
+                </div>
+            </div>
+
+            <div class="content-card">
+                <div class="card-header green">
+                    <h3>📊 System Analytics</h3>
+                </div>
+                <div class="card-body">
+                    <button class="btn btn-primary" onclick="location.href='admin-reports.html'">View Reports</button>
+                    <div id="systemHealth" class="mt-3">
+                        <!-- System health indicators -->
+                    </div>
+                </div>
+            </div>
+
+            <div class="content-card">
+                <div class="card-header orange">
+                    <h3>🔒 Audit Logs</h3>
+                </div>
+                <div class="card-body">
+                    <div id="recentLogs" class="audit-logs">
+                        <!-- Recent audit logs -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/auth.js"></script>
+    <script src="js/api.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', async () => {
+            if (!Auth.requireAuth() || !Auth.hasRole('admin')) {
+                window.location.href = 'index.html';
+                return;
+            }
+
+            document.querySelector('.logout-btn').addEventListener('click', (e) => {
+                e.preventDefault();
+                if (confirm('Are you sure you want to logout?')) {
+                    Auth.logout();
+                }
+            });
+
+            await loadAdminDashboard();
+        });
+
+        async function loadAdminDashboard() {
+            try {
+                const data = await API.get('/admin/analytics');
+                updateStatistics(data);
+                loadRecentUsers();
+                loadPendingApprovals();
+                loadAuditLogs();
+            } catch (error) {
+                console.error('Failed to load admin dashboard:', error);
+            }
+        }
+
+        function updateStatistics(data) {
+            document.getElementById('testsDesigned').textContent = data.totalAssessments || 0;
+            document.getElementById('testsConducted').textContent = data.totalResults || 0;
+            document.getElementById('testTakers').textContent = data.totalUsers || 0;
+            document.getElementById('testDesigners').textContent = data.usersByRole?.find(r => r.role === 'teacher')?.count || 0;
+        }
+
+        async function loadRecentUsers() {
+            try {
+                const users = await API.get('/admin/users');
+                const recentUsers = users.slice(0, 5);
+                document.getElementById('recentUsers').innerHTML = recentUsers.map(user => 
+                    `<div class="user-item">
+                        <span>${user.first_name} ${user.last_name}</span>
+                        <span class="role-badge ${user.role}">${user.role}</span>
+                    </div>`
+                ).join('');
+            } catch (error) {
+                console.error('Failed to load recent users:', error);
+            }
+        }
+
+        async function loadPendingApprovals() {
+            document.getElementById('pendingApprovals').innerHTML = 
+                '<p>No pending assessments for approval</p>';
+        }
+
+        async function loadAuditLogs() {
+            document.getElementById('recentLogs').innerHTML = 
+                '<p>Recent system activities will appear here</p>';
+        }
+
+        function createUser() {
+            window.location.href = 'admin-users.html?action=create';
+        }
+    </script>
+
+    <style>
+        .user-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 0.5rem;
+            border-bottom: 1px solid #eee;
+        }
+        .role-badge {
+            padding: 0.2rem 0.5rem;
+            border-radius: 3px;
+            font-size: 0.8rem;
+        }
+        .role-badge.admin { background: #dc3545; color: white; }
+        .role-badge.teacher { background: #007bff; color: white; }
+        .role-badge.student { background: #28a745; color: white; }
+        .audit-logs { max-height: 200px; overflow-y: auto; }
+    </style>
+</body>
+</html>

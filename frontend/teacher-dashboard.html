@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teacher Dashboard - OAS</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/dashboard.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-brand">
+            <img src="images/logo.png" alt="Logo" class="nav-logo" onerror="this.style.display='none'">
+        </div>
+        <ul class="nav-menu">
+            <li><a href="teacher-dashboard.html" class="active">🏠 Home</a></li>
+            <li><a href="teacher-assessments.html">📝 My Assessments</a></li>
+            <li><a href="teacher-create.html">➕ Create Assessment</a></li>
+            <li><a href="teacher-students.html">👥 Students</a></li>
+            <li><a href="teacher-reports.html">📊 Reports</a></li>
+            <li><a href="#" class="logout-btn">🚪 Logout</a></li>
+        </ul>
+    </nav>
+
+    <div class="dashboard-container">
+        <h1>Teacher Dashboard</h1>
+        
+        <!-- Statistics Cards -->
+        <div class="stats-grid">
+            <div class="stat-card red">
+                <div class="stat-icon">📋</div>
+                <div class="stat-content">
+                    <h3 id="myAssessments">0</h3>
+                    <p>My Assessments</p>
+                </div>
+            </div>
+            
+            <div class="stat-card blue">
+                <div class="stat-icon">👥</div>
+                <div class="stat-content">
+                    <h3 id="myStudents">0</h3>
+                    <p>My Students</p>
+                </div>
+            </div>
+            
+            <div class="stat-card green">
+                <div class="stat-icon">✅</div>
+                <div class="stat-content">
+                    <h3 id="completedTests">0</h3>
+                    <p>Completed Tests</p>
+                </div>
+            </div>
+            
+            <div class="stat-card orange">
+                <div class="stat-icon">⏳</div>
+                <div class="stat-content">
+                    <h3 id="pendingGrading">0</h3>
+                    <p>Pending Grading</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Teacher Actions -->
+        <div class="content-grid">
+            <div class="content-card">
+                <div class="card-header red">
+                    <h3>📝 Assessment Management</h3>
+                </div>
+                <div class="card-body">
+                    <button class="btn btn-success" onclick="createNewAssessment()">Create New Assessment</button>
+                    <button class="btn btn-primary" onclick="location.href='teacher-assessments.html'">View My Assessments</button>
+                    <div id="recentAssessments" class="mt-3">
+                        <!-- Recent assessments -->
+                    </div>
+                </div>
+            </div>
+
+            <div class="content-card">
+                <div class="card-header blue">
+                    <h3>👥 Student Management</h3>
+                </div>
+                <div class="card-body">
+                    <button class="btn btn-primary" onclick="location.href='teacher-students.html'">Manage Students</button>
+                    <div id="studentPerformance" class="mt-3">
+                        <!-- Student performance overview -->
+                    </div>
+                </div>
+            </div>
+
+            <div class="content-card">
+                <div class="card-header green">
+                    <h3>📊 Grading & Feedback</h3>
+                </div>
+                <div class="card-body">
+                    <div id="pendingGrades" class="grading-queue">
+                        <!-- Pending grading items -->
+                    </div>
+                </div>
+            </div>
+
+            <div class="content-card">
+                <div class="card-header orange">
+                    <h3>📈 Performance Analytics</h3>
+                </div>
+                <div class="card-body">
+                    <button class="btn btn-primary" onclick="location.href='teacher-reports.html'">View Detailed Reports</button>
+                    <div id="classAnalytics" class="mt-3">
+                        <!-- Class performance summary -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/auth.js"></script>
+    <script src="js/api.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', async () => {
+            if (!Auth.requireAuth() || !Auth.hasRole('teacher')) {
+                window.location.href = 'index.html';
+                return;
+            }
+
+            document.querySelector('.logout-btn').addEventListener('click', (e) => {
+                e.preventDefault();
+                if (confirm('Are you sure you want to logout?')) {
+                    Auth.logout();
+                }
+            });
+
+            await loadTeacherDashboard();
+        });
+
+        async function loadTeacherDashboard() {
+            try {
+                const data = await API.getDashboard();
+                updateStatistics(data.stats || {});
+                loadRecentAssessments();
+                loadStudentPerformance();
+                loadPendingGrades();
+            } catch (error) {
+                console.error('Failed to load teacher dashboard:', error);
+            }
+        }
+
+        function updateStatistics(stats) {
+            document.getElementById('myAssessments').textContent = stats.testsDesigned || 0;
+            document.getElementById('myStudents').textContent = stats.totalStudents || 0;
+            document.getElementById('completedTests').textContent = stats.completedTests || 0;
+            document.getElementById('pendingGrading').textContent = stats.pendingGrading || 0;
+        }
+
+        async function loadRecentAssessments() {
+            try {
+                const assessments = await API.getAssessments();
+                const recent = assessments.slice(0, 3);
+                document.getElementById('recentAssessments').innerHTML = recent.map(assessment => 
+                    `<div class="assessment-item">
+                        <span>${assessment.title}</span>
+                        <span class="status ${assessment.status}">${assessment.status}</span>
+                    </div>`
+                ).join('') || '<p>No assessments created yet</p>';
+            } catch (error) {
+                console.error('Failed to load assessments:', error);
+            }
+        }
+
+        function loadStudentPerformance() {
+            document.getElementById('studentPerformance').innerHTML = 
+                '<p>Student performance data will appear here</p>';
+        }
+
+        function loadPendingGrades() {
+            document.getElementById('pendingGrades').innerHTML = 
+                '<p>No pending grading items</p>';
+        }
+
+        function createNewAssessment() {
+            window.location.href = 'teacher-create.html';
+        }
+    </script>
+
+    <style>
+        .assessment-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 0.5rem;
+            border-bottom: 1px solid #eee;
+        }
+        .status {
+            padding: 0.2rem 0.5rem;
+            border-radius: 3px;
+            font-size: 0.8rem;
+        }
+        .status.published { background: #28a745; color: white; }
+        .status.draft { background: #ffc107; color: black; }
+        .status.archived { background: #6c757d; color: white; }
+        .grading-queue { max-height: 200px; overflow-y: auto; }
+    </style>
+</body>
+</html>

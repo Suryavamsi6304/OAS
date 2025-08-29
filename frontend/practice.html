@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Practice Platform - OAS</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/dashboard.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-brand">
+            <img src="images/logo.png" alt="Logo" class="nav-logo">
+        </div>
+        <ul class="nav-menu">
+            <li><a href="dashboard.html">🏠 Home</a></li>
+            <li><a href="attempt-test.html">📝 Attempt Test</a></li>
+            <li><a href="result.html">📊 Result</a></li>
+            <li><a href="practice.html" class="active">🎯 Practice Platform</a></li>
+            <li><a href="#" class="logout-btn">⚙️ Logout</a></li>
+        </ul>
+    </nav>
+
+    <div class="dashboard-container">
+        <div class="card">
+            <div class="card-header">
+                <h2 class="card-title">Practice Platform</h2>
+            </div>
+            
+            <div class="practice-levels">
+                <div class="level-card" onclick="startPractice(1)">
+                    <div class="level-number">1</div>
+                    <div class="level-info">
+                        <h3>Level 1</h3>
+                        <p>Basic Questions - Easy Difficulty</p>
+                        <span class="level-badge easy">Easy</span>
+                    </div>
+                </div>
+
+                <div class="level-card" onclick="startPractice(2)">
+                    <div class="level-number">2</div>
+                    <div class="level-info">
+                        <h3>Level 2</h3>
+                        <p>Intermediate Questions - Medium Difficulty</p>
+                        <span class="level-badge medium">Medium</span>
+                    </div>
+                </div>
+
+                <div class="level-card" onclick="startPractice(3)">
+                    <div class="level-number">3</div>
+                    <div class="level-info">
+                        <h3>Level 3</h3>
+                        <p>Advanced Questions - Hard Difficulty</p>
+                        <span class="level-badge hard">Hard</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Practice Session -->
+        <div id="practiceSession" class="card" style="display: none;">
+            <div class="card-header">
+                <h3 id="practiceTitle">Practice Session</h3>
+                <div class="practice-timer">
+                    Time: <span id="practiceTimer">00:00</span>
+                </div>
+            </div>
+            
+            <div class="practice-content">
+                <div class="question-container">
+                    <div class="question-header">
+                        <span id="practiceQuestionNumber">Question 1 of 10</span>
+                    </div>
+                    <div class="question-text" id="practiceQuestionText">
+                        Loading question...
+                    </div>
+                    <div class="options-container" id="practiceOptionsContainer">
+                        <!-- Dynamic options -->
+                    </div>
+                </div>
+
+                <div class="practice-navigation">
+                    <button id="practicePrevBtn" class="btn btn-secondary" onclick="previousQuestion()">Previous</button>
+                    <button id="practiceNextBtn" class="btn btn-primary" onclick="nextQuestion()">Next</button>
+                    <button id="practiceSubmitBtn" class="btn btn-success" onclick="submitPractice()" style="display: none;">Submit</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Practice Result -->
+        <div id="practiceResult" class="card" style="display: none;">
+            <div class="card-header">
+                <h3>Practice Result</h3>
+            </div>
+            <div id="practiceResultContent">
+                <!-- Dynamic result -->
+            </div>
+            <div class="text-center">
+                <button class="btn btn-primary" onclick="backToLevels()">Practice Again</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/auth.js"></script>
+    <script src="js/api.js"></script>
+    <script>
+        let currentLevel = 1;
+        let practiceQuestions = [];
+        let currentQuestionIndex = 0;
+        let practiceAnswers = {};
+        let practiceStartTime = null;
+
+        document.addEventListener('DOMContentLoaded', () => {
+            if (!Auth.requireAuth()) return;
+
+            document.querySelector('.logout-btn').addEventListener('click', (e) => {
+                e.preventDefault();
+                if (confirm('Are you sure you want to logout?')) {
+                    Auth.logout();
+                }
+            });
+        });
+
+        async function startPractice(level) {
+            currentLevel = level;
+            practiceAnswers = {};
+            currentQuestionIndex = 0;
+            practiceStartTime = Date.now();
+
+            try {
+                practiceQuestions = await API.getPracticeQuestions(level);
+                
+                if (practiceQuestions.length === 0) {
+                    Utils.showAlert('No practice questions available for this level', 'warning');
+                    return;
+                }
+
+                document.querySelector('.practice-levels').parentElement.style.display = 'none';
+                document.getElementById('practiceSession').style.display = 'block';
+                
+                const levelNames = ['', 'Basic', 'Intermediate', 'Advanced'];
+                document.getElementById('practiceTitle').textContent = `Level ${level} - ${levelNames[level]} Practice`;
+                
+                displayPracticeQuestion();
+                startPracticeTimer();
+            } catch (error) {
+                console.error('Failed to load practice questions:', error);
+                Utils.showAlert('Failed to load practice questions', 'error');
+            }
+        }
+
+        function displayPracticeQuestion() {
+            const question = practiceQuestions[currentQuestionIndex];
+            
+            document.getElementById('practiceQuestionNumber').textContent = 
+                `Question ${currentQuestionIndex + 1} of ${practiceQuestions.length}`;
+            document.getElementById('practiceQuestionText').textContent = question.question_text;
+
+            const optionsContainer = document.getElementById('practiceOptionsContainer');
+            
+            if (question.question_type === 'mcq') {
+                const options = JSON.parse(question.options);
+                optionsContainer.innerHTML = options.map((option, index) => `
+                    <label class="option-label">
+                        <input type="radio" name="practiceAnswer" value="${option}" 
+                               ${practiceAnswers[question.id] === option ? 'checked' : ''}>
+                        <span>${option}</span>
+                    </label>
+                `).join('');
+            } else {
+                optionsContainer.innerHTML = `
+                    <input type="text" class="form-control" placeholder="Enter your answer" 
+                           value="${practiceAnswers[question.id] || ''}" 
+                           onchange="savePracticeAnswer(this.value)">
+                `;
+            }
+
+            // Update navigation buttons
+            document.getElementById('practicePrevBtn').style.display = 
+                currentQuestionIndex > 0 ? 'inline-block' : 'none';
+            document.getElementById('practiceNextBtn').style.display = 
+                currentQuestionIndex < practiceQuestions.length - 1 ? 'inline-block' : 'none';
+            document.getElementById('practiceSubmitBtn').style.display = 
+                currentQuestionIndex === practiceQuestions.length - 1 ? 'inline-block' : 'none';
+        }
+
+        function savePracticeAnswer(value) {
+            const question = practiceQuestions[currentQuestionIndex];
+            practiceAnswers[question.id] = value;
+        }
+
+        function previousQuestion() {
+            if (currentQuestionIndex > 0) {
+                currentQuestionIndex--;
+                displayPracticeQuestion();
+            }
+        }
+
+        function nextQuestion() {
+            // Save current answer
+            const selectedAnswer = document.querySelector('input[name="practiceAnswer"]:checked');
+            if (selectedAnswer) {
+                savePracticeAnswer(selectedAnswer.value);
+            }
+
+            if (currentQuestionIndex < practiceQuestions.length - 1) {
+                currentQuestionIndex++;
+                displayPracticeQuestion();
+            }
+        }
+
+        async function submitPractice() {
+            // Save current answer
+            const selectedAnswer = document.querySelector('input[name="practiceAnswer"]:checked');
+            if (selectedAnswer) {
+                savePracticeAnswer(selectedAnswer.value);
+            }
+
+            const timeTaken = Math.floor((Date.now() - practiceStartTime) / 60000); // minutes
+
+            try {
+                const result = await API.submitPractice({
+                    level: currentLevel,
+                    answers: practiceAnswers,
+                    timeTaken: timeTaken
+                });
+
+                displayPracticeResult(result);
+            } catch (error) {
+                console.error('Failed to submit practice:', error);
+                Utils.showAlert('Failed to submit practice session', 'error');
+            }
+        }
+
+        function displayPracticeResult(result) {
+            document.getElementById('practiceSession').style.display = 'none';
+            document.getElementById('practiceResult').style.display = 'block';
+
+            const percentage = parseFloat(result.percentage);
+            const scoreColor = percentage >= 70 ? '#28a745' : percentage >= 50 ? '#ffc107' : '#dc3545';
+
+            document.getElementById('practiceResultContent').innerHTML = `
+                <div class="practice-score">
+                    <h2 style="color: ${scoreColor};">${result.correctAnswers}/${result.questionsAttempted}</h2>
+                    <p>Correct Answers</p>
+                    <div class="percentage-display">
+                        <span style="color: ${scoreColor}; font-size: 2rem; font-weight: bold;">${percentage}%</span>
+                    </div>
+                </div>
+                <div class="practice-feedback">
+                    <p><strong>Questions Attempted:</strong> ${result.questionsAttempted}</p>
+                    <p><strong>Correct Answers:</strong> ${result.correctAnswers}</p>
+                    <p><strong>Accuracy:</strong> ${percentage}%</p>
+                </div>
+            `;
+        }
+
+        function backToLevels() {
+            document.getElementById('practiceResult').style.display = 'none';
+            document.querySelector('.practice-levels').parentElement.style.display = 'block';
+        }
+
+        function startPracticeTimer() {
+            const timerElement = document.getElementById('practiceTimer');
+            let seconds = 0;
+
+            setInterval(() => {
+                seconds++;
+                const minutes = Math.floor(seconds / 60);
+                const secs = seconds % 60;
+                timerElement.textContent = 
+                    `${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+            }, 1000);
+        }
+
+        // Event listeners for radio buttons
+        document.addEventListener('change', (e) => {
+            if (e.target.name === 'practiceAnswer') {
+                savePracticeAnswer(e.target.value);
+            }
+        });
+    </script>
+
+    <style>
+        .practice-levels {
+            display: grid;
+            gap: 1.5rem;
+            margin-top: 1rem;
+        }
+
+        .level-card {
+            display: flex;
+            align-items: center;
+            padding: 1.5rem;
+            border: 2px solid #e9ecef;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .level-card:hover {
+            border-color: #007bff;
+            box-shadow: 0 4px 12px rgba(0,123,255,0.2);
+        }
+
+        .level-number {
+            width: 60px;
+            height: 60px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            font-weight: bold;
+            margin-right: 1.5rem;
+        }
+
+        .level-info {
+            flex: 1;
+        }
+
+        .level-info h3 {
+            margin: 0 0 0.5rem 0;
+            color: #333;
+        }
+
+        .level-info p {
+            margin: 0 0 0.5rem 0;
+            color: #666;
+        }
+
+        .level-badge {
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 500;
+        }
+
+        .level-badge.easy {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .level-badge.medium {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .level-badge.hard {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .practice-timer {
+            font-weight: bold;
+            color: #007bff;
+        }
+
+        .practice-content {
+            padding: 1rem 0;
+        }
+
+        .question-container {
+            margin-bottom: 2rem;
+        }
+
+        .question-header {
+            margin-bottom: 1rem;
+            font-weight: 600;
+            color: #666;
+        }
+
+        .question-text {
+            font-size: 1.1rem;
+            margin-bottom: 1.5rem;
+            color: #333;
+        }
+
+        .option-label {
+            display: block;
+            padding: 0.75rem;
+            margin-bottom: 0.5rem;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        .option-label:hover {
+            background-color: #f8f9fa;
+        }
+
+        .option-label input[type="radio"] {
+            margin-right: 0.5rem;
+        }
+
+        .practice-navigation {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 2rem;
+        }
+
+        .practice-score {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        .practice-score h2 {
+            font-size: 3rem;
+            margin: 0;
+        }
+
+        .percentage-display {
+            margin-top: 1rem;
+        }
+
+        .practice-feedback {
+            background: #f8f9fa;
+            padding: 1rem;
+            border-radius: 5px;
+        }
+
+        .practice-feedback p {
+            margin: 0.5rem 0;
+        }
+    </style>
+</body>
+</html>

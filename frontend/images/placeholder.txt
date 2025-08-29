@@ -1,0 +1,7 @@
+Place your logo and image files here:
+- logo.png (for the university/organization logo)
+- favicon.ico (for browser tab icon)
+
+Recommended sizes:
+- Logo: 200x60px or similar aspect ratio
+- Favicon: 32x32px or 16x16px

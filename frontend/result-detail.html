@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Result - OAS</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/dashboard.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-brand">
+            <img src="images/logo.png" alt="Logo" class="nav-logo">
+        </div>
+        <ul class="nav-menu">
+            <li><a href="dashboard.html">🏠 Home</a></li>
+            <li><a href="attempt-test.html">📝 Attempt Test</a></li>
+            <li><a href="result.html" class="active">📊 Result</a></li>
+            <li><a href="practice.html">🎯 Practice Platform</a></li>
+            <li><a href="#" class="logout-btn">⚙️ Logout</a></li>
+        </ul>
+    </nav>
+
+    <div class="dashboard-container">
+        <div class="result-container">
+            <div class="result-header">
+                <h2>Test Result</h2>
+                <div class="result-status" id="resultStatus">
+                    <span class="status-badge">Completed</span>
+                </div>
+            </div>
+
+            <div class="result-summary">
+                <div class="summary-card">
+                    <h3 id="testTitle">Test Completed Successfully!</h3>
+                    <div class="score-display">
+                        <div class="score-circle">
+                            <span id="scorePercentage">85%</span>
+                        </div>
+                        <div class="score-details">
+                            <p><strong>Score:</strong> <span id="obtainedMarks">17</span>/<span id="totalMarks">20</span></p>
+                            <p><strong>Time Taken:</strong> <span id="timeTaken">25 minutes</span></p>
+                            <p><strong>Submitted:</strong> <span id="submissionTime">Just now</span></p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="result-breakdown">
+                <h3>Performance Breakdown</h3>
+                <div class="breakdown-stats">
+                    <div class="stat-item correct">
+                        <span class="stat-number" id="correctAnswers">17</span>
+                        <span class="stat-label">Correct</span>
+                    </div>
+                    <div class="stat-item incorrect">
+                        <span class="stat-number" id="incorrectAnswers">3</span>
+                        <span class="stat-label">Incorrect</span>
+                    </div>
+                    <div class="stat-item unanswered">
+                        <span class="stat-number" id="unansweredQuestions">0</span>
+                        <span class="stat-label">Unanswered</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="action-buttons">
+                <button class="btn btn-primary" onclick="viewAllResults()">View All Results</button>
+                <button class="btn btn-secondary" onclick="goToDashboard()">Back to Dashboard</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/auth.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            if (!Auth.requireAuth()) return;
+
+            document.querySelector('.logout-btn').addEventListener('click', (e) => {
+                e.preventDefault();
+                if (confirm('Are you sure you want to logout?')) {
+                    Auth.logout();
+                }
+            });
+
+            loadResultDetails();
+        });
+
+        function loadResultDetails() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const resultId = urlParams.get('id');
+            
+            // Show demo result data
+            const demoResult = {
+                testTitle: 'Assessment Completed',
+                obtainedMarks: Math.floor(Math.random() * 20) + 15,
+                totalMarks: 25,
+                timeTaken: Math.floor(Math.random() * 30) + 20,
+                correctAnswers: Math.floor(Math.random() * 20) + 15,
+                incorrectAnswers: Math.floor(Math.random() * 5) + 2,
+                unansweredQuestions: Math.floor(Math.random() * 3)
+            };
+
+            displayResult(demoResult);
+        }
+
+        function displayResult(result) {
+            document.getElementById('testTitle').textContent = result.testTitle;
+            document.getElementById('obtainedMarks').textContent = result.obtainedMarks;
+            document.getElementById('totalMarks').textContent = result.totalMarks;
+            document.getElementById('timeTaken').textContent = result.timeTaken + ' minutes';
+            document.getElementById('submissionTime').textContent = 'Just now';
+            
+            const percentage = Math.round((result.obtainedMarks / result.totalMarks) * 100);
+            document.getElementById('scorePercentage').textContent = percentage + '%';
+            
+            document.getElementById('correctAnswers').textContent = result.correctAnswers;
+            document.getElementById('incorrectAnswers').textContent = result.incorrectAnswers;
+            document.getElementById('unansweredQuestions').textContent = result.unansweredQuestions;
+        }
+
+        function viewAllResults() {
+            window.location.href = 'result.html';
+        }
+
+        function goToDashboard() {
+            window.location.href = 'dashboard.html';
+        }
+    </script>
+
+    <style>
+        .result-container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        .result-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+            padding-bottom: 1rem;
+            border-bottom: 2px solid #eee;
+        }
+
+        .status-badge {
+            background: #28a745;
+            color: white;
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            font-size: 0.9rem;
+        }
+
+        .summary-card {
+            background: white;
+            border-radius: 10px;
+            padding: 2rem;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 2rem;
+        }
+
+        .score-display {
+            display: flex;
+            align-items: center;
+            gap: 2rem;
+            margin-top: 1rem;
+        }
+
+        .score-circle {
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #28a745, #20c997);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 2rem;
+            font-weight: bold;
+        }
+
+        .score-details p {
+            margin: 0.5rem 0;
+            font-size: 1.1rem;
+        }
+
+        .breakdown-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+
+        .stat-item {
+            text-align: center;
+            padding: 1.5rem;
+            border-radius: 8px;
+            background: white;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+
+        .stat-item.correct {
+            border-left: 4px solid #28a745;
+        }
+
+        .stat-item.incorrect {
+            border-left: 4px solid #dc3545;
+        }
+
+        .stat-item.unanswered {
+            border-left: 4px solid #ffc107;
+        }
+
+        .stat-number {
+            display: block;
+            font-size: 2rem;
+            font-weight: bold;
+            margin-bottom: 0.5rem;
+        }
+
+        .stat-label {
+            color: #666;
+            font-size: 0.9rem;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            margin-top: 2rem;
+        }
+
+        @media (max-width: 768px) {
+            .score-display {
+                flex-direction: column;
+                text-align: center;
+            }
+            
+            .action-buttons {
+                flex-direction: column;
+            }
+        }
+    </style>
+</body>
+</html>
