@@ -110,17 +110,54 @@
         });
 
         async function loadTestDetails() {
-            const storedTest = localStorage.getItem('selectedTest');
+            const urlParams = new URLSearchParams(window.location.search);
+            let testId = urlParams.get('id');
             
-            if (storedTest) {
-                currentTest = JSON.parse(storedTest);
-            } else {
-                const urlParams = new URLSearchParams(window.location.search);
-                let testId = urlParams.get('id') || '1';
+            if (!testId) {
+                const storedTest = localStorage.getItem('selectedTest');
+                if (storedTest) {
+                    currentTest = JSON.parse(storedTest);
+                    testId = currentTest.id;
+                } else {
+                    alert('No test selected. Redirecting to test selection.');
+                    window.location.href = 'attempt-test.html';
+                    return;
+                }
+            }
+            
+            try {
+                // Fetch test details from API
+                const response = await fetch(`http://localhost:3000/api/assessments/${testId}`, {
+                    headers: {
+                        'Authorization': `Bearer ${Auth.getToken()}`
+                    }
+                });
                 
+                if (response.ok) {
+                    currentTest = await response.json();
+                    
+                    // Fetch question count
+                    const questionsResponse = await fetch(`http://localhost:3000/api/questions/assessment/${testId}`, {
+                        headers: {
+                            'Authorization': `Bearer ${Auth.getToken()}`
+                        }
+                    });
+                    
+                    if (questionsResponse.ok) {
+                        const questions = await questionsResponse.json();
+                        currentTest.questionCount = questions.length;
+                    } else {
+                        currentTest.questionCount = 0;
+                    }
+                } else {
+                    throw new Error('Failed to load test details');
+                }
+            } catch (error) {
+                console.error('Failed to load test details:', error);
+                // Fallback to sample data
                 const sampleTests = {
-                    '1': { id: 1, title: 'JavaScript Fundamentals', time_limit: 60, total_marks: 100, negative_marking: false },
-                    '2': { id: 2, title: 'HTML & CSS Basics', time_limit: 45, total_marks: 80, negative_marking: false }
+                    '1': { id: 1, title: 'JavaScript Fundamentals', time_limit: 60, total_marks: 100, negative_marking: false, questionCount: 10 },
+                    '2': { id: 2, title: 'HTML & CSS Basics', time_limit: 45, total_marks: 80, negative_marking: false, questionCount: 8 }
                 };
                 
                 currentTest = sampleTests[testId] || sampleTests['1'];
@@ -131,7 +168,7 @@
 
         function displayTestDetails(test) {
             document.getElementById('testName').textContent = test.title;
-            document.getElementById('questionCount').textContent = '25';
+            document.getElementById('questionCount').textContent = test.questionCount || '0';
             document.getElementById('timeLimit').textContent = `${test.time_limit} Minutes`;
             document.getElementById('negativeMarking').textContent = test.negative_marking ? 'Yes' : 'NA';
         }

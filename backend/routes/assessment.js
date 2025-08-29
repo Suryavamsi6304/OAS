@@ -21,16 +21,25 @@ router.get('/', authenticateToken, async (req, res) => {
         ORDER BY a.created_at DESC
       `;
       params = [req.user.id];
+    } else if (req.user.role === 'admin') {
+      query = `
+        SELECT a.*, u.first_name, u.last_name,
+               (SELECT COUNT(*) FROM results WHERE assessment_id = a.id) as attempt_count
+        FROM assessments a
+        JOIN users u ON a.creator_id = u.id
+        ORDER BY a.created_at DESC
+      `;
+      params = [];
     } else {
       query = `
         SELECT a.*, u.first_name, u.last_name,
                (SELECT COUNT(*) FROM results WHERE assessment_id = a.id) as attempt_count
         FROM assessments a
         JOIN users u ON a.creator_id = u.id
-        WHERE a.creator_id = $1 OR $2 = 'admin'
+        WHERE a.creator_id = $1
         ORDER BY a.created_at DESC
       `;
-      params = [req.user.id, req.user.role];
+      params = [req.user.id];
     }
 
     const result = await db.query(query, params);
@@ -65,6 +74,8 @@ router.get('/:id', authenticateToken, async (req, res) => {
     if (req.user.role === 'teacher' && assessment.creator_id !== req.user.id) {
       return res.status(403).json({ error: 'Access denied' });
     }
+
+    // Admin can access all assessments
 
     res.json(assessment);
   } catch (error) {

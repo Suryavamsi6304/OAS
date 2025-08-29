@@ -15,7 +15,16 @@ document.addEventListener('DOMContentLoaded', async () => {
     let assessmentId = urlParams.get('id');
 
     if (!assessmentId) {
-        assessmentId = '1'; // Default assessment ID
+        // Try to get from localStorage
+        const storedTest = localStorage.getItem('selectedTest');
+        if (storedTest) {
+            const test = JSON.parse(storedTest);
+            assessmentId = test.id;
+        } else {
+            alert('No test selected. Please select a test first.');
+            window.location.href = 'attempt-test.html';
+            return;
+        }
     }
     
     console.log('Assessment ID:', assessmentId);
@@ -51,6 +60,12 @@ async function loadAssessment(assessmentId) {
         
         questions = await questionsResponse.json();
         
+        if (questions.length === 0) {
+            alert('No questions found for this test. Please contact your instructor.');
+            window.location.href = 'attempt-test.html';
+            return;
+        }
+        
         timeRemaining = currentAssessment.time_limit * 60; // Convert to seconds
         testStartTime = Date.now();
         
@@ -62,22 +77,9 @@ async function loadAssessment(assessmentId) {
         
     } catch (error) {
         console.error('Failed to load assessment:', error);
-        
-        // Try to get stored test data first
-        const storedTest = localStorage.getItem('selectedTest');
-        if (storedTest) {
-            currentAssessment = JSON.parse(storedTest);
-        } else {
-            // Fallback to sample data
-            const sampleAssessments = {
-                '1': { id: 1, title: 'JavaScript Fundamentals', time_limit: 60, total_marks: 100 },
-                '2': { id: 2, title: 'HTML & CSS Basics', time_limit: 45, total_marks: 80 }
-            };
-            currentAssessment = sampleAssessments[assessmentId] || sampleAssessments['1'];
-        }
-        
-        alert('Database connection required. Please set up PostgreSQL database with your assessment questions.');
+        alert(`Failed to load test with ID ${assessmentId}. Please check if the test exists and try again.`);
         window.location.href = 'attempt-test.html';
+        return;
     }
 }
 

@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Assessment Management - OAS</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/dashboard.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-brand">
+            <img src="images/logo.png" alt="Logo" class="nav-logo" onerror="this.style.display='none'">
+        </div>
+        <ul class="nav-menu">
+            <li><a href="admin-dashboard.html">🏠 Home</a></li>
+            <li><a href="admin-users.html">👥 User Management</a></li>
+            <li><a href="admin-assessments.html" class="active">📝 Assessment Management</a></li>
+            <li><a href="#" class="logout-btn">🚪 Logout</a></li>
+        </ul>
+    </nav>
+
+    <div class="dashboard-container">
+        <div class="page-header">
+            <h1>Assessment Management</h1>
+            <div class="header-actions">
+                <input type="text" id="searchAssessments" placeholder="Search assessments..." class="search-input">
+            </div>
+        </div>
+
+        <div class="assessments-container">
+            <div id="assessmentsList" class="assessments-list">
+                <!-- Assessments will be loaded here -->
+            </div>
+        </div>
+    </div>
+
+    <script src="js/auth.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', async () => {
+            if (!Auth.requireAuth() || !Auth.hasRole('admin')) {
+                window.location.href = 'index.html';
+                return;
+            }
+
+            document.querySelector('.logout-btn').addEventListener('click', (e) => {
+                e.preventDefault();
+                if (confirm('Are you sure you want to logout?')) {
+                    Auth.logout();
+                }
+            });
+
+            await loadAssessments();
+
+            document.getElementById('searchAssessments').addEventListener('input', filterAssessments);
+        });
+
+        let allAssessments = [];
+
+        async function loadAssessments() {
+            try {
+                const response = await fetch('http://localhost:3000/api/assessments', {
+                    headers: {
+                        'Authorization': `Bearer ${Auth.getToken()}`
+                    }
+                });
+
+                if (response.ok) {
+                    allAssessments = await response.json();
+                    displayAssessments(allAssessments);
+                } else {
+                    throw new Error('Failed to load assessments');
+                }
+            } catch (error) {
+                console.error('Failed to load assessments:', error);
+                document.getElementById('assessmentsList').innerHTML = 
+                    '<div class="error-message">Failed to load assessments. Please try again.</div>';
+            }
+        }
+
+        function displayAssessments(assessments) {
+            const container = document.getElementById('assessmentsList');
+            
+            if (assessments.length === 0) {
+                container.innerHTML = '<div class="empty-state">No assessments found</div>';
+                return;
+            }
+
+            container.innerHTML = assessments.map(assessment => `
+                <div class="assessment-card">
+                    <div class="assessment-header">
+                        <h3>${assessment.title}</h3>
+                        <span class="status-badge ${assessment.status}">${assessment.status}</span>
+                    </div>
+                    <div class="assessment-details">
+                        <p><strong>Creator:</strong> ${assessment.first_name} ${assessment.last_name}</p>
+                        <p><strong>Time Limit:</strong> ${assessment.time_limit} minutes</p>
+                        <p><strong>Total Marks:</strong> ${assessment.total_marks}</p>
+                        <p><strong>Created:</strong> ${new Date(assessment.created_at).toLocaleDateString()}</p>
+                        ${assessment.attempt_count ? `<p><strong>Attempts:</strong> ${assessment.attempt_count}</p>` : ''}
+                    </div>
+                    <div class="assessment-actions">
+                        <button class="btn btn-primary btn-sm" onclick="viewAssessment(${assessment.id})">View Details</button>
+                        <button class="btn btn-secondary btn-sm" onclick="viewResults(${assessment.id})">View Results</button>
+                        ${assessment.status === 'draft' ? 
+                            `<button class="btn btn-success btn-sm" onclick="publishAssessment(${assessment.id})">Publish</button>` : 
+                            `<button class="btn btn-warning btn-sm" onclick="archiveAssessment(${assessment.id})">Archive</button>`
+                        }
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function filterAssessments() {
+            const searchTerm = document.getElementById('searchAssessments').value.toLowerCase();
+            const filtered = allAssessments.filter(assessment => 
+                assessment.title.toLowerCase().includes(searchTerm) ||
+                (assessment.first_name + ' ' + assessment.last_name).toLowerCase().includes(searchTerm)
+            );
+            displayAssessments(filtered);
+        }
+
+        function viewAssessment(assessmentId) {
+            alert(`Viewing assessment ${assessmentId} details`);
+        }
+
+        function viewResults(assessmentId) {
+            alert(`Viewing results for assessment ${assessmentId}`);
+        }
+
+        async function publishAssessment(assessmentId) {
+            if (!confirm('Are you sure you want to publish this assessment?')) return;
+            
+            try {
+                const response = await fetch(`http://localhost:3000/api/assessments/${assessmentId}/publish`, {
+                    method: 'PUT',
+                    headers: {
+                        'Authorization': `Bearer ${Auth.getToken()}`
+                    }
+                });
+
+                if (response.ok) {
+                    alert('Assessment published successfully');
+                    await loadAssessments();
+                } else {
+                    throw new Error('Failed to publish assessment');
+                }
+            } catch (error) {
+                console.error('Failed to publish assessment:', error);
+                alert('Failed to publish assessment');
+            }
+        }
+
+        async function archiveAssessment(assessmentId) {
+            if (!confirm('Are you sure you want to archive this assessment?')) return;
+            
+            try {
+                const response = await fetch(`http://localhost:3000/api/assessments/${assessmentId}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Authorization': `Bearer ${Auth.getToken()}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ status: 'archived' })
+                });
+
+                if (response.ok) {
+                    alert('Assessment archived successfully');
+                    await loadAssessments();
+                } else {
+                    throw new Error('Failed to archive assessment');
+                }
+            } catch (error) {
+                console.error('Failed to archive assessment:', error);
+                alert('Failed to archive assessment');
+            }
+        }
+    </script>
+
+    <style>
+        .page-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+            padding-bottom: 1rem;
+            border-bottom: 2px solid #eee;
+        }
+
+        .search-input {
+            padding: 0.5rem;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            width: 300px;
+        }
+
+        .assessments-list {
+            display: grid;
+            gap: 1rem;
+        }
+
+        .assessment-card {
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 1.5rem;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .assessment-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+
+        .assessment-header h3 {
+            margin: 0;
+            color: #333;
+        }
+
+        .status-badge {
+            padding: 0.25rem 0.75rem;
+            border-radius: 12px;
+            font-size: 0.8rem;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+
+        .status-badge.published {
+            background: #28a745;
+            color: white;
+        }
+
+        .status-badge.draft {
+            background: #ffc107;
+            color: #333;
+        }
+
+        .status-badge.archived {
+            background: #6c757d;
+            color: white;
+        }
+
+        .assessment-details p {
+            margin: 0.5rem 0;
+            color: #666;
+        }
+
+        .assessment-actions {
+            display: flex;
+            gap: 0.5rem;
+            margin-top: 1rem;
+            padding-top: 1rem;
+            border-top: 1px solid #eee;
+        }
+
+        .btn-sm {
+            padding: 0.375rem 0.75rem;
+            font-size: 0.875rem;
+        }
+
+        .empty-state, .error-message {
+            text-align: center;
+            padding: 2rem;
+            color: #666;
+            font-style: italic;
+        }
+
+        .error-message {
+            color: #dc3545;
+        }
+    </style>
+</body>
+</html>

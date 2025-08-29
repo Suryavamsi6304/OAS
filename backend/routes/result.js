@@ -76,6 +76,37 @@ router.post('/submit/:assessmentId', authenticateToken, authorizeRoles('student'
   }
 });
 
+// Get specific result by ID
+router.get('/:resultId', authenticateToken, async (req, res) => {
+  try {
+    const resultId = req.params.resultId;
+
+    const result = await db.query(
+      `SELECT r.*, a.title, a.total_marks, a.time_limit, a.id as assessment_id
+       FROM results r
+       JOIN assessments a ON r.assessment_id = a.id
+       WHERE r.id = $1`,
+      [resultId]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Result not found' });
+    }
+
+    const resultData = result.rows[0];
+
+    // Check permissions
+    if (req.user.role === 'student' && req.user.id != resultData.student_id) {
+      return res.status(403).json({ error: 'Access denied' });
+    }
+
+    res.json(resultData);
+  } catch (error) {
+    console.error('Get result error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 // Get student results
 router.get('/student/:studentId', authenticateToken, async (req, res) => {
   try {
