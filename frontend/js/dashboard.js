@@ -25,21 +25,66 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // Load dashboard data
     await loadDashboardData();
+    await loadSystemBanner();
 });
+
+async function loadSystemBanner() {
+    try {
+        const response = await fetch('http://localhost:3000/api/admin/announcement');
+        const announcement = await response.json();
+        
+        if (announcement && announcement.message) {
+            const banner = document.getElementById('systemBanner');
+            const message = document.getElementById('bannerMessage');
+            
+            message.textContent = announcement.message;
+            message.className = 'banner-message';
+            banner.className = `system-banner banner-${announcement.type || 'info'}`;
+            banner.style.display = 'block';
+            
+            document.getElementById('closeBanner').onclick = () => {
+                banner.style.display = 'none';
+            };
+        }
+    } catch (error) {
+        console.error('Failed to load system banner:', error);
+    }
+}
 
 async function loadDashboardData() {
     try {
-        const data = await API.getDashboard();
+        console.log('Loading dashboard data...');
+        console.log('Token:', Auth.getToken());
+        
+        const response = await fetch('http://localhost:3000/api/users/dashboard', {
+            headers: {
+                'Authorization': `Bearer ${Auth.getToken()}`,
+                'Content-Type': 'application/json'
+            }
+        });
+        
+        console.log('Response status:', response.status);
+        
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        
+        const data = await response.json();
+        console.log('Dashboard data received:', data);
+        console.log('Stats object:', data.stats);
+        
         updateStatistics(data.stats || {});
         updateTodayTests(data.todayTests || []);
         updateRecentTests(data.recentTests || []);
     } catch (error) {
         console.error('Failed to load dashboard data:', error);
-        Utils.showAlert('Failed to load dashboard data', 'error');
+        Utils.showAlert('Failed to load dashboard data: ' + error.message, 'error');
     }
 }
 
 function updateStatistics(stats) {
+    console.log('updateStatistics called with:', stats);
+    
     const elements = {
         testsDesigned: document.getElementById('testsDesigned'),
         testsConducted: document.getElementById('testsConducted'),
@@ -49,6 +94,7 @@ function updateStatistics(stats) {
 
     // Animate counters
     Object.keys(elements).forEach(key => {
+        console.log(`Processing ${key}: ${stats[key]}`);
         if (elements[key] && stats[key] !== undefined) {
             animateCounter(elements[key], stats[key]);
         }

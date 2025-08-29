@@ -21,6 +21,14 @@
         </ul>
     </nav>
 
+    <!-- System Banner -->
+    <div id="systemBanner" class="system-banner" style="display: none;">
+        <div class="banner-content">
+            <span id="bannerMessage"></span>
+            <button id="closeBanner" class="banner-close">×</button>
+        </div>
+    </div>
+
     <div class="dashboard-container">
         <div class="card">
             <div class="card-header">
@@ -62,9 +70,32 @@
             });
 
             await loadAvailableTests();
+            await loadSystemBanner();
 
             const searchInput = document.getElementById('searchTest');
             searchInput.addEventListener('input', debounce(filterTests, 300));
+        });
+
+        async function loadSystemBanner() {
+            try {
+                const response = await fetch('http://localhost:3000/api/admin/announcement');
+                const announcement = await response.json();
+                
+                if (announcement && announcement.message) {
+                    const banner = document.getElementById('systemBanner');
+                    const message = document.getElementById('bannerMessage');
+                    
+                    message.textContent = announcement.message;
+                    banner.className = `system-banner banner-${announcement.type || 'info'}`;
+                    banner.style.display = 'block';
+                    
+                    document.getElementById('closeBanner').onclick = () => {
+                        banner.style.display = 'none';
+                    };
+                }
+            } catch (error) {
+                console.error('Failed to load system banner:', error);
+            }
         });
 
         let allTests = [];
@@ -298,6 +329,59 @@
 
         .test-card.selected .selection-indicator {
             display: flex;
+        }
+
+        /* System Banner */
+        .system-banner {
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-weight: 600;
+            position: relative;
+            border-bottom: 1px solid rgba(0,0,0,0.1);
+        }
+
+        .banner-content {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            width: 100%;
+            max-width: 1400px;
+        }
+
+        .banner-close {
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: inherit;
+            opacity: 0.7;
+            margin-left: 1rem;
+        }
+
+        .banner-close:hover {
+            opacity: 1;
+        }
+
+        .banner-info {
+            background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+            color: white;
+        }
+
+        .banner-warning {
+            background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+            color: white;
+        }
+
+        .banner-success {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            color: white;
+        }
+
+        .banner-error {
+            background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+            color: white;
         }
     </style>
 </body>

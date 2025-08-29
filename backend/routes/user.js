@@ -28,12 +28,29 @@ router.get('/dashboard', authenticateToken, async (req, res) => {
         [req.user.id]
       );
 
+      // Student statistics
+      const stats = await Promise.all([
+        db.query('SELECT COUNT(*) as count FROM assessments WHERE status = $1', ['published']),
+        db.query('SELECT COUNT(*) as count FROM results r JOIN users u ON r.student_id = u.id WHERE u.role = $1', ['student']),
+        db.query('SELECT COUNT(*) as count FROM users WHERE role = $1', ['student']),
+        db.query('SELECT COUNT(*) as count FROM users WHERE role = $1', ['teacher'])
+      ]);
+
+      console.log('Student dashboard stats:', {
+        testsDesigned: stats[0].rows[0].count,
+        testsConducted: stats[1].rows[0].count,
+        testTakers: stats[2].rows[0].count,
+        testDesigners: stats[3].rows[0].count
+      });
+
       dashboardData = {
         todayTests: todayTests.rows,
         recentTests: recentTests.rows,
         stats: {
-          testsAttempted: recentTests.rowCount,
-          averageScore: 0 // Calculate if needed
+          testsDesigned: parseInt(stats[0].rows[0].count),
+          testsConducted: parseInt(stats[1].rows[0].count),
+          testTakers: parseInt(stats[2].rows[0].count),
+          testDesigners: parseInt(stats[3].rows[0].count)
         }
       };
     } else if (req.user.role === 'teacher') {

@@ -16,7 +16,7 @@ const app = express();
 
 // Security middleware
 app.use(helmet());
-app.use(cors({ origin: process.env.CORS_ORIGIN }));
+app.use(cors());
 
 // Rate limiting
 const limiter = rateLimit({

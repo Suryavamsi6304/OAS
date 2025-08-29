@@ -145,4 +145,42 @@ router.get('/audit-logs', authenticateToken, authorizeRoles('admin'), async (req
   }
 });
 
+// Get system announcement
+router.get('/announcement', async (req, res) => {
+  try {
+    const result = await db.query(`
+      SELECT message, type, is_active, created_at
+      FROM system_announcements
+      WHERE is_active = true
+      ORDER BY created_at DESC
+      LIMIT 1
+    `);
+    res.json(result.rows[0] || null);
+  } catch (error) {
+    res.json(null);
+  }
+});
+
+// Update system announcement
+router.post('/announcement', authenticateToken, authorizeRoles('admin'), async (req, res) => {
+  try {
+    const { message, type, isActive } = req.body;
+    
+    // Deactivate all existing announcements
+    await db.query('UPDATE system_announcements SET is_active = false');
+    
+    if (message && isActive) {
+      await db.query(
+        'INSERT INTO system_announcements (message, type, is_active, created_by) VALUES ($1, $2, $3, $4)',
+        [message, type || 'info', true, req.user.id]
+      );
+    }
+    
+    res.json({ message: 'Announcement updated successfully' });
+  } catch (error) {
+    console.error('Update announcement error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 module.exports = router;

@@ -109,6 +109,31 @@
                     </div>
                 </div>
             </div>
+
+            <div class="content-card">
+                <div class="card-header purple">
+                    <h3>📢 System Announcements</h3>
+                </div>
+                <div class="card-body">
+                    <div class="form-group">
+                        <label>Message:</label>
+                        <textarea id="announcementMessage" placeholder="Enter announcement message..." rows="3"></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label>Type:</label>
+                        <select id="announcementType">
+                            <option value="info">Info</option>
+                            <option value="warning">Warning</option>
+                            <option value="success">Success</option>
+                            <option value="error">Error</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <button class="btn btn-primary" onclick="updateAnnouncement()">Update Announcement</button>
+                        <button class="btn btn-secondary" onclick="clearAnnouncement()">Clear</button>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -178,6 +203,27 @@
         function createUser() {
             window.location.href = 'admin-users.html?action=create';
         }
+
+        async function updateAnnouncement() {
+            const message = document.getElementById('announcementMessage').value;
+            const type = document.getElementById('announcementType').value;
+            
+            try {
+                await API.post('/admin/announcement', {
+                    message: message,
+                    type: type,
+                    isActive: !!message
+                });
+                alert('Announcement updated successfully!');
+            } catch (error) {
+                alert('Failed to update announcement: ' + error.message);
+            }
+        }
+        
+        function clearAnnouncement() {
+            document.getElementById('announcementMessage').value = '';
+            updateAnnouncement();
+        }
     </script>
 
     <style>
@@ -196,6 +242,7 @@
         .role-badge.teacher { background: #007bff; color: white; }
         .role-badge.student { background: #28a745; color: white; }
         .audit-logs { max-height: 200px; overflow-y: auto; }
+        .card-header.purple { background: linear-gradient(135deg, #8b5cf6, #7c3aed); }
     </style>
 </body>
 </html>
