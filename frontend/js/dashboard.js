@@ -41,21 +41,37 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 async function loadSystemBanner() {
     try {
+        console.log('Loading system banner...');
         const response = await fetch('http://localhost:3000/api/admin/announcement');
+        console.log('Banner response status:', response.status);
         const announcement = await response.json();
+        console.log('Banner data:', announcement);
         
         if (announcement && announcement.message) {
+            console.log('Showing banner with message:', announcement.message);
             const banner = document.getElementById('systemBanner');
             const message = document.getElementById('bannerMessage');
             
-            message.textContent = announcement.message;
-            message.className = 'banner-message';
-            banner.className = `system-banner banner-${announcement.type || 'info'}`;
-            banner.style.display = 'block';
+            console.log('Banner element:', banner);
+            console.log('Message element:', message);
             
-            document.getElementById('closeBanner').onclick = () => {
-                banner.style.display = 'none';
-            };
+            if (banner && message) {
+                message.textContent = announcement.message;
+                message.className = 'banner-message';
+                banner.className = `system-banner banner-${announcement.type || 'info'}`;
+                banner.style.display = 'block';
+                document.querySelector('.admin-main').classList.add('with-banner');
+                console.log('Banner displayed successfully');
+                
+                document.getElementById('closeBanner').onclick = () => {
+                    banner.style.display = 'none';
+                    document.querySelector('.admin-main').classList.remove('with-banner');
+                };
+            } else {
+                console.error('Banner or message element not found');
+            }
+        } else {
+            console.log('No announcement to display');
         }
     } catch (error) {
         console.error('Failed to load system banner:', error);

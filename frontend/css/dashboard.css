@@ -245,7 +245,11 @@
     justify-content: center;
     align-items: center;
     font-weight: 600;
-    position: relative;
+    position: fixed;
+    top: 80px;
+    left: 0;
+    right: 0;
+    z-index: 998;
     border-bottom: 2px solid #e5e7eb;
     box-shadow: 0 2px 4px rgba(0,0,0,0.05);
     overflow: hidden;
@@ -281,11 +285,11 @@
 }
 
 .banner-info {
-    color: #0070ad;
+    color: #000000;
 }
 
 .banner-warning {
-    color: #f39c12;
+    color: #dc2626;
 }
 
 .banner-message {
@@ -297,7 +301,7 @@
 }
 
 .banner-error {
-    color: #e74c3c;
+    color: #dc2626;
 }
 
 @keyframes scroll-text {
@@ -454,6 +458,10 @@
 .admin-main {
     margin-top: 80px;
     transition: margin-left 0.3s ease;
+}
+
+.admin-main.with-banner {
+    margin-top: 140px;
 }
 
 .admin-header .logout-btn {
