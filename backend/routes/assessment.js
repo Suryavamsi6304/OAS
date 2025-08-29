@@ -24,7 +24,8 @@ router.get('/', authenticateToken, async (req, res) => {
     } else if (req.user.role === 'admin') {
       query = `
         SELECT a.*, u.first_name, u.last_name,
-               (SELECT COUNT(*) FROM results WHERE assessment_id = a.id) as attempt_count
+               (SELECT COUNT(*) FROM results r JOIN users us ON r.student_id = us.id 
+                WHERE r.assessment_id = a.id AND us.role = 'student') as attempt_count
         FROM assessments a
         JOIN users u ON a.creator_id = u.id
         ORDER BY a.created_at DESC
@@ -33,7 +34,8 @@ router.get('/', authenticateToken, async (req, res) => {
     } else {
       query = `
         SELECT a.*, u.first_name, u.last_name,
-               (SELECT COUNT(*) FROM results WHERE assessment_id = a.id) as attempt_count
+               (SELECT COUNT(*) FROM results r JOIN users us ON r.student_id = us.id 
+                WHERE r.assessment_id = a.id AND us.role = 'student') as attempt_count
         FROM assessments a
         JOIN users u ON a.creator_id = u.id
         WHERE a.creator_id = $1

@@ -42,16 +42,16 @@ router.get('/analytics', authenticateToken, authorizeRoles('admin'), async (req,
   try {
     const stats = await Promise.all([
       db.query('SELECT COUNT(*) as total_assessments FROM assessments'),
-      db.query('SELECT COUNT(*) as total_results FROM results'),
+      db.query('SELECT COUNT(*) as tests_conducted FROM results'),
       db.query('SELECT COUNT(*) as total_students FROM users WHERE role = $1', ['student']),
-      db.query('SELECT role, COUNT(*) as count FROM users GROUP BY role')
+      db.query('SELECT COUNT(*) as total_teachers FROM users WHERE role = $1', ['teacher'])
     ]);
 
     res.json({
-      totalAssessments: stats[0].rows[0].total_assessments,
-      totalResults: stats[1].rows[0].total_results,
-      totalStudents: stats[2].rows[0].total_students,
-      usersByRole: stats[3].rows
+      totalAssessments: parseInt(stats[0].rows[0].total_assessments),
+      testsConducted: parseInt(stats[1].rows[0].tests_conducted),
+      totalStudents: parseInt(stats[2].rows[0].total_students),
+      totalTeachers: parseInt(stats[3].rows[0].total_teachers)
     });
   } catch (error) {
     console.error('Get analytics error:', error);
@@ -73,13 +73,13 @@ router.get('/reports', authenticateToken, authorizeRoles('admin'), async (req, r
         GROUP BY a.id, a.title, a.total_marks
         ORDER BY attempts DESC
       `),
-      // User activity
+      // User activity (only students for test taking)
       db.query(`
-        SELECT u.role, COUNT(r.id) as total_attempts,
+        SELECT 'student' as role, COUNT(r.id) as total_attempts,
                AVG(r.percentage) as avg_performance
-        FROM users u
-        LEFT JOIN results r ON u.id = r.student_id
-        GROUP BY u.role
+        FROM results r
+        JOIN users u ON r.student_id = u.id
+        WHERE u.role = 'student'
       `),
       // Recent activity
       db.query(`
@@ -87,6 +87,7 @@ router.get('/reports', authenticateToken, authorizeRoles('admin'), async (req, r
         FROM results r
         JOIN users u ON r.student_id = u.id
         JOIN assessments a ON r.assessment_id = a.id
+        WHERE u.role = 'student'
         ORDER BY r.submitted_at DESC
         LIMIT 10
       `),
@@ -101,14 +102,25 @@ router.get('/reports', authenticateToken, authorizeRoles('admin'), async (req, r
         HAVING COUNT(r.id) > 0
         ORDER BY avg_score DESC
         LIMIT 10
-      `)
+      `),
+      // Summary statistics
+      db.query('SELECT COUNT(*) as total_assessments FROM assessments'),
+      db.query('SELECT COUNT(*) as tests_conducted FROM results r JOIN users u ON r.student_id = u.id WHERE u.role = $1', ['student']),
+      db.query('SELECT COUNT(*) as total_students FROM users WHERE role = $1', ['student']),
+      db.query('SELECT COUNT(*) as total_teachers FROM users WHERE role = $1', ['teacher'])
     ]);
 
     res.json({
       assessmentPerformance: reports[0].rows,
       userActivity: reports[1].rows,
       recentActivity: reports[2].rows,
-      topPerformers: reports[3].rows
+      topPerformers: reports[3].rows,
+      summary: {
+        totalAssessments: parseInt(reports[4].rows[0].total_assessments),
+        testsConducted: parseInt(reports[5].rows[0].tests_conducted),
+        totalStudents: parseInt(reports[6].rows[0].total_students),
+        totalTeachers: parseInt(reports[7].rows[0].total_teachers)
+      }
     });
   } catch (error) {
     console.error('Get reports error:', error);

@@ -142,7 +142,7 @@ router.get('/assessment/:assessmentId', authenticateToken, authorizeRoles('teach
       `SELECT r.*, u.first_name, u.last_name, u.email
        FROM results r
        JOIN users u ON r.student_id = u.id
-       WHERE r.assessment_id = $1
+       WHERE r.assessment_id = $1 AND u.role = 'student'
        ORDER BY r.score DESC`,
       [assessmentId]
     );
