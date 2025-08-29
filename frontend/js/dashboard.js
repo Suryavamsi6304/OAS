@@ -15,6 +15,17 @@ document.addEventListener('DOMContentLoaded', async () => {
         return;
     }
     
+    // Setup sidebar toggle
+    document.getElementById('menuToggle').addEventListener('click', () => {
+        document.getElementById('sidebar').classList.toggle('active');
+        document.getElementById('overlay').classList.toggle('active');
+    });
+
+    document.getElementById('overlay').addEventListener('click', () => {
+        document.getElementById('sidebar').classList.remove('active');
+        document.getElementById('overlay').classList.remove('active');
+    });
+
     // Setup logout functionality
     document.querySelector('.logout-btn').addEventListener('click', (e) => {
         e.preventDefault();

@@ -8,30 +8,44 @@
     <link rel="stylesheet" href="css/dashboard.css">
 </head>
 <body>
-    <nav class="navbar">
-        <div class="nav-brand">
+    <!-- Top Header -->
+    <header class="admin-header">
+        <button id="menuToggle" class="menu-toggle">☰</button>
+        <div class="header-brand">
             <img src="images/logo.png" alt="Logo" class="nav-logo" onerror="this.style.display='none'">
+            <span>Teacher Portal</span>
         </div>
-        <ul class="nav-menu">
-            <li><a href="teacher-dashboard.html" class="active">🏠 Home</a></li>
+        <button class="logout-btn">🚪 Logout</button>
+    </header>
+
+    <!-- Sidebar -->
+    <nav id="sidebar" class="admin-sidebar">
+        <div class="sidebar-header">
+            <h3>Teacher Menu</h3>
+        </div>
+        <ul class="sidebar-menu">
+            <li><a href="teacher-dashboard.html" class="active">🏠 Dashboard</a></li>
             <li><a href="teacher-assessments.html">📝 My Assessments</a></li>
             <li><a href="teacher-create.html">➕ Create Assessment</a></li>
             <li><a href="teacher-students.html">👥 Students</a></li>
             <li><a href="teacher-reports.html">📊 Reports</a></li>
-            <li><a href="#" class="logout-btn">🚪 Logout</a></li>
         </ul>
     </nav>
+
+    <!-- Overlay -->
+    <div id="overlay" class="sidebar-overlay"></div>
 
     <!-- System Banner -->
     <div id="systemBanner" class="system-banner" style="display: none;">
         <div class="banner-content">
-            <span id="bannerMessage"></span>
+            <div id="bannerMessage" class="banner-message"></div>
             <button id="closeBanner" class="banner-close">×</button>
         </div>
     </div>
 
+    <main class="admin-main">
     <div class="dashboard-container">
-        <h1>Teacher Dashboard</h1>
+
         
         <!-- Statistics Cards -->
         <div class="stats-grid">
@@ -119,6 +133,7 @@
             </div>
         </div>
     </div>
+    </main>
 
     <script src="js/auth.js"></script>
     <script src="js/api.js"></script>
@@ -128,6 +143,17 @@
                 window.location.href = 'index.html';
                 return;
             }
+
+            // Setup sidebar toggle
+            document.getElementById('menuToggle').addEventListener('click', () => {
+                document.getElementById('sidebar').classList.toggle('active');
+                document.getElementById('overlay').classList.toggle('active');
+            });
+
+            document.getElementById('overlay').addEventListener('click', () => {
+                document.getElementById('sidebar').classList.remove('active');
+                document.getElementById('overlay').classList.remove('active');
+            });
 
             document.querySelector('.logout-btn').addEventListener('click', (e) => {
                 e.preventDefault();
@@ -150,6 +176,7 @@
                     const message = document.getElementById('bannerMessage');
                     
                     message.textContent = announcement.message;
+                    message.className = 'banner-message';
                     banner.className = `system-banner banner-${announcement.type || 'info'}`;
                     banner.style.display = 'block';
                     

@@ -15,13 +15,13 @@ body {
 
 /* Navigation */
 .navbar {
-    background: linear-gradient(135deg, #1e40af 0%, #3730a3 50%, #581c87 100%);
+    background: linear-gradient(135deg, #0070ad 0%, #005a8b 100%);
     padding: 1rem 2rem;
     display: flex;
     justify-content: space-between;
     align-items: center;
-    box-shadow: 0 4px 20px rgba(0,0,0,0.15);
-    border-bottom: 1px solid rgba(255,255,255,0.1);
+    box-shadow: 0 4px 16px rgba(0,112,173,0.12);
+    border-bottom: 1px solid rgba(255,255,255,0.08);
     backdrop-filter: blur(10px);
 }
 
@@ -53,14 +53,14 @@ body {
 }
 
 .nav-menu a:hover {
-    background-color: rgba(255,255,255,0.15);
-    border-color: rgba(255,255,255,0.2);
+    background-color: rgba(255,255,255,0.1);
+    border-color: rgba(255,255,255,0.15);
     transform: translateY(-1px);
 }
 
 .nav-menu a.active {
-    background-color: rgba(255,255,255,0.2);
-    border-color: rgba(255,255,255,0.3);
+    background-color: rgba(255,255,255,0.15);
+    border-color: rgba(255,255,255,0.2);
     color: white;
     font-weight: 600;
 }
@@ -89,43 +89,43 @@ body {
 }
 
 .btn-primary {
-    background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+    background: linear-gradient(135deg, #0070ad 0%, #005a8b 100%);
     color: white;
-    border: 1px solid #2563eb;
+    border: 1px solid #0070ad;
 }
 
 .btn-primary:hover {
-    background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%);
+    background: linear-gradient(135deg, #005a8b 0%, #004a73 100%);
 }
 
 .btn-success {
-    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    background: linear-gradient(135deg, #16a085 0%, #138d75 100%);
     color: white;
-    border: 1px solid #047857;
+    border: 1px solid #16a085;
 }
 
 .btn-success:hover {
-    background: linear-gradient(135deg, #059669 0%, #047857 100%);
+    background: linear-gradient(135deg, #138d75 0%, #117a65 100%);
 }
 
 .btn-danger {
-    background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+    background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
     color: white;
-    border: 1px solid #b91c1c;
+    border: 1px solid #e74c3c;
 }
 
 .btn-danger:hover {
-    background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+    background: linear-gradient(135deg, #c0392b 0%, #a93226 100%);
 }
 
 .btn-secondary {
-    background: linear-gradient(135deg, #64748b 0%, #475569 100%);
+    background: linear-gradient(135deg, #85929e 0%, #717d8a 100%);
     color: white;
-    border: 1px solid #334155;
+    border: 1px solid #85929e;
 }
 
 .btn-secondary:hover {
-    background: linear-gradient(135deg, #475569 0%, #334155 100%);
+    background: linear-gradient(135deg, #717d8a 0%, #5d6d7e 100%);
 }
 
 /* Form Elements */
@@ -153,8 +153,8 @@ body {
 .form-group select:focus,
 .form-group textarea:focus {
     outline: none;
-    border-color: #007bff;
-    box-shadow: 0 0 0 2px rgba(0,123,255,0.25);
+    border-color: #0070ad;
+    box-shadow: 0 0 0 2px rgba(0,112,173,0.15);
 }
 
 /* Cards */
