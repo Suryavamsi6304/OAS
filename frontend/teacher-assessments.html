@@ -89,17 +89,7 @@
 
         async function loadAssessments() {
             try {
-                const response = await fetch('http://localhost:3000/api/assessments', {
-                    headers: {
-                        'Authorization': `Bearer ${Auth.getToken()}`
-                    }
-                });
-                
-                if (!response.ok) {
-                    throw new Error('Failed to load assessments');
-                }
-                
-                allAssessments = await response.json();
+                allAssessments = await API.get('/assessments');
                 displayAssessments(allAssessments);
             } catch (error) {
                 console.error('Failed to load assessments:', error);
@@ -162,17 +152,7 @@
         async function publishAssessment(assessmentId) {
             if (confirm('Publish this assessment? Students will be able to see it.')) {
                 try {
-                    const response = await fetch(`http://localhost:3000/api/assessments/${assessmentId}/publish`, {
-                        method: 'PUT',
-                        headers: {
-                            'Authorization': `Bearer ${Auth.getToken()}`
-                        }
-                    });
-                    
-                    if (!response.ok) {
-                        throw new Error('Failed to publish assessment');
-                    }
-                    
+                    await API.put(`/assessments/${assessmentId}/publish`, {});
                     alert('Assessment published successfully!');
                     await loadAssessments();
                 } catch (error) {
@@ -188,71 +168,50 @@
         async function deleteAssessment(assessmentId) {
             if (confirm('Are you sure you want to delete this assessment? This action cannot be undone.')) {
                 try {
-                    const response = await fetch(`http://localhost:3000/api/assessments/${assessmentId}`, {
-                        method: 'DELETE',
-                        headers: {
-                            'Authorization': `Bearer ${Auth.getToken()}`,
-                            'Content-Type': 'application/json'
-                        }
-                    });
-                    
-                    const result = await response.text();
-                    console.log('Delete response:', response.status, result);
-                    
-                    if (response.ok) {
-                        alert('Assessment deleted successfully!');
-                        // Reload to verify deletion
-                        await loadAssessments();
-                    } else {
-                        throw new Error(`Delete failed: ${response.status} - ${result}`);
-                    }
+                    await API.delete(`/assessments/${assessmentId}`);
+                    alert('Assessment deleted successfully!');
+                    await loadAssessments();
                 } catch (error) {
-                    console.error('Delete error:', error);
-                    alert('Failed to delete assessment: ' + error.message);
+                    alert('Error deleting assessment: ' + error.message);
                 }
             }
         }
     </script>
 
     <style>
-        .page-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 2rem;
-        }
         .search-filter {
             display: flex;
             gap: 1rem;
+            position: relative;
+            z-index: 1000;
         }
-        .table-container {
-            overflow-x: auto;
+        .search-filter input, .search-filter select {
+            color: #000000 !important;
+            background: #ffffff !important;
+            border: 2px solid #0070ad !important;
+            padding: 8px 12px !important;
+            font-size: 14px !important;
+            font-weight: 600 !important;
+            border-radius: 4px !important;
+            position: relative;
+            z-index: 1001;
         }
-        table {
-            width: 100%;
-            border-collapse: collapse;
+        .search-filter input::placeholder {
+            color: #666666 !important;
         }
-        th, td {
-            padding: 0.75rem;
-            text-align: left;
-            border-bottom: 1px solid #ddd;
+        .card-header {
+            background: #f8fafc !important;
+            padding: 1rem !important;
+            border-radius: 8px !important;
+            margin-bottom: 1rem !important;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
         }
-        th {
-            background-color: #f8f9fa;
-            font-weight: 600;
-        }
-        .status-badge {
-            padding: 0.2rem 0.5rem;
-            border-radius: 3px;
-            font-size: 0.8rem;
-        }
-        .status-badge.published { background: #28a745; color: white; }
-        .status-badge.draft { background: #ffc107; color: black; }
-        .status-badge.archived { background: #6c757d; color: white; }
-        .btn-small {
-            padding: 0.25rem 0.5rem;
-            font-size: 0.8rem;
-            margin-right: 0.25rem;
+        .card-header h3 {
+            color: #000000 !important;
+            font-weight: 800 !important;
+            margin: 0 !important;
         }
     </style>
 </body>
