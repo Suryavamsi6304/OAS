@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Multiple Face Detection</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        .container { max-width: 800px; margin: 0 auto; }
+        video { width: 100%; max-width: 400px; border: 2px solid #ccc; }
+        .results { margin-top: 20px; padding: 15px; background: #f5f5f5; border-radius: 8px; }
+        .violation { padding: 10px; margin: 5px 0; background: #ffebee; border-left: 4px solid #f44336; }
+        .status { padding: 10px; margin: 10px 0; border-radius: 4px; }
+        .status.good { background: #e8f5e8; color: #2e7d32; }
+        .status.warning { background: #fff3e0; color: #f57c00; }
+        .status.danger { background: #ffebee; color: #d32f2f; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Multiple Face Detection Test</h1>
+        <p>This page tests the multiple person detection feature. Allow camera access and try having multiple people in view.</p>
+        
+        <video id="video" autoplay muted></video>
+        
+        <div class="results">
+            <h3>Detection Results:</h3>
+            <div id="faceCount" class="status good">Face Count: 0</div>
+            <div id="multipleFaces" class="status good">Multiple Faces: No</div>
+            <div id="facePresent" class="status good">Face Present: No</div>
+            <div id="lastUpdate">Last Update: Never</div>
+        </div>
+        
+        <div id="violations">
+            <h3>Violations Log:</h3>
+        </div>
+        
+        <button onclick="startTest()" id="startBtn">Start Test</button>
+        <button onclick="stopTest()" id="stopBtn" disabled>Stop Test</button>
+    </div>
+
+    <script src="frontend/js/face-detection.js"></script>
+    <script>
+        let faceDetector;
+        let video;
+        let stream;
+        let testInterval;
+        let violations = [];
+
+        async function startTest() {
+            try {
+                video = document.getElementById('video');
+                faceDetector = new FaceDetection();
+                
+                // Get camera stream
+                stream = await navigator.mediaDevices.getUserMedia({ video: true });
+                video.srcObject = stream;
+                
+                // Wait for video to be ready
+                video.onloadedmetadata = () => {
+                    console.log('Video ready, starting detection...');
+                    testInterval = setInterval(performDetection, 2000);
+                    document.getElementById('startBtn').disabled = true;
+                    document.getElementById('stopBtn').disabled = false;
+                };
+                
+            } catch (error) {
+                console.error('Error starting test:', error);
+                alert('Error accessing camera: ' + error.message);
+            }
+        }
+
+        async function performDetection() {
+            if (!video || video.readyState !== 4) return;
+            
+            try {
+                const analysis = await faceDetector.detectFaces(video);
+                
+                // Update display
+                document.getElementById('faceCount').textContent = `Face Count: ${analysis.faceCount}`;
+                document.getElementById('faceCount').className = `status ${analysis.faceCount === 1 ? 'good' : analysis.faceCount > 1 ? 'danger' : 'warning'}`;
+                
+                document.getElementById('multipleFaces').textContent = `Multiple Faces: ${analysis.multipleFaces ? 'Yes' : 'No'}`;
+                document.getElementById('multipleFaces').className = `status ${analysis.multipleFaces ? 'danger' : 'good'}`;
+                
+                document.getElementById('facePresent').textContent = `Face Present: ${analysis.facePresent ? 'Yes' : 'No'}`;
+                document.getElementById('facePresent').className = `status ${analysis.facePresent ? 'good' : 'warning'}`;
+                
+                document.getElementById('lastUpdate').textContent = `Last Update: ${new Date().toLocaleTimeString()}`;
+                
+                // Log violations
+                if (analysis.multipleFaces && analysis.faceCount > 1) {
+                    logViolation(`Multiple persons detected (${analysis.faceCount} faces)`);
+                }
+                
+                if (!analysis.facePresent) {
+                    logViolation('No face detected in camera');
+                }
+                
+                console.log('Detection results:', analysis);
+                
+            } catch (error) {
+                console.error('Detection error:', error);
+            }
+        }
+
+        function logViolation(message) {
+            const violation = {
+                message,
+                time: new Date().toLocaleTimeString()
+            };
+            
+            violations.push(violation);
+            
+            // Update violations display
+            const violationsDiv = document.getElementById('violations');
+            const violationElement = document.createElement('div');
+            violationElement.className = 'violation';
+            violationElement.innerHTML = `<strong>${violation.time}:</strong> ${violation.message}`;
+            violationsDiv.appendChild(violationElement);
+            
+            // Keep only last 10 violations
+            if (violations.length > 10) {
+                violations.shift();
+                violationsDiv.removeChild(violationsDiv.children[1]); // Keep the h3
+            }
+        }
+
+        function stopTest() {
+            if (testInterval) {
+                clearInterval(testInterval);
+                testInterval = null;
+            }
+            
+            if (stream) {
+                stream.getTracks().forEach(track => track.stop());
+                stream = null;
+            }
+            
+            document.getElementById('startBtn').disabled = false;
+            document.getElementById('stopBtn').disabled = true;
+            
+            console.log('Test stopped');
+        }
+    </script>
+</body>
+</html>

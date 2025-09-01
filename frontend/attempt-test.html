@@ -78,8 +78,7 @@
 
         async function loadSystemBanner() {
             try {
-                const response = await fetch('http://localhost:3000/api/admin/announcement');
-                const announcement = await response.json();
+                const announcement = await API.get('/admin/announcement');
                 
                 if (announcement && announcement.message) {
                     const banner = document.getElementById('systemBanner');
@@ -115,17 +114,7 @@
 
         async function loadAvailableTests() {
             try {
-                const response = await fetch('http://localhost:3000/api/assessments', {
-                    headers: {
-                        'Authorization': `Bearer ${Auth.getToken()}`
-                    }
-                });
-                
-                if (!response.ok) {
-                    throw new Error('Failed to load tests');
-                }
-                
-                const tests = await response.json();
+                const tests = await API.get('/assessments');
                 allTests = tests;
                 displayTests(tests);
             } catch (error) {

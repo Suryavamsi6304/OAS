@@ -1,4 +1,3 @@
-// Login page functionality
 document.addEventListener('DOMContentLoaded', () => {
     // Handle logo image error
     const logoImg = document.getElementById('logoImg');
@@ -8,20 +7,12 @@ document.addEventListener('DOMContentLoaded', () => {
         };
     }
 
-    // Redirect if already logged in
-    if (Auth.isAuthenticated()) {
-        const user = Auth.getUser();
-        if (user.role === 'admin') {
-            window.location.href = 'admin-dashboard.html';
-        } else if (user.role === 'teacher') {
-            window.location.href = 'teacher-dashboard.html';
-        } else {
-            window.location.href = 'dashboard.html';
-        }
+    if (Auth.isAuthenticated() && Auth.hasRole('admin')) {
+        window.location.href = 'admin-dashboard.html';
         return;
     }
 
-    const loginForm = document.getElementById('loginForm');
+    const loginForm = document.getElementById('adminLoginForm');
     const emailInput = document.getElementById('email');
     const passwordInput = document.getElementById('password');
     const loginBtn = loginForm.querySelector('button[type="submit"]');
@@ -32,19 +23,17 @@ document.addEventListener('DOMContentLoaded', () => {
         const email = emailInput.value.trim();
         const password = passwordInput.value;
 
-        // Basic validation
         if (!email || !password) {
-            Utils.showAlert('Please fill in all fields', 'error');
+            alert('Please fill in all fields');
             return;
         }
 
-        // Show loading state
         const originalBtnText = loginBtn.textContent;
         loginBtn.disabled = true;
         loginBtn.innerHTML = '<div class="loading"></div> Logging in...';
 
         try {
-            const response = await fetch(`http://${window.location.hostname}:3000/api/auth/login`, {
+            const response = await fetch(`http://${window.location.hostname}:3000/api/auth/admin/login`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ email, password })
@@ -53,34 +42,23 @@ document.addEventListener('DOMContentLoaded', () => {
             const data = await response.json();
             
             if (!response.ok) {
-                throw new Error(data.error || 'Login failed');
+                throw new Error(data.error || 'Admin login failed');
             }
             
-            // Store authentication data
             Auth.setToken(data.token);
             Auth.setUser(data.user);
 
-            alert('Login successful!');
-            
-            // Redirect based on role
-            if (data.user.role === 'admin') {
-                window.location.href = 'admin-dashboard.html';
-            } else if (data.user.role === 'teacher') {
-                window.location.href = 'teacher-dashboard.html';
-            } else {
-                window.location.href = 'dashboard.html';
-            }
+            alert('Admin login successful!');
+            window.location.href = 'admin-dashboard.html';
 
         } catch (error) {
-            alert('Error: ' + (error.message || 'Login failed'));
+            alert('Error: ' + (error.message || 'Admin login failed'));
         } finally {
-            // Reset button state
             loginBtn.disabled = false;
             loginBtn.textContent = originalBtnText;
         }
     });
 
-    // Enter key support
     [emailInput, passwordInput].forEach(input => {
         input.addEventListener('keypress', (e) => {
             if (e.key === 'Enter') {

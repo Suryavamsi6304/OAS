@@ -156,6 +156,8 @@
     flex: 1;
     padding: 2rem;
     background: #f8f9fa;
+    overflow-y: auto;
+    max-height: calc(100vh - 120px);
 }
 
 .question-container {

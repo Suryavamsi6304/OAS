@@ -1,9 +1,14 @@
 // API utility class
 class API {
-    static BASE_URL = 'http://localhost:3000/api';
+    static BASE_URL = `http://${window.location.hostname}:3000/api`;
+    
+    static getBaseURL() {
+        // Use current hostname and port 3000 for API
+        return `http://${window.location.hostname}:3000/api`;
+    }
 
     static async request(endpoint, options = {}) {
-        const url = `${this.BASE_URL}${endpoint}`;
+        const url = `${this.getBaseURL()}${endpoint}`;
         const config = {
             headers: {
                 'Content-Type': 'application/json',

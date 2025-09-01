@@ -6,8 +6,19 @@
     <title>Live Test - OAS</title>
     <link rel="stylesheet" href="css/style.css">
     <link rel="stylesheet" href="css/test-taking.css">
+    <link rel="stylesheet" href="css/proctoring.css">
 </head>
 <body>
+    <!-- Proctoring Overlay -->
+    <div class="proctoring-overlay" id="proctoringOverlay" style="display: none;">
+        <div class="proctoring-status">
+            <div class="proctoring-indicator"></div>
+            <span>Proctoring Active</span>
+        </div>
+        <div class="violation-counter">
+            Violations: <span id="violationCount">0</span>
+        </div>
+    </div>
     <div class="test-header">
         <div class="test-info">
             <button id="viewInstructions" class="btn-secondary">📋 View Instructions</button>
@@ -19,7 +30,7 @@
         </div>
     </div>
 
-    <div class="test-container">
+    <div class="test-container" style="height: calc(100vh - 60px); overflow-y: auto;">
         <div class="test-sidebar">
             <div class="student-info">
                 <div class="student-id" id="studentInfo">Student ID</div>
@@ -83,6 +94,8 @@
 
     <script src="js/auth.js"></script>
     <script src="js/api.js"></script>
+    <script src="js/face-detection.js"></script>
+    <script src="js/proctoring.js"></script>
     <script src="js/test-taking.js"></script>
 </body>
 </html>

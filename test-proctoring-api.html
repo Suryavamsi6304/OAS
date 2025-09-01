@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Proctoring API</title>
+</head>
+<body>
+    <h1>Test Proctoring API</h1>
+    <div id="result"></div>
+    
+    <script>
+        async function testAPI() {
+            const resultDiv = document.getElementById('result');
+            
+            try {
+                // Test the proctoring logs endpoint without authentication first
+                const response = await fetch('http://localhost:3000/api/proctoring/logs');
+                const status = response.status;
+                const text = await response.text();
+                
+                resultDiv.innerHTML = `
+                    <h3>API Test Result:</h3>
+                    <p><strong>Status:</strong> ${status}</p>
+                    <p><strong>Response:</strong></p>
+                    <pre>${text}</pre>
+                `;
+                
+                if (status === 401) {
+                    resultDiv.innerHTML += '<p><strong>Issue:</strong> Authentication required. You need to login as a teacher first.</p>';
+                } else if (status === 404) {
+                    resultDiv.innerHTML += '<p><strong>Issue:</strong> Endpoint not found. Check if the server is running and routes are registered.</p>';
+                }
+                
+            } catch (error) {
+                resultDiv.innerHTML = `<p><strong>Error:</strong> ${error.message}</p>`;
+            }
+        }
+        
+        // Run test when page loads
+        testAPI();
+    </script>
+</body>
+</html>

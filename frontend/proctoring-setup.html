@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Proctoring Setup - OAS</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/proctoring.css">
+</head>
+<body>
+    <div class="proctoring-setup" id="proctoringSetup">
+        <div class="proctoring-setup-content">
+            <h2>🔒 Proctoring System Setup</h2>
+            <p>This test requires proctoring. Please complete the following steps:</p>
+            
+            <div class="setup-step" id="cameraStep">
+                <h4>📹 Camera Access</h4>
+                <p>Allow camera access for identity verification</p>
+                <video id="cameraPreview" class="camera-preview" autoplay muted></video>
+                <div class="step-status" id="cameraStatus">Requesting permission...</div>
+            </div>
+            
+            <div class="setup-step" id="microphoneStep">
+                <h4>🎤 Microphone Access</h4>
+                <p>Allow microphone access for audio monitoring</p>
+                <div class="step-status" id="microphoneStatus">Requesting permission...</div>
+            </div>
+            
+            <div class="setup-step" id="fullscreenStep">
+                <h4>🖥️ Fullscreen Mode</h4>
+                <p>Test will run in fullscreen mode</p>
+                <div class="step-status" id="fullscreenStatus">Ready</div>
+            </div>
+            
+            <div class="setup-step" id="rulesStep">
+                <h4>📋 Proctoring Rules</h4>
+                <ul style="text-align: left; max-width: 400px; margin: 0 auto;">
+                    <li>Stay in camera view at all times</li>
+                    <li>Do not switch tabs or applications</li>
+                    <li>Do not use external devices</li>
+                    <li>Do not communicate with others</li>
+                    <li>Keep your workspace clear</li>
+                </ul>
+                <label>
+                    <input type="checkbox" id="rulesAccepted"> I understand and accept the proctoring rules
+                </label>
+            </div>
+            
+            <div class="proctoring-controls">
+                <button class="btn-proctoring secondary" onclick="cancelSetup()">Cancel</button>
+                <button class="btn-proctoring primary" id="startTestBtn" onclick="startProctoredTest()" disabled>Start Proctored Test</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/auth.js"></script>
+    <script src="js/proctoring.js"></script>
+    <script>
+        let assessmentId = null;
+        let proctoringSystem = null;
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            if (!Auth.requireAuth()) return;
+
+            const urlParams = new URLSearchParams(window.location.search);
+            assessmentId = urlParams.get('id');
+
+            if (!assessmentId) {
+                alert('No assessment selected');
+                window.location.href = 'attempt-test.html';
+                return;
+            }
+
+            proctoringSystem = new ProctoringSystem();
+            await setupProctoring();
+        });
+
+        async function setupProctoring() {
+            try {
+                // Check camera
+                const cameraStep = document.getElementById('cameraStep');
+                const cameraStatus = document.getElementById('cameraStatus');
+                const cameraPreview = document.getElementById('cameraPreview');
+
+                try {
+                    const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+                    cameraPreview.srcObject = stream;
+                    cameraStep.classList.add('completed');
+                    cameraStatus.textContent = '✅ Camera ready';
+                } catch (error) {
+                    cameraStep.classList.add('failed');
+                    cameraStatus.textContent = '❌ Camera access denied';
+                }
+
+                // Check microphone
+                const microphoneStep = document.getElementById('microphoneStep');
+                const microphoneStatus = document.getElementById('microphoneStatus');
+
+                try {
+                    await navigator.mediaDevices.getUserMedia({ audio: true });
+                    microphoneStep.classList.add('completed');
+                    microphoneStatus.textContent = '✅ Microphone ready';
+                } catch (error) {
+                    microphoneStep.classList.add('failed');
+                    microphoneStatus.textContent = '❌ Microphone access denied';
+                }
+
+                // Rules acceptance
+                document.getElementById('rulesAccepted').addEventListener('change', (e) => {
+                    document.getElementById('startTestBtn').disabled = !e.target.checked;
+                });
+
+            } catch (error) {
+                console.error('Setup error:', error);
+                alert('Failed to setup proctoring system');
+            }
+        }
+
+        async function startProctoredTest() {
+            try {
+                const result = await proctoringSystem.initialize(assessmentId);
+                
+                if (result.success) {
+                    // Redirect to test with proctoring enabled
+                    window.location.href = `test-taking.html?id=${assessmentId}&proctored=true`;
+                } else {
+                    alert('Failed to start proctoring: ' + result.error);
+                }
+            } catch (error) {
+                console.error('Failed to start proctored test:', error);
+                alert('Failed to start proctored test');
+            }
+        }
+
+        function cancelSetup() {
+            if (confirm('Are you sure you want to cancel? You will not be able to take this test.')) {
+                window.location.href = 'attempt-test.html';
+            }
+        }
+    </script>
+</body>
+</html>

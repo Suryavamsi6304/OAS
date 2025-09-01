@@ -26,9 +26,21 @@ start "Frontend Server" cmd /k "python -m http.server 3001"
 
 echo.
 echo Assessment Platform is starting...
-echo Backend: http://localhost:3000
-echo Frontend: http://localhost:3001
+echo.
+echo Local access:
+echo - Backend: http://localhost:3000
+echo - Frontend: http://localhost:3001
+echo.
+echo Network access for friends:
+for /f "tokens=2 delims=:" %%a in ('ipconfig ^| findstr /i "IPv4" ^| findstr /v "127.0.0.1"') do (
+    for /f "tokens=1" %%b in ("%%a") do (
+        echo - Share this URL: http://%%b:3001
+        echo - Admin panel: http://%%b:3001/admin
+    )
+)
 echo.
 echo Default login: admin@assessment.com / password
+echo.
+echo IMPORTANT: Friends should use port 3001 (not 3000)
 echo.
 pause

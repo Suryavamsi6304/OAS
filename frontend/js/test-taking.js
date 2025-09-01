@@ -7,6 +7,8 @@ let flaggedQuestions = new Set();
 let timeRemaining = 0;
 let timerInterval = null;
 let testStartTime = null;
+let proctoringSystem = null;
+let isProctoredTest = false;
 
 document.addEventListener('DOMContentLoaded', async () => {
     if (!Auth.requireAuth()) return;
@@ -28,6 +30,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
     
     console.log('Assessment ID:', assessmentId);
+
+    // Check if proctoring is required and initialize
+    await checkAndInitializeProctoring(assessmentId);
 
     await loadAssessment(assessmentId);
     setupEventListeners();
@@ -255,12 +260,178 @@ function startTimer() {
     }, 1000);
 }
 
+async function checkAndInitializeProctoring(assessmentId) {
+    try {
+        // Check if proctoring is enabled for this assessment
+        const response = await fetch(`http://localhost:3000/api/proctoring/settings/${assessmentId}`, {
+            headers: { 'Authorization': `Bearer ${Auth.getToken()}` }
+        });
+        const settings = await response.json();
+        
+        if (settings.proctoring_enabled) {
+            await showProctoringSetup(assessmentId, settings);
+        }
+    } catch (error) {
+        console.error('Failed to check proctoring settings:', error);
+    }
+}
+
+async function showProctoringSetup(assessmentId, settings) {
+    return new Promise((resolve, reject) => {
+        // Create proctoring setup modal
+        const modal = document.createElement('div');
+        modal.className = 'proctoring-setup';
+        modal.innerHTML = `
+            <div class="proctoring-setup-content">
+                <h2>🔒 Proctoring Required</h2>
+                <p style="margin-bottom: 15px;">Complete the setup to start your test:</p>
+                
+                <div class="setup-step" id="cameraStep" style="margin: 10px 0; padding: 10px;">
+                    <h4 style="margin: 5px 0;">📹 Camera Access</h4>
+                    <video id="cameraPreview" class="camera-preview" autoplay muted style="display:none; width: 150px; height: 100px;"></video>
+                    <div class="step-status" id="cameraStatus">Click to enable</div>
+                </div>
+                
+                <div class="setup-step" id="microphoneStep" style="margin: 10px 0; padding: 10px;">
+                    <h4 style="margin: 5px 0;">🎤 Microphone Access</h4>
+                    <div class="step-status" id="microphoneStatus">Click to enable</div>
+                </div>
+                
+                <div class="setup-step" style="margin: 10px 0; padding: 10px;">
+                    <h4 style="margin: 5px 0;">📋 Proctoring Rules</h4>
+                    <ul style="text-align: left; margin: 5px 0; font-size: 13px;">
+                        <li>Stay in camera view</li>
+                        <li>No tab switching</li>
+                        <li>No external devices</li>
+                        <li>Keep workspace clear</li>
+                    </ul>
+                    <label style="font-size: 14px;">
+                        <input type="checkbox" id="rulesAccepted"> I accept the rules
+                    </label>
+                </div>
+                
+                <div class="proctoring-controls" style="margin-top: 15px;">
+                    <button class="btn-proctoring secondary" onclick="cancelTest()">Cancel</button>
+                    <button class="btn-proctoring primary" id="startProctoringBtn" disabled>Start Test</button>
+                </div>
+            </div>
+        `;
+        
+        document.body.appendChild(modal);
+        
+        // Setup camera
+        document.getElementById('cameraStep').addEventListener('click', async () => {
+            try {
+                document.getElementById('cameraStatus').textContent = 'Requesting access...';
+                const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+                const preview = document.getElementById('cameraPreview');
+                preview.srcObject = stream;
+                preview.style.display = 'block';
+                document.getElementById('cameraStep').classList.add('completed');
+                document.getElementById('cameraStatus').textContent = '✅ Camera ready';
+                checkSetupComplete();
+            } catch (error) {
+                console.error('Camera error:', error);
+                document.getElementById('cameraStatus').textContent = '❌ Camera access denied';
+            }
+        });
+        
+        // Setup microphone
+        document.getElementById('microphoneStep').addEventListener('click', async () => {
+            try {
+                document.getElementById('microphoneStatus').textContent = 'Requesting access...';
+                await navigator.mediaDevices.getUserMedia({ audio: true });
+                document.getElementById('microphoneStep').classList.add('completed');
+                document.getElementById('microphoneStatus').textContent = '✅ Microphone ready';
+                checkSetupComplete();
+            } catch (error) {
+                console.error('Microphone error:', error);
+                document.getElementById('microphoneStatus').textContent = '❌ Microphone access denied';
+            }
+        });
+        
+        // Rules acceptance
+        document.getElementById('rulesAccepted').addEventListener('change', checkSetupComplete);
+        
+        function checkSetupComplete() {
+            const cameraReady = document.getElementById('cameraStep').classList.contains('completed');
+            const micReady = document.getElementById('microphoneStep').classList.contains('completed');
+            const rulesAccepted = document.getElementById('rulesAccepted').checked;
+            
+            console.log('Setup check:', { cameraReady, micReady, rulesAccepted });
+            
+            const btn = document.getElementById('startProctoringBtn');
+            btn.disabled = !(cameraReady && micReady && rulesAccepted);
+            
+            if (!btn.disabled) {
+                btn.style.opacity = '1';
+                btn.style.cursor = 'pointer';
+            } else {
+                btn.style.opacity = '0.6';
+                btn.style.cursor = 'not-allowed';
+            }
+        }
+        
+        // Start proctoring
+        document.getElementById('startProctoringBtn').addEventListener('click', async () => {
+            try {
+                const btn = document.getElementById('startProctoringBtn');
+                btn.disabled = true;
+                btn.textContent = 'Starting...';
+                
+                await initializeProctoring(assessmentId);
+                modal.remove();
+                resolve();
+            } catch (error) {
+                alert('Failed to start proctoring: ' + error.message);
+                document.getElementById('startProctoringBtn').disabled = false;
+                document.getElementById('startProctoringBtn').textContent = 'Start Proctored Test';
+                reject(error);
+            }
+        });
+        
+        window.cancelTest = () => {
+            if (confirm('Cancel test? You will return to the test selection page.')) {
+                window.location.href = 'attempt-test.html';
+            }
+        };
+    });
+}
+
+async function initializeProctoring(assessmentId) {
+    try {
+        proctoringSystem = new ProctoringSystem();
+        const result = await proctoringSystem.initialize(assessmentId);
+        
+        if (result.success && result.proctoring) {
+            isProctoredTest = true;
+            document.body.classList.add('proctored');
+            document.getElementById('proctoringOverlay').style.display = 'flex';
+            
+            // Update violation counter periodically
+            setInterval(() => {
+                const summary = proctoringSystem.getViolationSummary();
+                document.getElementById('violationCount').textContent = summary.total;
+            }, 1000);
+        }
+    } catch (error) {
+        console.error('Proctoring initialization failed:', error);
+        throw error;
+    }
+}
+
 async function endTest() {
     if (!confirm('Are you sure you want to submit the test? This action cannot be undone.')) {
         return;
     }
     
     clearInterval(timerInterval);
+    
+    // End proctoring session
+    if (proctoringSystem) {
+        await proctoringSystem.endSession();
+        document.body.classList.remove('proctored');
+    }
     
     const timeTaken = Math.floor((Date.now() - testStartTime) / 60000); // minutes
     

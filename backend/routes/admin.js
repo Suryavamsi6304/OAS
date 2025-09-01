@@ -37,6 +37,40 @@ router.post('/users', authenticateToken, authorizeRoles('admin'), async (req, re
   }
 });
 
+// Delete user (deactivate)
+router.delete('/users/:id', authenticateToken, authorizeRoles('admin'), async (req, res) => {
+  try {
+    const userId = req.params.id;
+    console.log('Attempting to deactivate user with ID:', userId);
+    
+    // First check if user exists and get their role
+    const userCheck = await db.query(
+      'SELECT id, role FROM users WHERE id = $1',
+      [userId]
+    );
+    
+    if (userCheck.rows.length === 0) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+    
+    if (userCheck.rows[0].role === 'admin') {
+      return res.status(400).json({ error: 'Cannot delete admin user' });
+    }
+    
+    // Deactivate user instead of deleting to avoid foreign key constraints
+    const result = await db.query(
+      'UPDATE users SET is_active = false WHERE id = $1',
+      [userId]
+    );
+
+    console.log('Deactivate result:', result.rowCount);
+    res.json({ message: 'User deactivated successfully' });
+  } catch (error) {
+    console.error('Deactivate user error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 // Get system analytics
 router.get('/analytics', authenticateToken, authorizeRoles('admin'), async (req, res) => {
   try {

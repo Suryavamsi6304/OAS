@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Network Connection Test</title>
+</head>
+<body>
+    <h1>Network Connection Test</h1>
+    <div id="results"></div>
+    
+    <script>
+        async function testConnection() {
+            const results = document.getElementById('results');
+            const hostname = window.location.hostname;
+            
+            results.innerHTML = '<p>Testing connection...</p>';
+            
+            try {
+                const response = await fetch(`http://${hostname}:3000/api/proctoring/test`);
+                const data = await response.json();
+                
+                results.innerHTML = `
+                    <p style="color: green;">✅ Connection successful!</p>
+                    <p>Hostname: ${hostname}</p>
+                    <p>Backend URL: http://${hostname}:3000</p>
+                    <p>Response: ${data.message}</p>
+                `;
+            } catch (error) {
+                results.innerHTML = `
+                    <p style="color: red;">❌ Connection failed!</p>
+                    <p>Error: ${error.message}</p>
+                    <p>Hostname: ${hostname}</p>
+                    <p>Backend URL: http://${hostname}:3000</p>
+                `;
+            }
+        }
+        
+        testConnection();
+    </script>
+</body>
+</html>

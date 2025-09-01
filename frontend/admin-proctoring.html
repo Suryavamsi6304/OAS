@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Proctoring Management - Admin</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/dashboard.css">
+</head>
+<body>
+    <div class="dashboard-container">
+        <nav class="sidebar">
+            <div class="sidebar-header">
+                <h3>Admin Panel</h3>
+            </div>
+            <ul class="nav-links">
+                <li><a href="admin-dashboard.html">Dashboard</a></li>
+                <li><a href="admin-users.html">Users</a></li>
+                <li><a href="admin-assessments.html">Assessments</a></li>
+                <li><a href="admin-proctoring.html" class="active">Proctoring</a></li>
+                <li><a href="admin-reports.html">Reports</a></li>
+            </ul>
+        </nav>
+
+        <main class="main-content">
+            <div class="content-header">
+                <h1>Proctoring Management</h1>
+                <button onclick="Auth.logout()" class="btn-logout">Logout</button>
+            </div>
+
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <h3>Active Sessions</h3>
+                    <div class="stat-number" id="activeSessions">0</div>
+                </div>
+                <div class="stat-card">
+                    <h3>Total Violations</h3>
+                    <div class="stat-number" id="totalViolations">0</div>
+                </div>
+                <div class="stat-card">
+                    <h3>High Risk Sessions</h3>
+                    <div class="stat-number" id="highRiskSessions">0</div>
+                </div>
+            </div>
+
+            <div class="content-section">
+                <h2>Recent Proctoring Sessions</h2>
+                <div class="table-container">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Student</th>
+                                <th>Assessment</th>
+                                <th>Start Time</th>
+                                <th>Status</th>
+                                <th>Violations</th>
+                                <th>Risk Score</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="sessionsTable">
+                            <tr>
+                                <td colspan="7" class="text-center">Loading...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="js/auth.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', async () => {
+            if (!Auth.requireAuth() || !Auth.hasRole('admin')) {
+                window.location.href = '/admin';
+                return;
+            }
+
+            await loadProctoringData();
+        });
+
+        async function loadProctoringData() {
+            try {
+                // Mock data for demonstration
+                const mockSessions = [
+                    {
+                        id: 1,
+                        student_name: 'John Doe',
+                        assessment_title: 'Mathematics Final',
+                        start_time: '2024-01-15 10:00:00',
+                        status: 'active',
+                        total_violations: 2,
+                        risk_score: 15
+                    },
+                    {
+                        id: 2,
+                        student_name: 'Jane Smith',
+                        assessment_title: 'Physics Quiz',
+                        start_time: '2024-01-15 09:30:00',
+                        status: 'completed',
+                        total_violations: 0,
+                        risk_score: 0
+                    }
+                ];
+
+                // Update stats
+                document.getElementById('activeSessions').textContent = 
+                    mockSessions.filter(s => s.status === 'active').length;
+                document.getElementById('totalViolations').textContent = 
+                    mockSessions.reduce((sum, s) => sum + s.total_violations, 0);
+                document.getElementById('highRiskSessions').textContent = 
+                    mockSessions.filter(s => s.risk_score > 20).length;
+
+                // Update table
+                const tbody = document.getElementById('sessionsTable');
+                tbody.innerHTML = mockSessions.map(session => `
+                    <tr>
+                        <td>${session.student_name}</td>
+                        <td>${session.assessment_title}</td>
+                        <td>${new Date(session.start_time).toLocaleString()}</td>
+                        <td>
+                            <span class="badge ${session.status === 'active' ? 'success' : 'secondary'}">
+                                ${session.status}
+                            </span>
+                        </td>
+                        <td>
+                            <span class="badge ${session.total_violations > 0 ? 'warning' : 'success'}">
+                                ${session.total_violations}
+                            </span>
+                        </td>
+                        <td>
+                            <span class="badge ${session.risk_score > 20 ? 'danger' : session.risk_score > 10 ? 'warning' : 'success'}">
+                                ${session.risk_score}
+                            </span>
+                        </td>
+                        <td>
+                            <button class="btn-sm btn-primary" onclick="viewSession(${session.id})">
+                                View Details
+                            </button>
+                        </td>
+                    </tr>
+                `).join('');
+
+            } catch (error) {
+                console.error('Failed to load proctoring data:', error);
+                document.getElementById('sessionsTable').innerHTML = 
+                    '<tr><td colspan="7" class="text-center text-danger">Failed to load data</td></tr>';
+            }
+        }
+
+        function viewSession(sessionId) {
+            alert(`Viewing session ${sessionId} - Full implementation would show detailed violation logs, recordings, and analytics.`);
+        }
+    </script>
+</body>
+</html>

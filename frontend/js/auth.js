@@ -25,15 +25,27 @@ class Auth {
     }
 
     static logout() {
+        const user = this.getUser();
         localStorage.removeItem(this.TOKEN_KEY);
         localStorage.removeItem(this.USER_KEY);
-        window.location.href = 'index.html';
+        
+        if (user && user.role === 'admin') {
+            window.location.href = '/admin';
+        } else {
+            window.location.href = 'index.html';
+        }
     }
 
     static requireAuth() {
         const currentPage = window.location.pathname.split('/').pop();
+        const currentPath = window.location.pathname;
+        
         if (!this.isAuthenticated() && currentPage !== 'register.html') {
-            window.location.href = 'index.html';
+            if (currentPath === '/admin' || currentPage === 'admin-login.html') {
+                window.location.href = '/admin';
+            } else {
+                window.location.href = 'index.html';
+            }
             return false;
         }
         return true;
@@ -79,10 +91,10 @@ window.addEventListener('storage', (e) => {
 // Check authentication on page load
 document.addEventListener('DOMContentLoaded', () => {
     // Skip auth check for login and register pages
-    const publicPages = ['index.html', 'register.html', '', '/'];
+    const publicPages = ['index.html', 'register.html', 'admin-login.html', '', '/', '/admin'];
     const currentPage = window.location.pathname.split('/').pop() || window.location.pathname;
     
-    if (!publicPages.includes(currentPage) && !currentPage.includes('register')) {
+    if (!publicPages.includes(currentPage) && !publicPages.includes(window.location.pathname) && !currentPage.includes('register')) {
         Auth.requireAuth();
     }
 });
