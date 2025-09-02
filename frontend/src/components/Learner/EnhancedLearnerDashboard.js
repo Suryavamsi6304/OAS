@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
-import { BookOpen, Clock, Award, Play, Eye, User, LogOut, Code, Target, TrendingUp, Calendar, Download, Star, Trophy, Zap } from 'lucide-react';
+import { BookOpen, Clock, Award, Play, Eye, User, LogOut, Code, Target, TrendingUp, Calendar, Download, Star, Trophy, Zap, RefreshCw } from 'lucide-react';
 import axios from 'axios';
 import toast from 'react-hot-toast';
 
@@ -626,7 +626,8 @@ const EnhancedLearnerDashboard = () => {
               { id: 'practice', label: 'Practice Tests', icon: Target },
               { id: 'skills', label: 'Skill Assessment', icon: Code },
               { id: 'certificates', label: 'Certificates', icon: Award },
-              { id: 'analytics', label: 'Analytics', icon: TrendingUp }
+              { id: 'analytics', label: 'Analytics', icon: TrendingUp },
+              { id: 're-attempts', label: 'Re-attempts', icon: RefreshCw }
             ].map(tab => {
               const Icon = tab.icon;
               return (
@@ -663,6 +664,28 @@ const EnhancedLearnerDashboard = () => {
         {activeTab === 'skills' && renderSkillAssessment()}
         {activeTab === 'certificates' && renderCertificates()}
         {activeTab === 'analytics' && renderAnalytics()}
+        {activeTab === 're-attempts' && (
+          <div style={{ textAlign: 'center', padding: '40px' }}>
+            <RefreshCw size={48} style={{ color: '#3b82f6', margin: '0 auto 16px' }} />
+            <h3 style={{ fontSize: '18px', fontWeight: '600', margin: '0 0 16px 0' }}>Re-attempt Requests</h3>
+            <p style={{ color: '#6b7280', marginBottom: '24px' }}>View and track your exam re-attempt requests</p>
+            <button
+              onClick={() => navigate('/learner/re-attempts')}
+              style={{
+                padding: '12px 24px',
+                backgroundColor: '#3b82f6',
+                color: 'white',
+                border: 'none',
+                borderRadius: '6px',
+                cursor: 'pointer',
+                fontSize: '14px',
+                fontWeight: '500'
+              }}
+            >
+              View Re-attempts
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );

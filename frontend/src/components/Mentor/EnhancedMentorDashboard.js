@@ -92,14 +92,26 @@ const EnhancedMentorDashboard = () => {
     toast.success('Skill assessment created successfully!');
   };
 
-  const deletePracticeTest = (id) => {
-    setPracticeTests(practiceTests.filter(test => test.id !== id));
-    toast.success('Practice test deleted');
+  const deletePracticeTest = async (id) => {
+    try {
+      await axios.delete(`/api/exams/${id}`);
+      setPracticeTests(practiceTests.filter(test => test.id !== id));
+      toast.success('Practice test deleted');
+    } catch (error) {
+      console.error('Error deleting practice test:', error);
+      toast.error('Failed to delete practice test');
+    }
   };
 
-  const deleteSkillAssessment = (id) => {
-    setSkillAssessments(skillAssessments.filter(assessment => assessment.id !== id));
-    toast.success('Skill assessment deleted');
+  const deleteSkillAssessment = async (id) => {
+    try {
+      await axios.delete(`/api/exams/${id}`);
+      setSkillAssessments(skillAssessments.filter(assessment => assessment.id !== id));
+      toast.success('Skill assessment deleted');
+    } catch (error) {
+      console.error('Error deleting skill assessment:', error);
+      toast.error('Failed to delete skill assessment');
+    }
   };
 
   if (loading) {

@@ -1,4 +1,4 @@
-const { Exam, Result, User } = require('../models');
+const { Exam, Result, User, ReAttemptRequest, Notification } = require('../models');
 
 /**
  * Create new exam (Admin only)
@@ -320,6 +320,27 @@ const deleteExam = async (req, res) => {
       });
     }
 
+    // Check if user can delete this exam (admin can delete any, mentor can only delete their own)
+    if (req.user.role === 'mentor' && exam.createdBy !== req.user.id) {
+      return res.status(403).json({
+        success: false,
+        message: 'You can only delete exams you created'
+      });
+    }
+
+    // Delete related records first to avoid foreign key constraints
+    const { ReAttemptRequest, Notification } = require('../models');
+    
+    // Delete related results
+    await Result.destroy({ where: { examId: id } });
+    
+    // Delete related re-attempt requests
+    await ReAttemptRequest.destroy({ where: { examId: id } });
+    
+    // Delete related notifications
+    await Notification.destroy({ where: { relatedId: id } });
+    
+    // Now delete the exam
     await exam.destroy();
     
     res.json({
@@ -327,6 +348,7 @@ const deleteExam = async (req, res) => {
       message: 'Exam deleted successfully'
     });
   } catch (error) {
+    console.error('Delete exam error:', error);
     res.status(500).json({
       success: false,
       message: error.message

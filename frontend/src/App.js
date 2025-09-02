@@ -21,6 +21,7 @@ import ExamResult from './components/Learner/ExamResult';
 import Profile from './components/Learner/Profile';
 import JobDetails from './components/Learner/JobDetails';
 import ApplicationTracker from './components/Learner/ApplicationTracker';
+import ReAttempts from './components/Learner/ReAttempts';
 
 const queryClient = new QueryClient();
 
@@ -180,6 +181,14 @@ function App() {
                 element={
                   <ProtectedRoute allowedRoles={['learner']}>
                     <ApplicationTracker />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="/learner/re-attempts" 
+                element={
+                  <ProtectedRoute allowedRoles={['learner']}>
+                    <ReAttempts />
                   </ProtectedRoute>
                 } 
               />

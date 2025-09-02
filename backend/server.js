@@ -40,7 +40,7 @@ app.post('/api/exams', auth, adminOnly, examController.createExam);
 app.get('/api/exams', auth, examController.getExams);
 app.get('/api/exams/:id', auth, examController.getExamById);
 app.put('/api/exams/:id', auth, adminOnly, examController.updateExam);
-app.delete('/api/exams/:id', auth, adminOnly, examController.deleteExam);
+app.delete('/api/exams/:id', auth, mentorOrAdmin, examController.deleteExam);
 app.post('/api/exams/submit', auth, examController.submitExam);
 
 // Result routes
