@@ -1,17 +1,38 @@
-const { Pool } = require('pg');
+const { Sequelize } = require('sequelize');
 
-const pool = new Pool({
+/**
+ * PostgreSQL database connection configuration
+ */
+const sequelize = new Sequelize({
+  dialect: 'postgres',
   host: process.env.DB_HOST || 'localhost',
-  port: process.env.DB_PORT || 5432,
-  database: process.env.DB_NAME,
-  user: process.env.DB_USER,
-  password: process.env.DB_PASSWORD,
-  max: 20,
-  idleTimeoutMillis: 30000,
-  connectionTimeoutMillis: 2000,
+  port: parseInt(process.env.DB_PORT) || 5432,
+  database: process.env.DB_NAME || 'oas_db',
+  username: process.env.DB_USER || 'postgres',
+  password: process.env.DB_PASSWORD || 'shiva',
+  logging: false,
+  pool: {
+    max: 5,
+    min: 0,
+    acquire: 30000,
+    idle: 10000
+  }
 });
 
-module.exports = {
-  query: (text, params) => pool.query(text, params),
-  pool
+const connectDB = async () => {
+  try {
+    await sequelize.authenticate();
+    console.log('PostgreSQL Connected successfully');
+    
+    // Sync database in development
+    if (process.env.NODE_ENV === 'development') {
+      await sequelize.sync({ alter: true });
+      console.log('Database synced');
+    }
+  } catch (error) {
+    console.error('Database connection error:', error);
+    process.exit(1);
+  }
 };
+
+module.exports = { sequelize, connectDB };

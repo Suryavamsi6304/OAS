@@ -6,11 +6,12 @@
   "scripts": {
     "start": "cd backend && npm start",
     "dev": "cd backend && npm run dev",
+    "dev:react": "cd frontend-react && npm start",
     "install-backend": "cd backend && npm install",
-    "install-frontend": "cd frontend && npm install",
+    "install-frontend": "cd frontend-react && npm install",
     "setup": "npm run install-backend && npm run install-frontend",
     "test": "cd backend && npm test",
-    "build": "echo 'Building application...'",
+    "build": "cd frontend-react && npm run build",
     "deploy": "echo 'Deploying application...'"
   },
   "keywords": [

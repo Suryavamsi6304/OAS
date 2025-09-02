@@ -1,0 +1,66 @@
+const User = require('./User');
+const Exam = require('./Exam');
+const Result = require('./Result');
+const JobPosting = require('./JobPosting');
+const Application = require('./Application');
+const ProctoringSession = require('./ProctoringSession');
+const ReAttemptRequest = require('./ReAttemptRequest');
+const Notification = require('./Notification');
+
+/**
+ * Define model associations for Recruitment System
+ */
+
+// User associations
+User.hasMany(Exam, { foreignKey: 'createdBy', as: 'createdExams' });
+User.hasMany(Result, { foreignKey: 'studentId', as: 'results' });
+User.hasMany(JobPosting, { foreignKey: 'createdBy', as: 'createdJobs' });
+User.hasMany(Application, { foreignKey: 'candidateId', as: 'applications' });
+User.hasMany(Application, { foreignKey: 'mentorId', as: 'mentorApplications' });
+
+// Job Posting associations
+JobPosting.belongsTo(User, { foreignKey: 'createdBy', as: 'creator' });
+JobPosting.hasMany(Application, { foreignKey: 'jobId', as: 'applications' });
+
+// Application associations
+Application.belongsTo(User, { foreignKey: 'candidateId', as: 'candidate' });
+Application.belongsTo(User, { foreignKey: 'mentorId', as: 'mentor' });
+Application.belongsTo(JobPosting, { foreignKey: 'jobId', as: 'job' });
+
+// ProctoringSession associations
+ProctoringSession.belongsTo(User, { foreignKey: 'candidateId', as: 'candidate' });
+ProctoringSession.belongsTo(Exam, { foreignKey: 'examId', as: 'exam' });
+User.hasMany(ProctoringSession, { foreignKey: 'candidateId', as: 'proctoringSessions' });
+Exam.hasMany(ProctoringSession, { foreignKey: 'examId', as: 'proctoringSessions' });
+
+// Exam associations (existing)
+Exam.belongsTo(User, { foreignKey: 'createdBy', as: 'creator' });
+Exam.hasMany(Result, { foreignKey: 'examId', as: 'results' });
+
+// Result associations (existing)
+Result.belongsTo(User, { foreignKey: 'studentId', as: 'student' });
+Result.belongsTo(Exam, { foreignKey: 'examId', as: 'exam' });
+
+// ReAttemptRequest associations
+ReAttemptRequest.belongsTo(User, { foreignKey: 'studentId', as: 'student' });
+ReAttemptRequest.belongsTo(User, { foreignKey: 'reviewedBy', as: 'reviewer' });
+ReAttemptRequest.belongsTo(Exam, { foreignKey: 'examId', as: 'exam' });
+ReAttemptRequest.belongsTo(Result, { foreignKey: 'resultId', as: 'result' });
+User.hasMany(ReAttemptRequest, { foreignKey: 'studentId', as: 'reAttemptRequests' });
+Exam.hasMany(ReAttemptRequest, { foreignKey: 'examId', as: 'reAttemptRequests' });
+Result.hasOne(ReAttemptRequest, { foreignKey: 'resultId', as: 'reAttemptRequest' });
+
+// Notification associations
+Notification.belongsTo(User, { foreignKey: 'userId', as: 'user' });
+User.hasMany(Notification, { foreignKey: 'userId', as: 'notifications' });
+
+module.exports = {
+  User,
+  Exam,
+  Result,
+  JobPosting,
+  Application,
+  ProctoringSession,
+  ReAttemptRequest,
+  Notification
+};

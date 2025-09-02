@@ -1,36 +1,73 @@
 const jwt = require('jsonwebtoken');
-const db = require('../config/database');
+const { User } = require('../models');
 
-const authenticateToken = async (req, res, next) => {
-  const authHeader = req.headers['authorization'];
-  const token = authHeader && authHeader.split(' ')[1];
-
-  if (!token) {
-    return res.status(401).json({ error: 'Access token required' });
-  }
-
+/**
+ * Authentication middleware
+ */
+const auth = async (req, res, next) => {
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    const result = await db.query('SELECT id, email, role FROM users WHERE id = $1 AND is_active = true', [decoded.userId]);
+    const token = req.header('Authorization')?.replace('Bearer ', '');
     
-    if (result.rows.length === 0) {
-      return res.status(401).json({ error: 'Invalid token' });
+    if (!token) {
+      return res.status(401).json({ 
+        success: false,
+        message: 'No token, authorization denied' 
+      });
     }
 
-    req.user = result.rows[0];
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const user = await User.findByPk(decoded.id, {
+      attributes: { exclude: ['password'] }
+    });
+    
+    if (!user) {
+      return res.status(401).json({ 
+        success: false,
+        message: 'Token is not valid' 
+      });
+    }
+
+    req.user = user;
     next();
   } catch (error) {
-    return res.status(403).json({ error: 'Invalid token' });
+    res.status(401).json({ 
+      success: false,
+      message: 'Token is not valid' 
+    });
   }
 };
 
-const authorizeRoles = (...roles) => {
-  return (req, res, next) => {
-    if (!roles.includes(req.user.role)) {
-      return res.status(403).json({ error: 'Insufficient permissions' });
-    }
-    next();
-  };
+/**
+ * Role-based middleware
+ */
+const adminOnly = (req, res, next) => {
+  if (req.user.role !== 'admin') {
+    return res.status(403).json({
+      success: false,
+      message: 'Admin access required'
+    });
+  }
+  next();
 };
 
-module.exports = { authenticateToken, authorizeRoles };
+const mentorOrAdmin = (req, res, next) => {
+  if (!['admin', 'mentor'].includes(req.user.role)) {
+    return res.status(403).json({
+      success: false,
+      message: 'Mentor or Admin access required'
+    });
+  }
+  next();
+};
+
+const learnerOnly = (req, res, next) => {
+  if (req.user.role !== 'learner') {
+    return res.status(403).json({
+      success: false,
+      message: 'Learner access required'
+    });
+  }
+  next();
+};
+
+module.exports = { auth, adminOnly, mentorOrAdmin, learnerOnly };
