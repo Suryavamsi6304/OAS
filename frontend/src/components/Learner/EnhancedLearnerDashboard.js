@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
-import { BookOpen, Clock, Award, Play, Eye, User, LogOut, Code, Target, TrendingUp, Calendar, Download, Star, Trophy, Zap, RefreshCw } from 'lucide-react';
+import { BookOpen, Clock, Award, Play, Eye, User, LogOut, Code, Target, TrendingUp, Calendar, Download, Star, Trophy, Zap, RefreshCw, FileText } from 'lucide-react';
 import axios from 'axios';
 import toast from 'react-hot-toast';
 
@@ -133,18 +133,19 @@ const EnhancedLearnerDashboard = () => {
         <h2 style={{ fontSize: '20px', fontWeight: 'bold', marginBottom: '20px' }}>Available Assessments</h2>
         
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '20px' }}>
-          {exams.map((exam) => {
+          {exams.filter(exam => {
             const isCompleted = results.some(r => r.examId === exam.id);
             const canRetake = exam.type === 'practice';
-            const approvedRequest = reAttemptRequests.find(r => r.examId === exam.id && r.status === 'approved');
-            const hasApprovedReAttempt = !!approvedRequest;
+            return !isCompleted || canRetake;
+          }).map((exam) => {
+            const isCompleted = results.some(r => r.examId === exam.id);
+            const canRetake = exam.type === 'practice';
             
             return (
               <div key={exam.id} style={{ 
                 padding: '20px', 
                 border: '1px solid #e5e7eb', 
                 borderRadius: '8px',
-                opacity: isCompleted && !canRetake && !hasApprovedReAttempt ? 0.7 : 1,
                 position: 'relative'
               }}>
                 {/* Test Type Badge */}
@@ -178,7 +179,7 @@ const EnhancedLearnerDashboard = () => {
                   </div>
                 )}
                 
-                {isCompleted && !hasApprovedReAttempt && (
+                {isCompleted && canRetake && (
                   <div style={{ 
                     padding: '8px 12px', 
                     backgroundColor: '#f0fdf4', 
@@ -187,35 +188,16 @@ const EnhancedLearnerDashboard = () => {
                     fontSize: '12px',
                     color: '#166534'
                   }}>
-                    ✅ Completed - {canRetake ? 'Can retake' : 'View results'}
-                  </div>
-                )}
-                
-                {hasApprovedReAttempt && (
-                  <div style={{ 
-                    padding: '8px 12px', 
-                    backgroundColor: '#fef3c7', 
-                    borderRadius: '6px', 
-                    marginBottom: '12px',
-                    fontSize: '12px',
-                    color: '#92400e'
-                  }}>
-                    🔄 Re-attempt approved - Take the exam again
+                    ✅ Completed - Can retake
                   </div>
                 )}
                 
                 <button
-                  onClick={() => {
-                    if (hasApprovedReAttempt || !isCompleted || canRetake) {
-                      navigate(`/learner/exam/${exam.id}/instructions`);
-                    } else {
-                      navigate(`/learner/results/${exam.id}`);
-                    }
-                  }}
+                  onClick={() => navigate(`/learner/exam/${exam.id}/instructions`)}
                   style={{
                     width: '100%',
                     padding: '10px',
-                    backgroundColor: hasApprovedReAttempt ? '#f59e0b' : (isCompleted && !canRetake ? '#6b7280' : '#3b82f6'),
+                    backgroundColor: isCompleted && canRetake ? '#10b981' : '#3b82f6',
                     color: 'white',
                     border: 'none',
                     borderRadius: '6px',
@@ -227,15 +209,8 @@ const EnhancedLearnerDashboard = () => {
                     gap: '8px'
                   }}
                 >
-                  {hasApprovedReAttempt ? (
-                    <><Play size={16} /> Start Re-attempt</>
-                  ) : isCompleted && !canRetake ? (
-                    <><Eye size={16} /> View Result</>
-                  ) : isCompleted && canRetake ? (
-                    <><Play size={16} /> Retake Test</>
-                  ) : (
-                    <><Play size={16} /> Start Test</>
-                  )}
+                  <Play size={16} />
+                  {isCompleted && canRetake ? 'Retake Test' : 'Start Test'}
                 </button>
               </div>
             );
@@ -478,6 +453,132 @@ const EnhancedLearnerDashboard = () => {
     </div>
   );
 
+  const renderResults = () => (
+    <div style={{ backgroundColor: 'white', padding: '24px', borderRadius: '8px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}>
+      <h2 style={{ fontSize: '20px', fontWeight: 'bold', marginBottom: '20px' }}>Exam Results</h2>
+      
+      {results.length === 0 ? (
+        <div style={{ textAlign: 'center', padding: '40px', color: '#6b7280' }}>
+          <FileText size={48} style={{ margin: '0 auto 16px', opacity: 0.5 }} />
+          <p>No exam results yet. Take some exams to see your results here!</p>
+        </div>
+      ) : (
+        <div style={{ display: 'grid', gap: '16px' }}>
+          {results.map((result) => {
+            const exam = exams.find(e => e.id === result.examId) || result.exam;
+            const isPassed = result.percentage >= (exam?.passingScore || 70);
+            
+            return (
+              <div key={result.id} style={{ 
+                padding: '20px', 
+                border: `2px solid ${isPassed ? '#10b981' : '#ef4444'}`, 
+                borderRadius: '8px',
+                backgroundColor: isPassed ? '#f0fdf4' : '#fef2f2'
+              }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px' }}>
+                  <div>
+                    <h3 style={{ fontSize: '18px', fontWeight: 'bold', margin: '0 0 4px 0' }}>{exam?.title || 'Unknown Exam'}</h3>
+                    <p style={{ color: '#6b7280', margin: 0, fontSize: '14px' }}>
+                      Completed on {new Date(result.createdAt).toLocaleDateString()}
+                    </p>
+                  </div>
+                  <div style={{ textAlign: 'right' }}>
+                    <div style={{ 
+                      fontSize: '24px', 
+                      fontWeight: 'bold', 
+                      color: isPassed ? '#10b981' : '#ef4444'
+                    }}>
+                      {result.percentage}%
+                    </div>
+                    <div style={{ 
+                      fontSize: '12px', 
+                      color: isPassed ? '#166534' : '#991b1b',
+                      fontWeight: '500'
+                    }}>
+                      {isPassed ? 'PASSED' : 'FAILED'}
+                    </div>
+                  </div>
+                </div>
+                
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: '12px', marginBottom: '16px' }}>
+                  <div style={{ textAlign: 'center', padding: '8px', backgroundColor: 'white', borderRadius: '6px' }}>
+                    <div style={{ fontSize: '16px', fontWeight: 'bold', color: '#374151' }}>{result.score}</div>
+                    <div style={{ fontSize: '12px', color: '#6b7280' }}>Score</div>
+                  </div>
+                  <div style={{ textAlign: 'center', padding: '8px', backgroundColor: 'white', borderRadius: '6px' }}>
+                    <div style={{ fontSize: '16px', fontWeight: 'bold', color: '#374151' }}>{result.totalPoints}</div>
+                    <div style={{ fontSize: '12px', color: '#6b7280' }}>Total Points</div>
+                  </div>
+                  <div style={{ textAlign: 'center', padding: '8px', backgroundColor: 'white', borderRadius: '6px' }}>
+                    <div style={{ fontSize: '16px', fontWeight: 'bold', color: '#374151' }}>{Math.floor((result.timeSpent || 0) / 60)}m</div>
+                    <div style={{ fontSize: '12px', color: '#6b7280' }}>Time Spent</div>
+                  </div>
+                  {exam?.passingScore && (
+                    <div style={{ textAlign: 'center', padding: '8px', backgroundColor: 'white', borderRadius: '6px' }}>
+                      <div style={{ fontSize: '16px', fontWeight: 'bold', color: '#374151' }}>{exam.passingScore}%</div>
+                      <div style={{ fontSize: '12px', color: '#6b7280' }}>Required</div>
+                    </div>
+                  )}
+                </div>
+                
+                <div style={{ display: 'flex', gap: '12px' }}>
+                  <button
+                    onClick={() => navigate(`/learner/results/${result.examId}`)}
+                    style={{
+                      flex: 1,
+                      padding: '10px',
+                      backgroundColor: '#3b82f6',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '6px',
+                      cursor: 'pointer',
+                      fontSize: '14px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '8px'
+                    }}
+                  >
+                    <Eye size={16} />
+                    View Details
+                  </button>
+                  
+                  {!isPassed && exam?.type !== 'practice' && (
+                    <button
+                      onClick={() => {
+                        const hasRequest = reAttemptRequests.some(r => r.examId === result.examId);
+                        if (hasRequest) {
+                          navigate('/learner/re-attempts');
+                        } else {
+                          navigate(`/learner/results/${result.examId}`);
+                        }
+                      }}
+                      style={{
+                        padding: '10px 16px',
+                        backgroundColor: '#f59e0b',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '6px',
+                        cursor: 'pointer',
+                        fontSize: '14px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px'
+                      }}
+                    >
+                      <RefreshCw size={16} />
+                      Re-attempt
+                    </button>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+
   const renderAnalytics = () => (
     <div style={{ backgroundColor: 'white', padding: '24px', borderRadius: '8px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}>
       <h2 style={{ fontSize: '20px', fontWeight: 'bold', marginBottom: '20px' }}>Performance Analytics</h2>
@@ -625,6 +726,7 @@ const EnhancedLearnerDashboard = () => {
               { id: 'dashboard', label: 'Dashboard', icon: BookOpen },
               { id: 'practice', label: 'Practice Tests', icon: Target },
               { id: 'skills', label: 'Skill Assessment', icon: Code },
+              { id: 'results', label: 'Results', icon: FileText },
               { id: 'certificates', label: 'Certificates', icon: Award },
               { id: 'analytics', label: 'Analytics', icon: TrendingUp },
               { id: 're-attempts', label: 'Re-attempts', icon: RefreshCw }
@@ -662,28 +764,111 @@ const EnhancedLearnerDashboard = () => {
         {activeTab === 'dashboard' && renderDashboard()}
         {activeTab === 'practice' && renderPracticeTests()}
         {activeTab === 'skills' && renderSkillAssessment()}
+        {activeTab === 'results' && renderResults()}
         {activeTab === 'certificates' && renderCertificates()}
         {activeTab === 'analytics' && renderAnalytics()}
         {activeTab === 're-attempts' && (
-          <div style={{ textAlign: 'center', padding: '40px' }}>
-            <RefreshCw size={48} style={{ color: '#3b82f6', margin: '0 auto 16px' }} />
-            <h3 style={{ fontSize: '18px', fontWeight: '600', margin: '0 0 16px 0' }}>Re-attempt Requests</h3>
-            <p style={{ color: '#6b7280', marginBottom: '24px' }}>View and track your exam re-attempt requests</p>
-            <button
-              onClick={() => navigate('/learner/re-attempts')}
-              style={{
-                padding: '12px 24px',
-                backgroundColor: '#3b82f6',
-                color: 'white',
-                border: 'none',
-                borderRadius: '6px',
-                cursor: 'pointer',
-                fontSize: '14px',
-                fontWeight: '500'
-              }}
-            >
-              View Re-attempts
-            </button>
+          <div style={{ backgroundColor: 'white', padding: '24px', borderRadius: '8px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}>
+            <h2 style={{ fontSize: '20px', fontWeight: 'bold', marginBottom: '20px' }}>Re-attempt Exams</h2>
+            
+            <div style={{ display: 'grid', gap: '16px' }}>
+              {/* Approved Re-attempts */}
+              {reAttemptRequests.filter(r => r.status === 'approved').map((request) => {
+                const exam = exams.find(e => e.id === request.examId);
+                if (!exam) return null;
+                
+                return (
+                  <div key={request.id} style={{ 
+                    padding: '20px', 
+                    border: '2px solid #10b981', 
+                    borderRadius: '8px',
+                    backgroundColor: '#f0fdf4'
+                  }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px' }}>
+                      <div>
+                        <h3 style={{ fontSize: '16px', fontWeight: 'bold', margin: '0 0 4px 0' }}>{exam.title}</h3>
+                        <p style={{ color: '#6b7280', margin: 0, fontSize: '14px' }}>
+                          Re-attempt approved on {new Date(request.reviewedAt).toLocaleDateString()}
+                        </p>
+                      </div>
+                      <span style={{ 
+                        padding: '4px 8px',
+                        borderRadius: '12px',
+                        fontSize: '10px',
+                        fontWeight: 'bold',
+                        backgroundColor: '#dcfce7',
+                        color: '#166534'
+                      }}>
+                        Approved
+                      </span>
+                    </div>
+                    
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '16px', fontSize: '12px', color: '#6b7280' }}>
+                      <span>⏱️ {exam.duration}min</span>
+                      <span>❓ {exam.questions?.length || 0} questions</span>
+                      <span>🏆 {exam.totalPoints || 0} points</span>
+                    </div>
+                    
+                    <button
+                      onClick={() => navigate(`/learner/exam/${exam.id}/instructions`)}
+                      style={{
+                        width: '100%',
+                        padding: '12px',
+                        backgroundColor: '#10b981',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '6px',
+                        cursor: 'pointer',
+                        fontSize: '14px',
+                        fontWeight: '500',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '8px'
+                      }}
+                    >
+                      <Play size={16} />
+                      Start Re-attempt
+                    </button>
+                  </div>
+                );
+              })}
+              
+              {/* Link to full re-attempts page */}
+              <div style={{ 
+                padding: '20px', 
+                border: '1px solid #e5e7eb', 
+                borderRadius: '8px',
+                textAlign: 'center',
+                backgroundColor: '#f8fafc'
+              }}>
+                <RefreshCw size={32} style={{ color: '#6b7280', margin: '0 auto 12px' }} />
+                <h3 style={{ fontSize: '16px', fontWeight: '600', margin: '0 0 8px 0' }}>View All Re-attempt Requests</h3>
+                <p style={{ color: '#6b7280', marginBottom: '16px', fontSize: '14px' }}>Track pending, approved, and rejected requests</p>
+                <button
+                  onClick={() => navigate('/learner/re-attempts')}
+                  style={{
+                    padding: '10px 20px',
+                    backgroundColor: '#3b82f6',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '6px',
+                    cursor: 'pointer',
+                    fontSize: '14px',
+                    fontWeight: '500'
+                  }}
+                >
+                  View All Requests
+                </button>
+              </div>
+            </div>
+            
+            {reAttemptRequests.filter(r => r.status === 'approved').length === 0 && (
+              <div style={{ textAlign: 'center', padding: '40px', color: '#6b7280' }}>
+                <RefreshCw size={48} style={{ margin: '0 auto 16px', opacity: 0.5 }} />
+                <p>No approved re-attempts available. Request re-attempts for failed exams from the results page.</p>
+              </div>
+            )}
           </div>
         )}
       </div>
