@@ -132,7 +132,7 @@ const EnhancedLearnerDashboard = () => {
       <div style={{ backgroundColor: 'white', padding: '24px', borderRadius: '8px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}>
         <h2 style={{ fontSize: '20px', fontWeight: 'bold', marginBottom: '20px' }}>Available Assessments</h2>
         
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '20px' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
           {exams.filter(exam => {
             const isCompleted = results.some(r => r.examId === exam.id);
             const canRetake = exam.type === 'practice';
@@ -143,39 +143,71 @@ const EnhancedLearnerDashboard = () => {
             
             return (
               <div key={exam.id} style={{ 
-                padding: '20px', 
-                border: '1px solid #e5e7eb', 
-                borderRadius: '8px',
-                position: 'relative'
+                backgroundColor: 'white',
+                border: '1px solid #e5e7eb',
+                borderRadius: '12px',
+                padding: '24px',
+                boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+                transition: 'all 0.2s ease',
+                cursor: 'pointer'
+              }}
+              onMouseEnter={(e) => {
+                e.target.style.boxShadow = '0 4px 12px rgba(0,0,0,0.15)';
+                e.target.style.transform = 'translateY(-2px)';
+              }}
+              onMouseLeave={(e) => {
+                e.target.style.boxShadow = '0 2px 8px rgba(0,0,0,0.1)';
+                e.target.style.transform = 'translateY(0)';
               }}>
-                {/* Test Type Badge */}
-                <div style={{
-                  position: 'absolute',
-                  top: '12px',
-                  right: '12px',
-                  padding: '4px 8px',
-                  borderRadius: '12px',
-                  fontSize: '10px',
-                  fontWeight: 'bold',
-                  backgroundColor: exam.type === 'practice' ? '#dcfce7' : exam.type === 'skill-assessment' ? '#e0f2fe' : '#fef3c7',
-                  color: exam.type === 'practice' ? '#166534' : exam.type === 'skill-assessment' ? '#0369a1' : '#92400e'
-                }}>
-                  {exam.type === 'practice' ? 'Practice' : exam.type === 'skill-assessment' ? 'Skill Test' : 'Exam'}
+                <div style={{ marginBottom: '16px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
+                    <h3 style={{ fontSize: '20px', fontWeight: 'bold', margin: 0, color: '#1f2937' }}>{exam.title}</h3>
+                    <span style={{
+                      padding: '4px 12px',
+                      borderRadius: '20px',
+                      fontSize: '12px',
+                      fontWeight: '600',
+                      backgroundColor: exam.type === 'practice' ? '#dcfce7' : exam.type === 'skill-assessment' ? '#dbeafe' : '#fef3c7',
+                      color: exam.type === 'practice' ? '#166534' : exam.type === 'skill-assessment' ? '#1e40af' : '#92400e'
+                    }}>
+                      {exam.type === 'practice' ? 'Practice' : exam.type === 'skill-assessment' ? 'Skill Test' : 'Assessment'}
+                    </span>
+                  </div>
+                  <p style={{ color: '#6b7280', margin: 0, fontSize: '16px', lineHeight: '1.5' }}>{exam.description}</p>
                 </div>
                 
-                <h3 style={{ fontSize: '16px', fontWeight: 'bold', marginBottom: '8px', paddingRight: '80px' }}>{exam.title}</h3>
-                <p style={{ color: '#6b7280', marginBottom: '12px', fontSize: '14px' }}>{exam.description}</p>
-                
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px', fontSize: '12px', color: '#6b7280' }}>
-                  <span>⏱️ {exam.duration}min</span>
-                  <span>❓ {exam.questions?.length || 0} questions</span>
-                  <span>🏆 {exam.totalPoints || 0} points</span>
-                  {exam.negativeMarking && <span>⚠️ -{exam.negativeMarkingValue} per wrong</span>}
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: '16px', marginBottom: '20px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <Clock size={18} style={{ color: '#3b82f6' }} />
+                    <span style={{ fontSize: '14px', fontWeight: '500' }}>{exam.duration} minutes</span>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <BookOpen size={18} style={{ color: '#10b981' }} />
+                    <span style={{ fontSize: '14px', fontWeight: '500' }}>{exam.questions?.length || 0} questions</span>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <Award size={18} style={{ color: '#f59e0b' }} />
+                    <span style={{ fontSize: '14px', fontWeight: '500' }}>{exam.totalPoints || 0} points</span>
+                  </div>
+                  {exam.passingScore && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <Target size={18} style={{ color: '#8b5cf6' }} />
+                      <span style={{ fontSize: '14px', fontWeight: '500' }}>{exam.passingScore}% to pass</span>
+                    </div>
+                  )}
                 </div>
                 
-                {exam.passingScore && (
-                  <div style={{ fontSize: '12px', color: '#6b7280', marginBottom: '12px' }}>
-                    📊 Passing Score: {exam.passingScore}%
+                {exam.negativeMarking && (
+                  <div style={{ 
+                    padding: '8px 12px', 
+                    backgroundColor: '#fef2f2', 
+                    borderRadius: '6px', 
+                    marginBottom: '16px',
+                    border: '1px solid #fecaca'
+                  }}>
+                    <span style={{ fontSize: '12px', color: '#dc2626', fontWeight: '500' }}>
+                      ⚠️ Negative marking: -{exam.negativeMarkingValue} points per wrong answer
+                    </span>
                   </div>
                 )}
                 
@@ -184,11 +216,12 @@ const EnhancedLearnerDashboard = () => {
                     padding: '8px 12px', 
                     backgroundColor: '#f0fdf4', 
                     borderRadius: '6px', 
-                    marginBottom: '12px',
-                    fontSize: '12px',
-                    color: '#166534'
+                    marginBottom: '16px',
+                    border: '1px solid #bbf7d0'
                   }}>
-                    ✅ Completed - Can retake
+                    <span style={{ fontSize: '12px', color: '#166534', fontWeight: '500' }}>
+                      ✅ Previously completed - You can retake this practice test
+                    </span>
                   </div>
                 )}
                 
@@ -196,21 +229,29 @@ const EnhancedLearnerDashboard = () => {
                   onClick={() => navigate(`/learner/exam/${exam.id}/instructions`)}
                   style={{
                     width: '100%',
-                    padding: '10px',
+                    padding: '14px 24px',
                     backgroundColor: isCompleted && canRetake ? '#10b981' : '#3b82f6',
                     color: 'white',
                     border: 'none',
-                    borderRadius: '6px',
+                    borderRadius: '8px',
                     cursor: 'pointer',
-                    fontSize: '14px',
+                    fontSize: '16px',
+                    fontWeight: '600',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    gap: '8px'
+                    gap: '8px',
+                    transition: 'background-color 0.2s'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.target.style.backgroundColor = isCompleted && canRetake ? '#059669' : '#2563eb';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.target.style.backgroundColor = isCompleted && canRetake ? '#10b981' : '#3b82f6';
                   }}
                 >
-                  <Play size={16} />
-                  {isCompleted && canRetake ? 'Retake Test' : 'Start Test'}
+                  <Play size={18} />
+                  {isCompleted && canRetake ? 'Retake Practice Test' : 'Start Assessment'}
                 </button>
               </div>
             );
@@ -230,52 +271,76 @@ const EnhancedLearnerDashboard = () => {
           <p>No practice tests available yet.</p>
         </div>
       ) : (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '20px' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
           {practiceTests.map((test) => {
             const isCompleted = results.some(r => r.examId === test.id);
             const result = results.find(r => r.examId === test.id);
             
             return (
               <div key={test.id} style={{ 
-                padding: '20px', 
-                border: '1px solid #e5e7eb', 
-                borderRadius: '8px',
-                position: 'relative'
+                backgroundColor: 'white',
+                border: '1px solid #e5e7eb',
+                borderRadius: '12px',
+                padding: '24px',
+                boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+                transition: 'all 0.2s ease',
+                cursor: 'pointer'
+              }}
+              onMouseEnter={(e) => {
+                e.target.style.boxShadow = '0 4px 12px rgba(0,0,0,0.15)';
+                e.target.style.transform = 'translateY(-2px)';
+              }}
+              onMouseLeave={(e) => {
+                e.target.style.boxShadow = '0 2px 8px rgba(0,0,0,0.1)';
+                e.target.style.transform = 'translateY(0)';
               }}>
-                <div style={{ 
-                  position: 'absolute', 
-                  top: '12px', 
-                  right: '12px',
-                  padding: '4px 8px',
-                  borderRadius: '12px',
-                  fontSize: '10px',
-                  fontWeight: 'bold',
-                  backgroundColor: '#dcfce7',
-                  color: '#166534'
-                }}>
-                  Practice
+                <div style={{ marginBottom: '16px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
+                    <h3 style={{ fontSize: '20px', fontWeight: 'bold', margin: 0, color: '#1f2937' }}>{test.title}</h3>
+                    <span style={{
+                      padding: '4px 12px',
+                      borderRadius: '20px',
+                      fontSize: '12px',
+                      fontWeight: '600',
+                      backgroundColor: '#dcfce7',
+                      color: '#166534'
+                    }}>
+                      Practice
+                    </span>
+                  </div>
+                  <p style={{ color: '#6b7280', margin: 0, fontSize: '16px', lineHeight: '1.5' }}>{test.description}</p>
                 </div>
                 
-                <h3 style={{ fontSize: '16px', fontWeight: 'bold', marginBottom: '8px', paddingRight: '60px' }}>{test.title}</h3>
-                <p style={{ color: '#6b7280', marginBottom: '12px', fontSize: '14px' }}>{test.description}</p>
-                
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '16px', fontSize: '12px', color: '#6b7280' }}>
-                  <span>❓ {test.questions?.length || 0} questions</span>
-                  <span>⏱️ {test.duration}min</span>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: '16px', marginBottom: '20px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <Clock size={18} style={{ color: '#3b82f6' }} />
+                    <span style={{ fontSize: '14px', fontWeight: '500' }}>{test.duration} minutes</span>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <BookOpen size={18} style={{ color: '#10b981' }} />
+                    <span style={{ fontSize: '14px', fontWeight: '500' }}>{test.questions?.length || 0} questions</span>
+                  </div>
+                  {test.totalPoints && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <Award size={18} style={{ color: '#f59e0b' }} />
+                      <span style={{ fontSize: '14px', fontWeight: '500' }}>{test.totalPoints} points</span>
+                    </div>
+                  )}
                 </div>
                 
                 {isCompleted && (
                   <div style={{ 
-                    padding: '8px 12px', 
+                    padding: '12px 16px', 
                     backgroundColor: '#f0fdf4', 
-                    borderRadius: '6px', 
-                    marginBottom: '12px',
+                    borderRadius: '8px', 
+                    marginBottom: '16px',
+                    border: '1px solid #bbf7d0',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'space-between'
                   }}>
-                    <span style={{ fontSize: '12px', color: '#166534' }}>✅ Completed</span>
-                    <span style={{ fontSize: '14px', fontWeight: 'bold', color: '#166534' }}>{result?.percentage}%</span>
+                    <span style={{ fontSize: '14px', color: '#166534', fontWeight: '500' }}>✅ Last Score:</span>
+                    <span style={{ fontSize: '18px', fontWeight: 'bold', color: '#166534' }}>{result?.percentage}%</span>
                   </div>
                 )}
                 
@@ -283,16 +348,29 @@ const EnhancedLearnerDashboard = () => {
                   onClick={() => navigate(`/learner/exam/${test.id}/instructions`)}
                   style={{
                     width: '100%',
-                    padding: '10px',
+                    padding: '14px 24px',
                     backgroundColor: isCompleted ? '#10b981' : '#3b82f6',
                     color: 'white',
                     border: 'none',
-                    borderRadius: '6px',
+                    borderRadius: '8px',
                     cursor: 'pointer',
-                    fontSize: '14px'
+                    fontSize: '16px',
+                    fontWeight: '600',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '8px',
+                    transition: 'background-color 0.2s'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.target.style.backgroundColor = isCompleted ? '#059669' : '#2563eb';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.target.style.backgroundColor = isCompleted ? '#10b981' : '#3b82f6';
                   }}
                 >
-                  {isCompleted ? 'Retake' : 'Start Practice'}
+                  <Play size={18} />
+                  {isCompleted ? 'Retake Practice' : 'Start Practice'}
                 </button>
               </div>
             );
@@ -312,65 +390,87 @@ const EnhancedLearnerDashboard = () => {
           <p>No skill assessments available yet.</p>
         </div>
       ) : (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '20px' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
           {skillAssessments.map((assessment) => {
             const isCompleted = results.some(r => r.examId === assessment.id);
             const result = results.find(r => r.examId === assessment.id);
             
             return (
               <div key={assessment.id} style={{ 
-                padding: '20px', 
-                border: '1px solid #e5e7eb', 
-                borderRadius: '8px',
-                position: 'relative'
+                backgroundColor: 'white',
+                border: '1px solid #e5e7eb',
+                borderRadius: '12px',
+                padding: '24px',
+                boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+                transition: 'all 0.2s ease',
+                cursor: 'pointer'
+              }}
+              onMouseEnter={(e) => {
+                e.target.style.boxShadow = '0 4px 12px rgba(0,0,0,0.15)';
+                e.target.style.transform = 'translateY(-2px)';
+              }}
+              onMouseLeave={(e) => {
+                e.target.style.boxShadow = '0 2px 8px rgba(0,0,0,0.1)';
+                e.target.style.transform = 'translateY(0)';
               }}>
-                <div style={{ 
-                  position: 'absolute', 
-                  top: '12px', 
-                  right: '12px',
-                  padding: '4px 8px',
-                  borderRadius: '12px',
-                  fontSize: '10px',
-                  fontWeight: 'bold',
-                  backgroundColor: '#e0f2fe',
-                  color: '#0369a1'
-                }}>
-                  Skill Test
+                <div style={{ marginBottom: '16px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
+                    <Code size={24} style={{ color: '#10b981' }} />
+                    <h3 style={{ fontSize: '20px', fontWeight: 'bold', margin: 0, color: '#1f2937' }}>{assessment.title}</h3>
+                    <span style={{
+                      padding: '4px 12px',
+                      borderRadius: '20px',
+                      fontSize: '12px',
+                      fontWeight: '600',
+                      backgroundColor: '#dbeafe',
+                      color: '#1e40af'
+                    }}>
+                      Skill Test
+                    </span>
+                  </div>
+                  <p style={{ color: '#6b7280', margin: 0, fontSize: '16px', lineHeight: '1.5' }}>{assessment.description}</p>
                 </div>
                 
-                <div style={{ display: 'flex', alignItems: 'center', marginBottom: '12px' }}>
-                  <Code size={20} style={{ color: '#10b981', marginRight: '8px' }} />
-                  <h3 style={{ fontSize: '16px', fontWeight: 'bold', margin: 0 }}>{assessment.title}</h3>
-                </div>
-                
-                <p style={{ color: '#6b7280', marginBottom: '12px', fontSize: '14px' }}>{assessment.description}</p>
-                
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '16px', fontSize: '12px', color: '#6b7280' }}>
-                  <span>❓ {assessment.questions?.length || 0} questions</span>
-                  <span>⏱️ {assessment.duration}min</span>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: '16px', marginBottom: '20px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <Clock size={18} style={{ color: '#3b82f6' }} />
+                    <span style={{ fontSize: '14px', fontWeight: '500' }}>{assessment.duration} minutes</span>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <BookOpen size={18} style={{ color: '#10b981' }} />
+                    <span style={{ fontSize: '14px', fontWeight: '500' }}>{assessment.questions?.length || 0} questions</span>
+                  </div>
+                  {assessment.totalPoints && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <Award size={18} style={{ color: '#f59e0b' }} />
+                      <span style={{ fontSize: '14px', fontWeight: '500' }}>{assessment.totalPoints} points</span>
+                    </div>
+                  )}
+                  {assessment.passingScore && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <Target size={18} style={{ color: '#8b5cf6' }} />
+                      <span style={{ fontSize: '14px', fontWeight: '500' }}>{assessment.passingScore}% to pass</span>
+                    </div>
+                  )}
                 </div>
                 
                 {isCompleted && (
-                  <div style={{ marginBottom: '12px' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
-                      <span style={{ fontSize: '12px', color: '#6b7280' }}>Last Score:</span>
-                      <span style={{ fontSize: '12px', fontWeight: 'bold', color: result?.percentage >= 70 ? '#10b981' : '#ef4444' }}>{result?.percentage}%</span>
-                    </div>
-                    <div style={{ 
-                      width: '100%', 
-                      height: '8px', 
-                      backgroundColor: '#e5e7eb', 
-                      borderRadius: '4px',
-                      overflow: 'hidden',
-                      marginBottom: '12px'
-                    }}>
-                      <div style={{
-                        width: `${result?.percentage || 0}%`,
-                        height: '100%',
-                        backgroundColor: result?.percentage >= 70 ? '#10b981' : '#ef4444',
-                        transition: 'width 0.3s'
-                      }} />
-                    </div>
+                  <div style={{ 
+                    padding: '12px 16px', 
+                    backgroundColor: result?.percentage >= 70 ? '#f0fdf4' : '#fef2f2', 
+                    borderRadius: '8px', 
+                    marginBottom: '16px',
+                    border: `1px solid ${result?.percentage >= 70 ? '#bbf7d0' : '#fecaca'}`,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between'
+                  }}>
+                    <span style={{ fontSize: '14px', color: result?.percentage >= 70 ? '#166534' : '#dc2626', fontWeight: '500' }}>
+                      {result?.percentage >= 70 ? '✅ Passed' : '❌ Failed'} - Last Score:
+                    </span>
+                    <span style={{ fontSize: '18px', fontWeight: 'bold', color: result?.percentage >= 70 ? '#166534' : '#dc2626' }}>
+                      {result?.percentage}%
+                    </span>
                   </div>
                 )}
                 
@@ -378,15 +478,28 @@ const EnhancedLearnerDashboard = () => {
                   onClick={() => navigate(`/learner/exam/${assessment.id}/instructions`)}
                   style={{
                     width: '100%',
-                    padding: '10px',
+                    padding: '14px 24px',
                     backgroundColor: isCompleted ? '#10b981' : '#3b82f6',
                     color: 'white',
                     border: 'none',
-                    borderRadius: '6px',
+                    borderRadius: '8px',
                     cursor: 'pointer',
-                    fontSize: '14px'
+                    fontSize: '16px',
+                    fontWeight: '600',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '8px',
+                    transition: 'background-color 0.2s'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.target.style.backgroundColor = isCompleted ? '#059669' : '#2563eb';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.target.style.backgroundColor = isCompleted ? '#10b981' : '#3b82f6';
                   }}
                 >
+                  <Code size={18} />
                   {isCompleted ? 'Reassess Skill' : 'Start Assessment'}
                 </button>
               </div>
