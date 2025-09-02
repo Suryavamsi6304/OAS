@@ -463,117 +463,121 @@ const EnhancedLearnerDashboard = () => {
           <p>No exam results yet. Take some exams to see your results here!</p>
         </div>
       ) : (
-        <div style={{ display: 'grid', gap: '16px' }}>
-          {results.map((result) => {
-            const exam = exams.find(e => e.id === result.examId) || result.exam;
-            const isPassed = result.percentage >= (exam?.passingScore || 70);
-            
-            return (
-              <div key={result.id} style={{ 
-                padding: '20px', 
-                border: `2px solid ${isPassed ? '#10b981' : '#ef4444'}`, 
-                borderRadius: '8px',
-                backgroundColor: isPassed ? '#f0fdf4' : '#fef2f2'
-              }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px' }}>
-                  <div>
-                    <h3 style={{ fontSize: '18px', fontWeight: 'bold', margin: '0 0 4px 0' }}>{exam?.title || 'Unknown Exam'}</h3>
-                    <p style={{ color: '#6b7280', margin: 0, fontSize: '14px' }}>
-                      Completed on {new Date(result.createdAt).toLocaleDateString()}
-                    </p>
-                  </div>
-                  <div style={{ textAlign: 'right' }}>
-                    <div style={{ 
-                      fontSize: '24px', 
-                      fontWeight: 'bold', 
-                      color: isPassed ? '#10b981' : '#ef4444'
-                    }}>
-                      {result.percentage}%
-                    </div>
-                    <div style={{ 
-                      fontSize: '12px', 
-                      color: isPassed ? '#166534' : '#991b1b',
-                      fontWeight: '500'
-                    }}>
-                      {isPassed ? 'PASSED' : 'FAILED'}
-                    </div>
-                  </div>
-                </div>
+        <div style={{ overflowX: 'auto' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+            <thead>
+              <tr style={{ borderBottom: '2px solid #e5e7eb' }}>
+                <th style={{ textAlign: 'left', padding: '12px', fontWeight: '600', color: '#374151' }}>Exam</th>
+                <th style={{ textAlign: 'center', padding: '12px', fontWeight: '600', color: '#374151' }}>Score</th>
+                <th style={{ textAlign: 'center', padding: '12px', fontWeight: '600', color: '#374151' }}>Status</th>
+                <th style={{ textAlign: 'center', padding: '12px', fontWeight: '600', color: '#374151' }}>Date</th>
+                <th style={{ textAlign: 'center', padding: '12px', fontWeight: '600', color: '#374151' }}>Time</th>
+                <th style={{ textAlign: 'center', padding: '12px', fontWeight: '600', color: '#374151' }}>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {results.map((result) => {
+                const exam = exams.find(e => e.id === result.examId) || result.exam;
+                const isPassed = result.percentage >= (exam?.passingScore || 70);
                 
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: '12px', marginBottom: '16px' }}>
-                  <div style={{ textAlign: 'center', padding: '8px', backgroundColor: 'white', borderRadius: '6px' }}>
-                    <div style={{ fontSize: '16px', fontWeight: 'bold', color: '#374151' }}>{result.score}</div>
-                    <div style={{ fontSize: '12px', color: '#6b7280' }}>Score</div>
-                  </div>
-                  <div style={{ textAlign: 'center', padding: '8px', backgroundColor: 'white', borderRadius: '6px' }}>
-                    <div style={{ fontSize: '16px', fontWeight: 'bold', color: '#374151' }}>{result.totalPoints}</div>
-                    <div style={{ fontSize: '12px', color: '#6b7280' }}>Total Points</div>
-                  </div>
-                  <div style={{ textAlign: 'center', padding: '8px', backgroundColor: 'white', borderRadius: '6px' }}>
-                    <div style={{ fontSize: '16px', fontWeight: 'bold', color: '#374151' }}>{Math.floor((result.timeSpent || 0) / 60)}m</div>
-                    <div style={{ fontSize: '12px', color: '#6b7280' }}>Time Spent</div>
-                  </div>
-                  {exam?.passingScore && (
-                    <div style={{ textAlign: 'center', padding: '8px', backgroundColor: 'white', borderRadius: '6px' }}>
-                      <div style={{ fontSize: '16px', fontWeight: 'bold', color: '#374151' }}>{exam.passingScore}%</div>
-                      <div style={{ fontSize: '12px', color: '#6b7280' }}>Required</div>
-                    </div>
-                  )}
-                </div>
-                
-                <div style={{ display: 'flex', gap: '12px' }}>
-                  <button
-                    onClick={() => navigate(`/learner/results/${result.examId}`)}
-                    style={{
-                      flex: 1,
-                      padding: '10px',
-                      backgroundColor: '#3b82f6',
-                      color: 'white',
-                      border: 'none',
-                      borderRadius: '6px',
-                      cursor: 'pointer',
-                      fontSize: '14px',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      gap: '8px'
-                    }}
-                  >
-                    <Eye size={16} />
-                    View Details
-                  </button>
-                  
-                  {!isPassed && exam?.type !== 'practice' && (
-                    <button
-                      onClick={() => {
-                        const hasRequest = reAttemptRequests.some(r => r.examId === result.examId);
-                        if (hasRequest) {
-                          navigate('/learner/re-attempts');
-                        } else {
-                          navigate(`/learner/results/${result.examId}`);
-                        }
-                      }}
-                      style={{
-                        padding: '10px 16px',
-                        backgroundColor: '#f59e0b',
-                        color: 'white',
-                        border: 'none',
-                        borderRadius: '6px',
-                        cursor: 'pointer',
-                        fontSize: '14px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '8px'
-                      }}
-                    >
-                      <RefreshCw size={16} />
-                      Re-attempt
-                    </button>
-                  )}
-                </div>
-              </div>
-            );
-          })}
+                return (
+                  <tr key={result.id} style={{ borderBottom: '1px solid #f3f4f6' }}>
+                    <td style={{ padding: '16px' }}>
+                      <div>
+                        <div style={{ fontWeight: '600', fontSize: '14px', marginBottom: '4px' }}>
+                          {exam?.title || 'Unknown Exam'}
+                        </div>
+                        <div style={{ fontSize: '12px', color: '#6b7280' }}>
+                          {exam?.type === 'practice' ? 'Practice Test' : 
+                           exam?.type === 'skill-assessment' ? 'Skill Assessment' : 'Exam'}
+                        </div>
+                      </div>
+                    </td>
+                    <td style={{ padding: '16px', textAlign: 'center' }}>
+                      <div style={{ 
+                        fontSize: '18px', 
+                        fontWeight: 'bold', 
+                        color: isPassed ? '#10b981' : '#ef4444'
+                      }}>
+                        {result.percentage}%
+                      </div>
+                      <div style={{ fontSize: '12px', color: '#6b7280' }}>
+                        {result.score}/{result.totalPoints}
+                      </div>
+                    </td>
+                    <td style={{ padding: '16px', textAlign: 'center' }}>
+                      <span style={{
+                        padding: '4px 12px',
+                        borderRadius: '12px',
+                        fontSize: '12px',
+                        fontWeight: '600',
+                        backgroundColor: isPassed ? '#dcfce7' : '#fee2e2',
+                        color: isPassed ? '#166534' : '#991b1b'
+                      }}>
+                        {isPassed ? 'PASSED' : 'FAILED'}
+                      </span>
+                    </td>
+                    <td style={{ padding: '16px', textAlign: 'center', color: '#6b7280', fontSize: '14px' }}>
+                      {new Date(result.createdAt).toLocaleDateString()}
+                    </td>
+                    <td style={{ padding: '16px', textAlign: 'center', color: '#6b7280', fontSize: '14px' }}>
+                      {Math.floor((result.timeSpent || 0) / 60)}m {(result.timeSpent || 0) % 60}s
+                    </td>
+                    <td style={{ padding: '16px', textAlign: 'center' }}>
+                      <div style={{ display: 'flex', gap: '8px', justifyContent: 'center' }}>
+                        <button
+                          onClick={() => navigate(`/learner/results/${result.examId}`)}
+                          style={{
+                            padding: '6px 12px',
+                            backgroundColor: '#3b82f6',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: '4px',
+                            cursor: 'pointer',
+                            fontSize: '12px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '4px'
+                          }}
+                        >
+                          <Eye size={14} />
+                          View
+                        </button>
+                        
+                        {!isPassed && exam?.type !== 'practice' && (
+                          <button
+                            onClick={() => {
+                              const hasRequest = reAttemptRequests.some(r => r.examId === result.examId);
+                              if (hasRequest) {
+                                navigate('/learner/re-attempts');
+                              } else {
+                                navigate(`/learner/results/${result.examId}`);
+                              }
+                            }}
+                            style={{
+                              padding: '6px 12px',
+                              backgroundColor: '#f59e0b',
+                              color: 'white',
+                              border: 'none',
+                              borderRadius: '4px',
+                              cursor: 'pointer',
+                              fontSize: '12px',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '4px'
+                            }}
+                          >
+                            <RefreshCw size={14} />
+                            Re-attempt
+                          </button>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
         </div>
       )}
     </div>

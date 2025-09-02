@@ -185,7 +185,7 @@ const CreatePracticeTest = () => {
         <div style={{ backgroundColor: 'white', padding: '24px', borderRadius: '8px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)', marginBottom: '24px' }}>
           <h2 style={{ fontSize: '20px', fontWeight: 'bold', marginBottom: '20px' }}>Practice Test Information</h2>
           
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '16px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '16px', marginBottom: '16px' }}>
             <div>
               <label style={{ display: 'block', marginBottom: '4px', fontSize: '14px', fontWeight: '500' }}>Title</label>
               <input
@@ -193,6 +193,15 @@ const CreatePracticeTest = () => {
                 onChange={(e) => setTestData({...testData, title: e.target.value})}
                 style={{ width: '100%', padding: '8px', border: '1px solid #d1d5db', borderRadius: '4px' }}
                 placeholder="Enter test title"
+              />
+            </div>
+            <div>
+              <label style={{ display: 'block', marginBottom: '4px', fontSize: '14px', fontWeight: '500' }}>Batch Code</label>
+              <input
+                value={testData.batchCode || ''}
+                onChange={(e) => setTestData({...testData, batchCode: e.target.value})}
+                style={{ width: '100%', padding: '8px', border: '1px solid #d1d5db', borderRadius: '4px' }}
+                placeholder="Enter batch code (e.g., BATCH001)"
               />
             </div>
             <div>

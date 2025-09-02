@@ -16,7 +16,8 @@ const Register = () => {
     email: '',
     password: '',
     confirmPassword: '',
-    role: 'learner'
+    role: 'learner',
+    batchCode: ''
   });
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -236,6 +237,33 @@ const Register = () => {
               <option value="mentor">Mentor (Interviewer)</option>
             </select>
           </div>
+
+          {/* Batch Code for Learners */}
+          {formData.role === 'learner' && (
+            <div style={{ marginBottom: '20px' }}>
+              <label style={{ display: 'block', marginBottom: '6px', fontWeight: '500' }}>
+                Batch Code
+              </label>
+              <input
+                type="text"
+                name="batchCode"
+                value={formData.batchCode}
+                onChange={handleChange}
+                required={formData.role === 'learner'}
+                placeholder="Enter your batch code (e.g., BATCH001)"
+                style={{
+                  width: '100%',
+                  padding: '12px',
+                  border: '2px solid #e5e7eb',
+                  borderRadius: '8px',
+                  fontSize: '16px',
+                  transition: 'border-color 0.2s'
+                }}
+                onFocus={(e) => e.target.style.borderColor = '#3b82f6'}
+                onBlur={(e) => e.target.style.borderColor = '#e5e7eb'}
+              />
+            </div>
+          )}
 
           {/* Password */}
           <div style={{ marginBottom: '20px' }}>

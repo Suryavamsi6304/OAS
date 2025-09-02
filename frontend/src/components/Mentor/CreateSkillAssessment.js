@@ -192,7 +192,7 @@ const CreateSkillAssessment = () => {
         <div style={{ backgroundColor: 'white', padding: '24px', borderRadius: '8px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)', marginBottom: '24px' }}>
           <h2 style={{ fontSize: '20px', fontWeight: 'bold', marginBottom: '20px' }}>Skill Assessment Information</h2>
           
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '16px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '16px', marginBottom: '16px' }}>
             <div>
               <label style={{ display: 'block', marginBottom: '4px', fontSize: '14px', fontWeight: '500' }}>Skill/Technology</label>
               <select
@@ -205,6 +205,15 @@ const CreateSkillAssessment = () => {
                   <option key={skill} value={skill}>{skill}</option>
                 ))}
               </select>
+            </div>
+            <div>
+              <label style={{ display: 'block', marginBottom: '4px', fontSize: '14px', fontWeight: '500' }}>Batch Code</label>
+              <input
+                value={assessmentData.batchCode || ''}
+                onChange={(e) => setAssessmentData({...assessmentData, batchCode: e.target.value})}
+                style={{ width: '100%', padding: '8px', border: '1px solid #d1d5db', borderRadius: '4px' }}
+                placeholder="Enter batch code (e.g., BATCH001)"
+              />
             </div>
             <div>
               <label style={{ display: 'block', marginBottom: '4px', fontSize: '14px', fontWeight: '500' }}>Level</label>

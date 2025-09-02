@@ -15,7 +15,7 @@ const generateToken = (id) => {
  */
 const register = async (req, res) => {
   try {
-    const { username, email, password, name, role = 'learner' } = req.body;
+    const { username, email, password, name, role = 'learner', batchCode } = req.body;
 
     // Prevent admin registration
     if (role === 'admin') {
@@ -30,6 +30,14 @@ const register = async (req, res) => {
       return res.status(400).json({
         success: false,
         message: 'All fields are required'
+      });
+    }
+
+    // Validate batch code for learners
+    if (role === 'learner' && !batchCode) {
+      return res.status(400).json({
+        success: false,
+        message: 'Batch code is required for learners'
       });
     }
 
@@ -56,7 +64,8 @@ const register = async (req, res) => {
       email,
       password,
       name,
-      role
+      role,
+      batchCode: role === 'learner' ? batchCode : null
     });
 
     // Generate token
@@ -70,7 +79,8 @@ const register = async (req, res) => {
         username: user.username,
         email: user.email,
         name: user.name,
-        role: user.role
+        role: user.role,
+        batchCode: user.batchCode
       }
     });
   } catch (error) {
@@ -117,7 +127,8 @@ const login = async (req, res) => {
         username: user.username,
         email: user.email,
         name: user.name,
-        role: user.role
+        role: user.role,
+        batchCode: user.batchCode
       }
     });
   } catch (error) {
@@ -144,7 +155,8 @@ const verifyToken = async (req, res) => {
         username: user.username,
         email: user.email,
         name: user.name,
-        role: user.role
+        role: user.role,
+        batchCode: user.batchCode
       }
     });
   } catch (error) {
