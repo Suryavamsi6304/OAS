@@ -85,6 +85,7 @@ const register = async (req, res) => {
     });
   } catch (error) {
     console.error('Registration error:', error);
+    console.error('Error stack:', error.stack);
     res.status(500).json({
       success: false,
       message: error.message || 'Registration failed'
@@ -132,6 +133,7 @@ const login = async (req, res) => {
       }
     });
   } catch (error) {
+    console.error('Login error:', error);
     res.status(500).json({
       success: false,
       message: 'Server error'

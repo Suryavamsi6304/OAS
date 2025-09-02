@@ -239,6 +239,7 @@ const EnhancedMentorDashboard = () => {
             <thead>
               <tr style={{ borderBottom: '2px solid #e5e7eb' }}>
                 <th style={{ textAlign: 'left', padding: '12px', fontWeight: '600' }}>Student</th>
+                <th style={{ textAlign: 'left', padding: '12px', fontWeight: '600' }}>Batch</th>
                 <th style={{ textAlign: 'left', padding: '12px', fontWeight: '600' }}>Exam</th>
                 <th style={{ textAlign: 'left', padding: '12px', fontWeight: '600' }}>Score</th>
                 <th style={{ textAlign: 'left', padding: '12px', fontWeight: '600' }}>Date</th>
@@ -249,6 +250,18 @@ const EnhancedMentorDashboard = () => {
               {results.slice(0, 5).map((result) => (
                 <tr key={result.id} style={{ borderBottom: '1px solid #f3f4f6' }}>
                   <td style={{ padding: '12px' }}>{result.student?.name}</td>
+                  <td style={{ padding: '12px' }}>
+                    <span style={{
+                      padding: '2px 6px',
+                      backgroundColor: '#3b82f6',
+                      color: 'white',
+                      borderRadius: '4px',
+                      fontSize: '10px',
+                      fontWeight: 'bold'
+                    }}>
+                      {result.student?.batchCode || 'N/A'}
+                    </span>
+                  </td>
                   <td style={{ padding: '12px' }}>{result.exam?.title}</td>
                   <td style={{ padding: '12px' }}>
                     <span style={{ color: result.percentage >= 70 ? '#10b981' : '#ef4444', fontWeight: '600' }}>
@@ -341,6 +354,21 @@ const EnhancedMentorDashboard = () => {
                   <span>👥 {attempts} attempts</span>
                 </div>
                 
+                {test.batchCode && (
+                  <div style={{ marginBottom: '12px' }}>
+                    <span style={{
+                      padding: '2px 6px',
+                      backgroundColor: '#3b82f6',
+                      color: 'white',
+                      borderRadius: '4px',
+                      fontSize: '10px',
+                      fontWeight: 'bold'
+                    }}>
+                      Batch: {test.batchCode}
+                    </span>
+                  </div>
+                )}
+                
                 <div style={{ fontSize: '12px', color: '#6b7280' }}>
                   Created: {new Date(test.createdAt).toLocaleDateString()}
                 </div>
@@ -421,6 +449,21 @@ const EnhancedMentorDashboard = () => {
                   <span>⏱️ {assessment.duration}min</span>
                   <span>👥 {attempts} attempts</span>
                 </div>
+                
+                {assessment.batchCode && (
+                  <div style={{ marginBottom: '12px' }}>
+                    <span style={{
+                      padding: '2px 6px',
+                      backgroundColor: '#3b82f6',
+                      color: 'white',
+                      borderRadius: '4px',
+                      fontSize: '10px',
+                      fontWeight: 'bold'
+                    }}>
+                      Batch: {assessment.batchCode}
+                    </span>
+                  </div>
+                )}
                 
                 <div style={{ fontSize: '12px', color: '#6b7280' }}>
                   Created: {new Date(assessment.createdAt).toLocaleDateString()}

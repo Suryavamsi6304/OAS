@@ -10,7 +10,7 @@ const ExamTaking = () => {
   const navigate = useNavigate();
   const [currentQuestion, setCurrentQuestion] = useState(0);
   const [answers, setAnswers] = useState({});
-  const [timeLeft, setTimeLeft] = useState(0);
+  const [timeLeft, setTimeLeft] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const { data: exam, isLoading, error } = useQuery(['exam', id], async () => {
@@ -25,10 +25,10 @@ const ExamTaking = () => {
   });
 
   useEffect(() => {
-    if (exam?.duration) {
+    if (exam?.duration && timeLeft === null) {
       setTimeLeft(exam.duration * 60);
     }
-  }, [exam]);
+  }, [exam, timeLeft]);
 
   // Start time tracking
   const [startTime] = useState(Date.now());
@@ -37,10 +37,10 @@ const ExamTaking = () => {
     if (timeLeft > 0) {
       const timer = setTimeout(() => setTimeLeft(timeLeft - 1), 1000);
       return () => clearTimeout(timer);
-    } else if (timeLeft === 0 && exam) {
+    } else if (timeLeft === 0 && timeLeft !== null) {
       handleSubmit();
     }
-  }, [timeLeft, exam]);
+  }, [timeLeft]);
 
   const formatTime = (seconds) => {
     const mins = Math.floor(seconds / 60);
@@ -172,7 +172,7 @@ const ExamTaking = () => {
                 fontWeight: 'bold',
                 color: timeLeft < 300 ? '#dc2626' : '#059669'
               }}>
-                {formatTime(timeLeft)}
+                {timeLeft !== null ? formatTime(timeLeft) : '--:--'}
               </span>
             </div>
             

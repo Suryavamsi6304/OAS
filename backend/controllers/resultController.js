@@ -52,7 +52,7 @@ const getAllResults = async (req, res) => {
         {
           model: User,
           as: 'student',
-          attributes: ['name', 'username']
+          attributes: ['name', 'username', 'batchCode']
         },
         {
           model: Exam,
