@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery } from 'react-query';
 import { Clock, ChevronLeft, ChevronRight, Flag, Send } from 'lucide-react';
@@ -167,10 +167,6 @@ const ExamTaking = () => {
           ref={proctoringMonitorRef}
           sessionId={proctoringSession.sessionId}
           examId={id}
-          onViolation={(violation, riskScore) => {
-            console.log('Proctoring violation:', violation, 'Risk score:', riskScore);
-            // Handle violation reporting here if needed
-          }}
         />
       )}
       {/* Header */}
