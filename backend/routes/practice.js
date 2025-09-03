@@ -4,6 +4,25 @@ const { authenticateToken, authorizeRoles } = require('../middleware/auth');
 
 const router = express.Router();
 
+// Get all practice tests
+router.get('/tests', authenticateToken, async (req, res) => {
+  try {
+    const result = await db.query(
+      `SELECT pt.*, COUNT(q.id) as questionCount
+       FROM "PracticeTests" pt
+       LEFT JOIN "Questions" q ON pt.id = q."practiceTestId"
+       WHERE pt."isActive" = true
+       GROUP BY pt.id
+       ORDER BY pt."createdAt" DESC`
+    );
+    
+    res.json({ success: true, data: result.rows });
+  } catch (error) {
+    console.error('Get practice tests error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 // Get practice questions by level
 router.get('/level/:level', authenticateToken, authorizeRoles('student'), async (req, res) => {
   try {
@@ -64,6 +83,25 @@ router.post('/submit', authenticateToken, authorizeRoles('student'), async (req,
     });
   } catch (error) {
     console.error('Submit practice error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Get practice tests (alias for backward compatibility)
+router.get('/', authenticateToken, async (req, res) => {
+  try {
+    const result = await db.query(
+      `SELECT pt.*, COUNT(q.id) as questionCount
+       FROM "PracticeTests" pt
+       LEFT JOIN "Questions" q ON pt.id = q."practiceTestId"
+       WHERE pt."isActive" = true
+       GROUP BY pt.id
+       ORDER BY pt."createdAt" DESC`
+    );
+    
+    res.json({ success: true, data: result.rows });
+  } catch (error) {
+    console.error('Get practice tests error:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });

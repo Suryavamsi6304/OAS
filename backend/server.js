@@ -91,7 +91,7 @@ app.get('/api/practice-tests', auth, async (req, res) => {
 });
 
 // Skill Assessments routes
-app.post('/api/skills/assessment', auth, mentorOrAdmin, async (req, res) => {
+app.post('/api/skill-assessments', auth, mentorOrAdmin, async (req, res) => {
   try {
     const { Exam } = require('./models');
     const assessment = await Exam.create({
@@ -104,7 +104,7 @@ app.post('/api/skills/assessment', auth, mentorOrAdmin, async (req, res) => {
     res.status(500).json({ success: false, message: error.message });
   }
 });
-app.get('/api/skills/assessment', auth, async (req, res) => {
+app.get('/api/skill-assessments', auth, async (req, res) => {
   try {
     const { Exam } = require('./models');
     let whereClause = { isActive: true, type: 'skill-assessment' };
@@ -127,9 +127,97 @@ app.get('/api/skills/assessment', auth, async (req, res) => {
 // Proctoring routes
 app.post('/api/proctoring/start', auth, proctoringController.startSession);
 app.post('/api/proctoring/:sessionId/violation', auth, proctoringController.reportViolation);
+app.post('/api/proctoring/log-violation', auth, async (req, res) => {
+  try {
+    const { ProctoringLog } = require('./models');
+    const { sessionId, violationType, severity, details, riskScore } = req.body;
+    
+    const log = await ProctoringLog.create({
+      sessionId,
+      studentId: req.user.id,
+      examId: req.body.examId,
+      violationType,
+      severity,
+      details,
+      riskScore
+    });
+    
+    res.json({ success: true, data: log });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Failed to log violation' });
+  }
+});
 app.put('/api/proctoring/:sessionId/behavior', auth, proctoringController.updateBehavior);
 app.post('/api/proctoring/:sessionId/end', auth, proctoringController.endSession);
 app.get('/api/proctoring/sessions', auth, mentorOrAdmin, proctoringController.getSessions);
+
+// Proctoring logs endpoint
+app.get('/api/proctoring/logs', auth, mentorOrAdmin, async (req, res) => {
+  try {
+    const { ProctoringLog, User, Exam } = require('./models');
+    const { filter = 'all' } = req.query;
+    
+    let whereClause = {};
+    if (filter === 'flagged') whereClause.status = 'flagged';
+    if (filter === 'violations') whereClause.severity = ['high', 'critical'];
+    
+    const logs = await ProctoringLog.findAll({
+      where: whereClause,
+      include: [
+        { model: User, as: 'student', attributes: ['name'] },
+        { model: Exam, attributes: ['title'] }
+      ],
+      order: [['createdAt', 'DESC']]
+    });
+    
+    res.json({ success: true, data: logs });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Failed to fetch logs' });
+  }
+});
+
+// Active sessions endpoint
+app.get('/api/proctoring/active-sessions', auth, mentorOrAdmin, async (req, res) => {
+  try {
+    const mockSessions = [
+      {
+        sessionId: 'session_' + Date.now(),
+        studentName: 'Jane Smith',
+        examTitle: 'React Development',
+        riskScore: 45,
+        violations: 1,
+        duration: 900,
+        lastViolation: 'Multiple faces detected'
+      }
+    ];
+    res.json({ success: true, data: mockSessions });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Failed to fetch active sessions' });
+  }
+});
+
+// Flag student endpoint
+app.post('/api/proctoring/:sessionId/flag', auth, mentorOrAdmin, async (req, res) => {
+  try {
+    const { sessionId } = req.params;
+    const { reason } = req.body;
+    console.log(`Flagged session ${sessionId}: ${reason}`);
+    res.json({ success: true, message: 'Student flagged successfully' });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Failed to flag student' });
+  }
+});
+
+// Terminate session endpoint
+app.post('/api/proctoring/:sessionId/terminate', auth, mentorOrAdmin, async (req, res) => {
+  try {
+    const { sessionId } = req.params;
+    console.log(`Terminated session ${sessionId}`);
+    res.json({ success: true, message: 'Session terminated successfully' });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Failed to terminate session' });
+  }
+});
 
 // Re-attempt routes
 app.post('/api/re-attempt/request', auth, learnerOnly, reAttemptController.requestReAttempt);

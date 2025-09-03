@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery } from 'react-query';
 import { Clock, ChevronLeft, ChevronRight, Flag, Send } from 'lucide-react';
@@ -39,6 +39,15 @@ const ExamTaking = () => {
       setShowProctoringSetup(true);
     }
   }, [exam, timeLeft, proctoringSession]);
+
+  // Cleanup when component unmounts
+  useEffect(() => {
+    return () => {
+      if (proctoringMonitorRef.current) {
+        proctoringMonitorRef.current.stopMonitoring();
+      }
+    };
+  }, []);
 
   // Start time tracking
   const [startTime] = useState(Date.now());

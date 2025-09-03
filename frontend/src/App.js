@@ -10,6 +10,10 @@ import ExamForm from './components/Admin/ExamForm';
 import EnhancedMentorDashboard from './components/Mentor/EnhancedMentorDashboard';
 import CreatePracticeTest from './components/Mentor/CreatePracticeTest';
 import CreateSkillAssessment from './components/Mentor/CreateSkillAssessment';
+import ProctoringLogsPage from './components/Mentor/ProctoringLogsPage';
+import LiveMonitorPage from './components/Mentor/LiveMonitorPage';
+import ApprovalRequestsPage from './components/Mentor/ApprovalRequestsPage';
+import ReAttemptRequests from './components/Mentor/ReAttemptRequests';
 import EnhancedLearnerDashboard from './components/Learner/EnhancedLearnerDashboard';
 import TestInstructions from './components/Learner/TestInstructions';
 import SimpleDashboard from './components/Learner/SimpleDashboard';
@@ -22,6 +26,9 @@ import Profile from './components/Learner/Profile';
 import JobDetails from './components/Learner/JobDetails';
 import ApplicationTracker from './components/Learner/ApplicationTracker';
 import ReAttempts from './components/Learner/ReAttempts';
+import PracticeTests from './components/Learner/PracticeTests';
+import SkillAssessments from './components/Learner/SkillAssessments';
+import Jobs from './components/Learner/Jobs';
 
 const queryClient = new QueryClient();
 
@@ -118,6 +125,38 @@ function App() {
                   </ProtectedRoute>
                 } 
               />
+              <Route 
+                path="/mentor/proctoring-logs" 
+                element={
+                  <ProtectedRoute allowedRoles={['mentor']}>
+                    <ProctoringLogsPage />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="/mentor/live-monitor" 
+                element={
+                  <ProtectedRoute allowedRoles={['mentor']}>
+                    <LiveMonitorPage />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="/mentor/approval-requests" 
+                element={
+                  <ProtectedRoute allowedRoles={['mentor']}>
+                    <ApprovalRequestsPage />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="/mentor/re-attempts" 
+                element={
+                  <ProtectedRoute allowedRoles={['mentor']}>
+                    <ReAttemptRequests />
+                  </ProtectedRoute>
+                } 
+              />
               
               {/* Learner Routes */}
               <Route 
@@ -189,6 +228,30 @@ function App() {
                 element={
                   <ProtectedRoute allowedRoles={['learner']}>
                     <ReAttempts />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="/learner/practice-tests" 
+                element={
+                  <ProtectedRoute allowedRoles={['learner']}>
+                    <PracticeTests />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="/learner/skill-assessments" 
+                element={
+                  <ProtectedRoute allowedRoles={['learner']}>
+                    <SkillAssessments />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="/learner/jobs" 
+                element={
+                  <ProtectedRoute allowedRoles={['learner']}>
+                    <Jobs />
                   </ProtectedRoute>
                 } 
               />

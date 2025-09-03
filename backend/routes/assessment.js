@@ -248,4 +248,23 @@ router.delete('/:id', authenticateToken, authorizeRoles('teacher', 'admin'), asy
 });
 
 
+// Get skill assessments
+router.get('/skill-assessments', authenticateToken, async (req, res) => {
+  try {
+    const result = await db.query(
+      `SELECT sa.*, COUNT(q.id) as questionCount
+       FROM "SkillAssessments" sa
+       LEFT JOIN "Questions" q ON sa.id = q."skillAssessmentId"
+       WHERE sa."isActive" = true
+       GROUP BY sa.id
+       ORDER BY sa."createdAt" DESC`
+    );
+    
+    res.json({ success: true, data: result.rows });
+  } catch (error) {
+    console.error('Get skill assessments error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 module.exports = router;

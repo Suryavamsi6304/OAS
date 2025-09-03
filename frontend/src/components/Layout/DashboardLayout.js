@@ -3,7 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { 
   Menu, X, Bell, User, LogOut, 
   Briefcase, Users, BarChart3, Settings,
-  Calendar, FileText, Search, Home
+  Calendar, FileText, Search, Home, Shield, Eye, AlertTriangle
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 
@@ -21,13 +21,19 @@ const getNavItems = (role) => {
     ],
     mentor: [
       { icon: Home, label: 'Dashboard', path: '/mentor' },
-      { icon: Users, label: 'Candidates', path: '/mentor/candidates' },
-      { icon: Calendar, label: 'Interviews', path: '/mentor/interviews' },
-      { icon: FileText, label: 'Assessments', path: '/mentor/assessments' }
+      { icon: FileText, label: 'Practice Tests', path: '/mentor/create-practice' },
+      { icon: BarChart3, label: 'Skill Assessments', path: '/mentor/create-skill' },
+      { icon: Users, label: 'Re-attempt Requests', path: '/mentor/re-attempts' },
+      { icon: Shield, label: 'Proctoring Logs', path: '/mentor/proctoring-logs' },
+      { icon: Eye, label: 'Live Monitor', path: '/mentor/live-monitor' },
+      { icon: AlertTriangle, label: 'Approval Requests', path: '/mentor/approval-requests' }
     ],
     learner: [
       { icon: Home, label: 'Dashboard', path: '/learner' },
-      { icon: Search, label: 'Find Jobs', path: '/learner' },
+      { icon: FileText, label: 'Practice Tests', path: '/learner/practice-tests' },
+      { icon: BarChart3, label: 'Skill Assessments', path: '/learner/skill-assessments' },
+      { icon: AlertTriangle, label: 'Re-attempt Requests', path: '/learner/re-attempts' },
+      { icon: Search, label: 'Find Jobs', path: '/learner/jobs' },
       { icon: FileText, label: 'Applications', path: '/learner/applications' },
       { icon: User, label: 'Profile', path: '/learner/profile' }
     ]
@@ -75,10 +81,9 @@ const DashboardLayout = ({ children, title }) => {
         height: '100vh',
         backgroundColor: 'white',
         boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
-        transform: sidebarOpen ? 'translateX(0)' : 'translateX(-100%)',
+        transform: isDesktop ? 'translateX(0)' : (sidebarOpen ? 'translateX(0)' : 'translateX(-100%)'),
         transition: 'transform 0.3s ease',
-        zIndex: 50,
-        display: isDesktop ? 'block' : sidebarOpen ? 'block' : 'none'
+        zIndex: 50
       }}>
         
         {/* Logo */}
@@ -129,7 +134,7 @@ const DashboardLayout = ({ children, title }) => {
         </div>
 
         {/* Navigation */}
-        <nav style={{ marginTop: '24px', padding: '0 12px' }}>
+        <nav style={{ marginTop: '24px', padding: '0 12px', maxHeight: 'calc(100vh - 300px)', overflowY: 'auto' }}>
           {navItems.map((item) => {
             const Icon = item.icon;
             const isActive = location.pathname === item.path;

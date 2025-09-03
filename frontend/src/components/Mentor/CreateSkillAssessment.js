@@ -152,7 +152,7 @@ const CreateSkillAssessment = () => {
         totalPoints
       };
 
-      const response = await axios.post('/api/skills/assessment', skillAssessment);
+      const response = await axios.post('/api/skill-assessments', skillAssessment);
       if (response.data.success) {
         toast.success('Skill assessment created successfully!');
         navigate('/mentor');

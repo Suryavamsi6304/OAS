@@ -25,28 +25,45 @@ const ProctoringSetup = ({ onSetupComplete, examId }) => {
 
   useEffect(() => {
     runSystemChecks();
+    
+    // Cleanup function to stop camera when component unmounts
+    return () => {
+      if (videoRef.current && videoRef.current.srcObject) {
+        const tracks = videoRef.current.srcObject.getTracks();
+        tracks.forEach(track => track.stop());
+        videoRef.current.srcObject = null;
+      }
+    };
   }, []);
 
   const runSystemChecks = async () => {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-        videoRef.current.onloadedmetadata = () => {
-          videoRef.current.play();
-        };
-      }
-      setChecks(prev => ({ ...prev, camera: true, microphone: true }));
-    } catch (error) {
-      console.error('Media access denied:', error);
-      setChecks(prev => ({ ...prev, camera: false, microphone: false }));
-    }
-
+    // Check other systems first
     setChecks(prev => ({ 
       ...prev, 
       browser: document.fullscreenEnabled,
       internet: navigator.onLine 
     }));
+
+    // Request camera access
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ 
+        video: { width: 320, height: 240 }, 
+        audio: true 
+      });
+      
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+        videoRef.current.onloadedmetadata = () => {
+          videoRef.current.play().catch(console.error);
+        };
+      }
+      
+      setChecks(prev => ({ ...prev, camera: true, microphone: true }));
+    } catch (error) {
+      console.error('Camera access failed:', error);
+      alert('Camera access denied. Please allow camera permissions and refresh the page.');
+      setChecks(prev => ({ ...prev, camera: false, microphone: false }));
+    }
   };
 
   const verifyIdentity = () => {
@@ -60,6 +77,13 @@ const ProctoringSetup = ({ onSetupComplete, examId }) => {
   const startProctoring = () => {
     const allChecksPass = Object.values(checks).every(check => check);
     if (allChecksPass) {
+      // Stop the setup camera before starting exam
+      if (videoRef.current && videoRef.current.srcObject) {
+        const tracks = videoRef.current.srcObject.getTracks();
+        tracks.forEach(track => track.stop());
+        videoRef.current.srcObject = null;
+      }
+      
       document.documentElement.requestFullscreen?.();
       onSetupComplete({
         sessionId: 'session_' + Date.now(),
@@ -149,18 +173,34 @@ const ProctoringSetup = ({ onSetupComplete, examId }) => {
             <h3 style={{ fontSize: '16px', fontWeight: '600', marginBottom: '12px' }}>
               Camera Preview
             </h3>
-            <video
-              ref={videoRef}
-              autoPlay
-              muted
-              playsInline
-              style={{
-                width: '200px',
-                height: '150px',
-                borderRadius: '8px',
-                border: '2px solid #e5e7eb'
-              }}
-            />
+            <div style={{ position: 'relative', display: 'inline-block' }}>
+              <video
+                ref={videoRef}
+                autoPlay
+                muted
+                playsInline
+                controls={false}
+                style={{
+                  width: '200px',
+                  height: '150px',
+                  borderRadius: '8px',
+                  border: '2px solid #10b981',
+                  backgroundColor: '#000',
+                  objectFit: 'cover'
+                }}
+                onError={(e) => console.error('Video error:', e)}
+              />
+              <div style={{
+                position: 'absolute',
+                top: '5px',
+                right: '5px',
+                width: '10px',
+                height: '10px',
+                borderRadius: '50%',
+                backgroundColor: '#ef4444',
+                animation: 'pulse 2s infinite'
+              }} />
+            </div>
           </div>
         )}
 

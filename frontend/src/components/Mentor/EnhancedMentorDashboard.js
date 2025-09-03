@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
-import { Users, BookOpen, Award, TrendingUp, Eye, CheckCircle, XCircle, Clock, Plus, Code, Target, Edit, Trash2, RefreshCw } from 'lucide-react';
+import { Users, BookOpen, Award, TrendingUp, Eye, CheckCircle, XCircle, Clock, Plus, Code, Target, Edit, Trash2, RefreshCw, Shield, AlertTriangle } from 'lucide-react';
 import axios from 'axios';
 import toast from 'react-hot-toast';
 import ReAttemptRequests from './ReAttemptRequests';
@@ -37,7 +37,7 @@ const EnhancedMentorDashboard = () => {
       const allPracticeTests = practiceRes.data.data || [];
       setPracticeTests(allPracticeTests.filter(test => test.createdBy === user.id));
       
-      const skillRes = await axios.get('/api/skills/assessment');
+      const skillRes = await axios.get('/api/skill-assessments');
       const allSkillAssessments = skillRes.data.data || [];
       setSkillAssessments(allSkillAssessments.filter(assessment => assessment.createdBy === user.id));
       
@@ -502,7 +502,10 @@ const EnhancedMentorDashboard = () => {
               { id: 'dashboard', label: 'Dashboard', icon: BookOpen },
               { id: 'practice', label: 'Practice Tests', icon: Target },
               { id: 'skills', label: 'Skill Assessments', icon: Code },
-              { id: 'requests', label: 'Re-attempt Requests', icon: RefreshCw }
+              { id: 'requests', label: 'Re-attempt Requests', icon: RefreshCw },
+              { id: 'proctoring', label: 'Proctoring Logs', icon: Shield },
+              { id: 'live', label: 'Live Monitor', icon: Eye },
+              { id: 'approvals', label: 'Approval Requests', icon: AlertTriangle }
             ].map(tab => {
               const Icon = tab.icon;
               return (
@@ -538,6 +541,24 @@ const EnhancedMentorDashboard = () => {
         {activeTab === 'practice' && renderPracticeTests()}
         {activeTab === 'skills' && renderSkillAssessments()}
         {activeTab === 'requests' && <ReAttemptRequests />}
+        {activeTab === 'proctoring' && (
+          <div style={{ backgroundColor: 'white', padding: '24px', borderRadius: '8px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}>
+            <h2 style={{ fontSize: '20px', fontWeight: 'bold', marginBottom: '20px' }}>Proctoring Logs</h2>
+            <p>View proctoring session logs and violations here.</p>
+          </div>
+        )}
+        {activeTab === 'live' && (
+          <div style={{ backgroundColor: 'white', padding: '24px', borderRadius: '8px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}>
+            <h2 style={{ fontSize: '20px', fontWeight: 'bold', marginBottom: '20px' }}>Live Monitor</h2>
+            <p>Monitor ongoing exams in real-time.</p>
+          </div>
+        )}
+        {activeTab === 'approvals' && (
+          <div style={{ backgroundColor: 'white', padding: '24px', borderRadius: '8px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}>
+            <h2 style={{ fontSize: '20px', fontWeight: 'bold', marginBottom: '20px' }}>Approval Requests</h2>
+            <p>Handle approval requests from students.</p>
+          </div>
+        )}
       </div>
 
       {/* Modals */}

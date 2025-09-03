@@ -26,7 +26,7 @@ const EnhancedLearnerDashboard = () => {
         axios.get('/api/exams'),
         axios.get('/api/results/student'),
         axios.get('/api/practice-tests'),
-        axios.get('/api/skills/assessment'),
+        axios.get('/api/skill-assessments'),
         axios.get('/api/re-attempt/my-requests').catch(() => ({ data: { data: [] } }))
       ]);
       
