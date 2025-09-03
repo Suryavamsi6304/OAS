@@ -1,8 +1,6 @@
-// Load environment variables first
-require('dotenv').config();
-
 const express = require('express');
 const cors = require('cors');
+const dotenv = require('dotenv');
 const { connectDB } = require('./config/database');
 const { auth, adminOnly, mentorOrAdmin, learnerOnly } = require('./middleware/auth');
 
@@ -14,6 +12,9 @@ const jobController = require('./controllers/jobController');
 const proctoringController = require('./controllers/proctoringController');
 const reAttemptController = require('./controllers/reAttemptController');
 const notificationController = require('./controllers/notificationController');
+
+// Load environment variables
+dotenv.config();
 
 // Connect to database
 connectDB();
@@ -129,30 +130,6 @@ app.post('/api/proctoring/:sessionId/violation', auth, proctoringController.repo
 app.put('/api/proctoring/:sessionId/behavior', auth, proctoringController.updateBehavior);
 app.post('/api/proctoring/:sessionId/end', auth, proctoringController.endSession);
 app.get('/api/proctoring/sessions', auth, mentorOrAdmin, proctoringController.getSessions);
-
-// Additional proctoring endpoints
-app.post('/api/proctoring/mentor-request', auth, async (req, res) => {
-  try {
-    const { sessionId, reason, violations, riskScore } = req.body;
-    // In a real app, this would notify mentors via email/notification system
-    console.log('Mentor request:', { sessionId, reason, violations, riskScore });
-    res.json({ success: true, message: 'Mentor request sent' });
-  } catch (error) {
-    res.status(500).json({ success: false, message: 'Failed to send mentor request' });
-  }
-});
-
-app.get('/api/proctoring/mentor-response/:sessionId', auth, async (req, res) => {
-  try {
-    const { sessionId } = req.params;
-    // In a real app, this would check for mentor responses in database
-    // For demo purposes, randomly approve after some time
-    const approved = Math.random() > 0.7; // 30% chance of approval
-    res.json({ approved, rejected: !approved });
-  } catch (error) {
-    res.status(500).json({ success: false, message: 'Failed to check mentor response' });
-  }
-});
 
 // Re-attempt routes
 app.post('/api/re-attempt/request', auth, learnerOnly, reAttemptController.requestReAttempt);
