@@ -36,6 +36,9 @@ const ProctoringMonitor = React.forwardRef(({ sessionId, onViolation }, ref) => 
       const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
+        videoRef.current.onloadedmetadata = () => {
+          videoRef.current.play();
+        };
       }
       
       // Start AI monitoring intervals

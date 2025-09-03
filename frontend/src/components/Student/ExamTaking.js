@@ -167,6 +167,10 @@ const ExamTaking = () => {
           ref={proctoringMonitorRef}
           sessionId={proctoringSession.sessionId}
           examId={id}
+          onViolation={(violation, riskScore) => {
+            console.log('Proctoring violation:', violation, 'Risk score:', riskScore);
+            // Handle violation reporting here if needed
+          }}
         />
       )}
       {/* Header */}

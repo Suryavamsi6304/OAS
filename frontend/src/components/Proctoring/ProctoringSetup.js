@@ -32,11 +32,14 @@ const ProctoringSetup = ({ onSetupComplete, examId }) => {
       const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
-        videoRef.current.play();
+        videoRef.current.onloadedmetadata = () => {
+          videoRef.current.play();
+        };
       }
       setChecks(prev => ({ ...prev, camera: true, microphone: true }));
     } catch (error) {
       console.error('Media access denied:', error);
+      setChecks(prev => ({ ...prev, camera: false, microphone: false }));
     }
 
     setChecks(prev => ({ 
