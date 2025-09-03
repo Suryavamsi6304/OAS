@@ -47,21 +47,18 @@ const ProctoringSetup = ({ onSetupComplete, examId }) => {
     // Request camera access
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ 
-        video: { width: 320, height: 240 }, 
+        video: true, 
         audio: true 
       });
       
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
-        videoRef.current.onloadedmetadata = () => {
-          videoRef.current.play().catch(console.error);
-        };
+        await videoRef.current.play();
       }
       
       setChecks(prev => ({ ...prev, camera: true, microphone: true }));
     } catch (error) {
       console.error('Camera access failed:', error);
-      alert('Camera access denied. Please allow camera permissions and refresh the page.');
       setChecks(prev => ({ ...prev, camera: false, microphone: false }));
     }
   };
@@ -179,16 +176,13 @@ const ProctoringSetup = ({ onSetupComplete, examId }) => {
                 autoPlay
                 muted
                 playsInline
-                controls={false}
                 style={{
                   width: '200px',
                   height: '150px',
                   borderRadius: '8px',
                   border: '2px solid #10b981',
-                  backgroundColor: '#000',
-                  objectFit: 'cover'
+                  backgroundColor: '#000'
                 }}
-                onError={(e) => console.error('Video error:', e)}
               />
               <div style={{
                 position: 'absolute',
