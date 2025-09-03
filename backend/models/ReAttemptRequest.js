@@ -3,12 +3,12 @@ const { sequelize } = require('../config/database');
 
 const ReAttemptRequest = sequelize.define('ReAttemptRequest', {
   id: {
-    type: DataTypes.UUID,
-    defaultValue: DataTypes.UUIDV4,
+    type: DataTypes.INTEGER,
+    autoIncrement: true,
     primaryKey: true
   },
   studentId: {
-    type: DataTypes.UUID,
+    type: DataTypes.INTEGER,
     allowNull: false,
     references: {
       model: 'Users',
@@ -16,7 +16,7 @@ const ReAttemptRequest = sequelize.define('ReAttemptRequest', {
     }
   },
   examId: {
-    type: DataTypes.UUID,
+    type: DataTypes.INTEGER,
     allowNull: false,
     references: {
       model: 'Exams',
@@ -24,7 +24,7 @@ const ReAttemptRequest = sequelize.define('ReAttemptRequest', {
     }
   },
   resultId: {
-    type: DataTypes.UUID,
+    type: DataTypes.INTEGER,
     allowNull: false,
     references: {
       model: 'Results',
@@ -40,7 +40,7 @@ const ReAttemptRequest = sequelize.define('ReAttemptRequest', {
     defaultValue: 'pending'
   },
   reviewedBy: {
-    type: DataTypes.UUID,
+    type: DataTypes.INTEGER,
     references: {
       model: 'Users',
       key: 'id'

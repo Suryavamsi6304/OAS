@@ -6,12 +6,12 @@ const { sequelize } = require('../config/database');
  */
 const Application = sequelize.define('Application', {
   id: {
-    type: DataTypes.UUID,
-    defaultValue: DataTypes.UUIDV4,
+    type: DataTypes.INTEGER,
+    autoIncrement: true,
     primaryKey: true
   },
   candidateId: {
-    type: DataTypes.UUID,
+    type: DataTypes.INTEGER,
     allowNull: false,
     references: {
       model: 'Users',
@@ -19,7 +19,7 @@ const Application = sequelize.define('Application', {
     }
   },
   jobId: {
-    type: DataTypes.UUID,
+    type: DataTypes.INTEGER,
     allowNull: false,
     references: {
       model: 'JobPostings',
@@ -27,7 +27,7 @@ const Application = sequelize.define('Application', {
     }
   },
   mentorId: {
-    type: DataTypes.UUID,
+    type: DataTypes.INTEGER,
     references: {
       model: 'Users',
       key: 'id'

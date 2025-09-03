@@ -4,6 +4,8 @@ import { useQuery } from 'react-query';
 import { Clock, ChevronLeft, ChevronRight, Flag, Send } from 'lucide-react';
 import axios from 'axios';
 import toast from 'react-hot-toast';
+import ProctoringSetup from '../Proctoring/ProctoringSetup';
+import ProctoringMonitor from '../Proctoring/ProctoringMonitor';
 
 const ExamTaking = () => {
   const { id } = useParams();
@@ -12,6 +14,9 @@ const ExamTaking = () => {
   const [answers, setAnswers] = useState({});
   const [timeLeft, setTimeLeft] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [proctoringSession, setProctoringSession] = useState(null);
+  const [showProctoringSetup, setShowProctoringSetup] = useState(false);
+  const proctoringMonitorRef = useRef(null);
 
   const { data: exam, isLoading, error } = useQuery(['exam', id], async () => {
     const response = await axios.get(`/api/exams/${id}`);
@@ -28,7 +33,12 @@ const ExamTaking = () => {
     if (exam?.duration && timeLeft === null) {
       setTimeLeft(exam.duration * 60);
     }
-  }, [exam, timeLeft]);
+    
+    // Check if proctoring is enabled
+    if (exam?.proctoringEnabled && !proctoringSession) {
+      setShowProctoringSetup(true);
+    }
+  }, [exam, timeLeft, proctoringSession]);
 
   // Start time tracking
   const [startTime] = useState(Date.now());
@@ -55,6 +65,11 @@ const ExamTaking = () => {
     }));
   };
 
+  const handleProctoringSetupComplete = (sessionData) => {
+    setProctoringSession(sessionData);
+    setShowProctoringSetup(false);
+  };
+
   const handleSubmit = async () => {
     if (isSubmitting) return;
     
@@ -71,6 +86,10 @@ const ExamTaking = () => {
 
       const response = await axios.post('/api/exams/submit', submissionData);
       if (response.data.success) {
+        // Stop proctoring monitoring
+        if (proctoringMonitorRef.current) {
+          proctoringMonitorRef.current.stopMonitoring();
+        }
         toast.success('Test submitted successfully!');
         navigate('/learner/results');
       } else {
@@ -130,8 +149,26 @@ const ExamTaking = () => {
   const question = exam.questions[currentQuestion];
   const progress = ((currentQuestion + 1) / exam.questions.length) * 100;
 
+  // Show proctoring setup if required
+  if (showProctoringSetup) {
+    return (
+      <ProctoringSetup 
+        examId={id}
+        onSetupComplete={handleProctoringSetupComplete}
+      />
+    );
+  }
+
   return (
     <div style={{ minHeight: '100vh', backgroundColor: '#f8fafc' }}>
+      {/* Proctoring Monitor */}
+      {proctoringSession && (
+        <ProctoringMonitor 
+          ref={proctoringMonitorRef}
+          sessionId={proctoringSession.sessionId}
+          examId={id}
+        />
+      )}
       {/* Header */}
       <div style={{
         backgroundColor: 'white',

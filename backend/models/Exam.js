@@ -6,8 +6,8 @@ const { sequelize } = require('../config/database');
  */
 const Exam = sequelize.define('Exam', {
   id: {
-    type: DataTypes.UUID,
-    defaultValue: DataTypes.UUIDV4,
+    type: DataTypes.INTEGER,
+    autoIncrement: true,
     primaryKey: true
   },
   title: {
@@ -36,7 +36,7 @@ const Exam = sequelize.define('Exam', {
     type: DataTypes.DATE
   },
   createdBy: {
-    type: DataTypes.UUID,
+    type: DataTypes.INTEGER,
     allowNull: false,
     references: {
       model: 'Users',
@@ -58,6 +58,10 @@ const Exam = sequelize.define('Exam', {
   batchCode: {
     type: DataTypes.STRING,
     allowNull: true // Can be assigned to specific batch or all
+  },
+  proctoringEnabled: {
+    type: DataTypes.BOOLEAN,
+    defaultValue: false
   }
 }, {
   timestamps: true,

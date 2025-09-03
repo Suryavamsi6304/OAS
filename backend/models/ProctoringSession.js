@@ -6,12 +6,12 @@ const { sequelize } = require('../config/database');
  */
 const ProctoringSession = sequelize.define('ProctoringSession', {
   id: {
-    type: DataTypes.UUID,
-    defaultValue: DataTypes.UUIDV4,
+    type: DataTypes.INTEGER,
+    autoIncrement: true,
     primaryKey: true
   },
   examId: {
-    type: DataTypes.UUID,
+    type: DataTypes.INTEGER,
     allowNull: false,
     references: {
       model: 'Exams',
@@ -19,7 +19,7 @@ const ProctoringSession = sequelize.define('ProctoringSession', {
     }
   },
   candidateId: {
-    type: DataTypes.UUID,
+    type: DataTypes.INTEGER,
     allowNull: false,
     references: {
       model: 'Users',

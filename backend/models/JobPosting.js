@@ -6,8 +6,8 @@ const { sequelize } = require('../config/database');
  */
 const JobPosting = sequelize.define('JobPosting', {
   id: {
-    type: DataTypes.UUID,
-    defaultValue: DataTypes.UUIDV4,
+    type: DataTypes.INTEGER,
+    autoIncrement: true,
     primaryKey: true
   },
   title: {
@@ -35,7 +35,7 @@ const JobPosting = sequelize.define('JobPosting', {
     defaultValue: 'active'
   },
   createdBy: {
-    type: DataTypes.UUID,
+    type: DataTypes.INTEGER,
     allowNull: false,
     references: {
       model: 'Users',

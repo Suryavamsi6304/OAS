@@ -32,10 +32,11 @@ const ProctoringSetup = ({ onSetupComplete, examId }) => {
       const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
+        videoRef.current.play();
       }
       setChecks(prev => ({ ...prev, camera: true, microphone: true }));
     } catch (error) {
-      console.error('Media access denied');
+      console.error('Media access denied:', error);
     }
 
     setChecks(prev => ({ 
@@ -78,7 +79,9 @@ const ProctoringSetup = ({ onSetupComplete, examId }) => {
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
-      zIndex: 1000
+      zIndex: 1000,
+      overflow: 'auto',
+      padding: '20px'
     }}>
       <div style={{
         backgroundColor: 'white',
@@ -86,7 +89,10 @@ const ProctoringSetup = ({ onSetupComplete, examId }) => {
         padding: '32px',
         width: '90%',
         maxWidth: '600px',
-        textAlign: 'center'
+        textAlign: 'center',
+        maxHeight: '90vh',
+        overflow: 'auto',
+        margin: 'auto'
       }}>
         <Shield size={48} style={{ color: '#3b82f6', margin: '0 auto 16px' }} />
         <h2 style={{ fontSize: '24px', fontWeight: 'bold', marginBottom: '8px' }}>
@@ -144,6 +150,7 @@ const ProctoringSetup = ({ onSetupComplete, examId }) => {
               ref={videoRef}
               autoPlay
               muted
+              playsInline
               style={{
                 width: '200px',
                 height: '150px',

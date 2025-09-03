@@ -1,14 +1,24 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useQuery } from 'react-query';
-import { Users, BookOpen, Award, TrendingUp, Eye, CheckCircle, XCircle, Clock } from 'lucide-react';
+import { Users, BookOpen, Award, TrendingUp, Eye, CheckCircle, XCircle, Clock, Shield } from 'lucide-react';
 import DashboardLayout from '../Layout/DashboardLayout';
+import ProctoringRequests from './ProctoringRequests';
 import axios from 'axios';
 import toast from 'react-hot-toast';
 
 const MentorDashboard = () => {
+  const [activeTab, setActiveTab] = useState('dashboard');
+  
   const { data: results, isLoading: resultsLoading } = useQuery('mentor-results', async () => {
     const response = await axios.get('/api/results/all');
     return response.data.data || [];
+  });
+  
+  const { data: proctoringRequests } = useQuery('proctoring-requests', async () => {
+    const response = await axios.get('/api/proctoring/mentor-requests');
+    return response.data.data || [];
+  }, {
+    refetchInterval: 10000 // Refetch every 10 seconds
   });
 
   const { data: exams } = useQuery('mentor-exams', async () => {
@@ -45,6 +55,62 @@ const MentorDashboard = () => {
   return (
     <DashboardLayout title="Mentor Dashboard">
       <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
+        
+        {/* Tab Navigation */}
+        <div style={{
+          display: 'flex',
+          borderBottom: '2px solid #e5e7eb',
+          marginBottom: '24px'
+        }}>
+          <button
+            onClick={() => setActiveTab('dashboard')}
+            style={{
+              padding: '12px 24px',
+              border: 'none',
+              backgroundColor: 'transparent',
+              borderBottom: activeTab === 'dashboard' ? '2px solid #3b82f6' : 'none',
+              color: activeTab === 'dashboard' ? '#3b82f6' : '#6b7280',
+              fontWeight: activeTab === 'dashboard' ? '600' : '400',
+              cursor: 'pointer'
+            }}
+          >
+            Dashboard
+          </button>
+          <button
+            onClick={() => setActiveTab('proctoring')}
+            style={{
+              padding: '12px 24px',
+              border: 'none',
+              backgroundColor: 'transparent',
+              borderBottom: activeTab === 'proctoring' ? '2px solid #3b82f6' : 'none',
+              color: activeTab === 'proctoring' ? '#3b82f6' : '#6b7280',
+              fontWeight: activeTab === 'proctoring' ? '600' : '400',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center'
+            }}
+          >
+            <Shield size={16} style={{ marginRight: '8px' }} />
+            Proctoring Requests
+            {proctoringRequests?.length > 0 && (
+              <span style={{
+                marginLeft: '8px',
+                backgroundColor: '#ef4444',
+                color: 'white',
+                borderRadius: '10px',
+                padding: '2px 6px',
+                fontSize: '12px',
+                fontWeight: 'bold'
+              }}>
+                {proctoringRequests.length}
+              </span>
+            )}
+          </button>
+        </div>
+        
+        {activeTab === 'proctoring' ? (
+          <ProctoringRequests />
+        ) : (
         
         {/* Stats Cards */}
         <div style={{ 
@@ -324,6 +390,7 @@ const MentorDashboard = () => {
             </div>
           )}
         </div>
+        )}
       </div>
     </DashboardLayout>
   );

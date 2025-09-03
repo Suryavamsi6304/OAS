@@ -6,12 +6,12 @@ const { sequelize } = require('../config/database');
  */
 const Result = sequelize.define('Result', {
   id: {
-    type: DataTypes.UUID,
-    defaultValue: DataTypes.UUIDV4,
+    type: DataTypes.INTEGER,
+    autoIncrement: true,
     primaryKey: true
   },
   studentId: {
-    type: DataTypes.UUID,
+    type: DataTypes.INTEGER,
     allowNull: false,
     references: {
       model: 'Users',
@@ -19,7 +19,7 @@ const Result = sequelize.define('Result', {
     }
   },
   examId: {
-    type: DataTypes.UUID,
+    type: DataTypes.INTEGER,
     allowNull: false,
     references: {
       model: 'Exams',
