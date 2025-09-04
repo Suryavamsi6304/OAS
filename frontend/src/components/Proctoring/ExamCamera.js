@@ -2,6 +2,10 @@ import React, { useRef, useEffect, useState, forwardRef, useImperativeHandle } f
 import { Camera, AlertCircle } from 'lucide-react';
 import { io } from 'socket.io-client';
 
+// Global singleton to prevent multiple camera instances
+let globalCameraElement = null;
+let globalCameraActive = false;
+
 const ExamCamera = forwardRef(({ onCameraReady, examId, studentId }, ref) => {
   const videoRef = useRef(null);
   const containerRef = useRef(null);
@@ -17,9 +21,17 @@ const ExamCamera = forwardRef(({ onCameraReady, examId, studentId }, ref) => {
   const [sessionId] = useState(`session-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`);
 
   useEffect(() => {
+    // Check if camera is already active globally
+    if (globalCameraActive) {
+      return; // Don't initialize if already active
+    }
+    
+    globalCameraActive = true;
     initializeCamera();
     initializeSocket();
+    
     return () => {
+      globalCameraActive = false;
       stopCamera();
       stopStreaming();
     };
@@ -44,6 +56,10 @@ const ExamCamera = forwardRef(({ onCameraReady, examId, studentId }, ref) => {
   }, [isDragging, dragOffset]);
 
   const initializeCamera = async () => {
+    if (isActive || videoRef.current?.srcObject) {
+      return; // Prevent duplicate initialization
+    }
+    
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
         video: {
@@ -53,7 +69,7 @@ const ExamCamera = forwardRef(({ onCameraReady, examId, studentId }, ref) => {
         }
       });
 
-      if (videoRef.current) {
+      if (videoRef.current && !videoRef.current.srcObject) {
         videoRef.current.srcObject = stream;
         await videoRef.current.play();
         setIsActive(true);
@@ -134,8 +150,12 @@ const ExamCamera = forwardRef(({ onCameraReady, examId, studentId }, ref) => {
   const stopCamera = () => {
     if (videoRef.current?.srcObject) {
       const tracks = videoRef.current.srcObject.getTracks();
-      tracks.forEach(track => track.stop());
+      tracks.forEach(track => {
+        track.stop();
+        track.enabled = false;
+      });
       videoRef.current.srcObject = null;
+      videoRef.current.src = '';
     }
     setIsActive(false);
     stopStreaming();
@@ -456,6 +476,11 @@ const ExamCamera = forwardRef(({ onCameraReady, examId, studentId }, ref) => {
     }, 2000);
   };
 
+  // Don't render if another camera instance is already active
+  if (globalCameraActive && !isActive) {
+    return null;
+  }
+  
   if (error || isExamTerminated) {
     return (
       <div style={{

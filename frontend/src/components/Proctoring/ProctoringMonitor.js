@@ -73,20 +73,8 @@ const ProctoringMonitor = React.forwardRef(({ sessionId, onViolation }, ref) => 
   }, [proctoringSessionId]);
 
   const startMonitoring = async () => {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ 
-        video: { width: 320, height: 240 }, 
-        audio: false 
-      });
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-        videoRef.current.play();
-      }
-      setFaceCount(1); // Always show 1 face
-    } catch (error) {
-      console.error('Camera error:', error);
-      setFaceCount(0);
-    }
+    // No camera needed - ExamCamera handles video
+    setFaceCount(1); // Always show 1 face
   };
 
   const setupBehaviorTracking = () => {
@@ -410,70 +398,7 @@ const ProctoringMonitor = React.forwardRef(({ sessionId, onViolation }, ref) => 
 
   return (
     <>
-      {/* Movable Round Video Button */}
-      <div
-        ref={containerRef}
-        onMouseDown={handleMouseDown}
-        style={{
-          position: 'fixed',
-          left: position.x,
-          top: position.y,
-          width: '100px',
-          height: '100px',
-          borderRadius: '50%',
-          overflow: 'hidden',
-          cursor: isDragging ? 'grabbing' : 'grab',
-          zIndex: 1000,
-          border: `3px solid ${faceCount > 1 ? '#ef4444' : faceCount === 1 ? '#10b981' : '#f59e0b'}`,
-          boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
-          transition: isDragging ? 'none' : 'border-color 0.3s ease'
-        }}
-      >
-        <video
-          ref={videoRef}
-          autoPlay
-          muted
-          playsInline
-          style={{
-            width: '100%',
-            height: '100%',
-            objectFit: 'cover',
-            backgroundColor: '#000',
-            transform: 'scaleX(-1)'
-          }}
-        />
-        
-        {/* Face Count Indicator */}
-        <div style={{
-          position: 'absolute',
-          top: '5px',
-          right: '5px',
-          width: '20px',
-          height: '20px',
-          borderRadius: '50%',
-          backgroundColor: faceCount > 1 ? '#ef4444' : faceCount === 1 ? '#10b981' : '#f59e0b',
-          color: 'white',
-          fontSize: '12px',
-          fontWeight: 'bold',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center'
-        }}>
-          {faceCount}
-        </div>
-        
-        {/* Recording Indicator */}
-        <div style={{
-          position: 'absolute',
-          bottom: '5px',
-          left: '5px',
-          width: '8px',
-          height: '8px',
-          borderRadius: '50%',
-          backgroundColor: '#ef4444',
-          animation: 'pulse 2s infinite'
-        }} />
-      </div>
+      {/* ProctoringMonitor now only handles behavior tracking - no camera display */}
       
       {/* Warning Toast for Multiple Faces */}
       {faceCount > 1 && (
