@@ -26,7 +26,10 @@ const app = express();
 const server = http.createServer(app);
 
 // Middleware
-app.use(cors());
+app.use(cors({
+  origin: true,
+  credentials: true
+}));
 app.use(express.json());
 
 // Test route
@@ -718,7 +721,7 @@ if (process.env.NODE_ENV === 'development') {
 // Single Socket.IO setup with proper error handling
 const io = require('socket.io')(server, {
   cors: {
-    origin: ["http://localhost:3000", "http://127.0.0.1:3000"],
+    origin: true,
     methods: ["GET", "POST"],
     credentials: true
   },
@@ -910,10 +913,11 @@ io.on('connection', (socket) => {
 });
 
 const PORT = process.env.PORT || 3001;
-server.listen(PORT, () => {
+server.listen(PORT, '0.0.0.0', () => {
   console.log(`🚀 Server running on port ${PORT}`);
   console.log(`🔌 Socket.IO server initialized`);
-  console.log(`📡 WebSocket available at ws://localhost:${PORT}`);
+  console.log(`📡 WebSocket available at ws://10.211.190.206:${PORT}`);
+  console.log(`🌐 Network access: http://10.211.190.206:${PORT}`);
 });
 
 // Handle server errors
