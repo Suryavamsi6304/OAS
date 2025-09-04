@@ -25,6 +25,7 @@ import Profile from './components/Learner/Profile';
 import JobDetails from './components/Learner/JobDetails';
 import ApplicationTracker from './components/Learner/ApplicationTracker';
 import ReAttempts from './components/Learner/ReAttempts';
+import ReAttemptRequest from './components/Learner/ReAttemptRequest';
 import PracticeTests from './components/Learner/PracticeTests';
 import SkillAssessments from './components/Learner/SkillAssessments';
 import Jobs from './components/Learner/Jobs';
@@ -67,7 +68,7 @@ const ProtectedRoute = ({ children, allowedRoles }) => {
  * Role-Based Dashboard Router
  */
 const DashboardRouter = () => {
-  const { user, loading } = useAuth();
+  const { user, loading, isAuthenticated } = useAuth();
   
   if (loading) {
     return (
@@ -80,6 +81,10 @@ const DashboardRouter = () => {
     );
   }
   
+  if (!isAuthenticated) {
+    return <Navigate to="/login" replace />;
+  }
+  
   switch (user?.role) {
     case 'admin':
       return <Navigate to="/admin" replace />;
@@ -87,6 +92,8 @@ const DashboardRouter = () => {
       return <Navigate to="/mentor" replace />;
     case 'learner':
       return <Navigate to="/learner" replace />;
+    default:
+      return <Navigate to="/login" replace />;
   }
 };
 
@@ -120,6 +127,22 @@ function App() {
                 element={
                   <ProtectedRoute allowedRoles={['admin']}>
                     <ExamForm />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="/admin/users" 
+                element={
+                  <ProtectedRoute allowedRoles={['admin']}>
+                    <AdminDashboard />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="/admin/analytics" 
+                element={
+                  <ProtectedRoute allowedRoles={['admin']}>
+                    <AdminDashboard />
                   </ProtectedRoute>
                 } 
               />
@@ -178,14 +201,6 @@ function App() {
                 element={
                   <ProtectedRoute allowedRoles={['mentor']}>
                     <ReAttemptRequests />
-                  </ProtectedRoute>
-                } 
-              />
-              <Route 
-                path="/mentor/live-monitor" 
-                element={
-                  <ProtectedRoute allowedRoles={['mentor']}>
-                    <LiveMonitorDashboard />
                   </ProtectedRoute>
                 } 
               />
@@ -264,6 +279,14 @@ function App() {
                 } 
               />
               <Route 
+                path="/learner/re-attempt/:examId" 
+                element={
+                  <ProtectedRoute allowedRoles={['learner']}>
+                    <ReAttemptRequest />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
                 path="/learner/practice-tests" 
                 element={
                   <ProtectedRoute allowedRoles={['learner']}>
@@ -284,6 +307,22 @@ function App() {
                 element={
                   <ProtectedRoute allowedRoles={['learner']}>
                     <Jobs />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="/learner/test/:id" 
+                element={
+                  <ProtectedRoute allowedRoles={['learner']}>
+                    <ExamTaking />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="/learner/assessment/:id" 
+                element={
+                  <ProtectedRoute allowedRoles={['learner']}>
+                    <ExamTaking />
                   </ProtectedRoute>
                 } 
               />

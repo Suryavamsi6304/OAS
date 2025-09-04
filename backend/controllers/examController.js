@@ -65,12 +65,43 @@ const getExamById = async (req, res) => {
       });
     }
     
-    // Check batch access for learners
-    if (req.user.role === 'learner' && exam.batchCode && req.user.batchCode !== exam.batchCode) {
+    // Check batch access for learners (only if both have batchCode)
+    if (req.user.role === 'learner' && exam.batchCode && req.user.batchCode && req.user.batchCode !== exam.batchCode) {
       return res.status(403).json({
         success: false,
         message: 'You do not have access to this exam'
       });
+    }
+
+    // Check if student has already taken this exam (only for skill assessments)
+    if (req.user.role === 'learner' && exam.type === 'skill-assessment') {
+      const existingResult = await Result.findOne({
+        where: {
+          studentId: req.user.id,
+          examId: req.params.id
+        }
+      });
+
+      if (existingResult) {
+        // Check if there's an approved re-attempt request
+        const approvedReAttempt = await ReAttemptRequest.findOne({
+          where: {
+            studentId: req.user.id,
+            examId: req.params.id,
+            status: 'approved'
+          }
+        });
+
+        if (!approvedReAttempt) {
+          return res.status(403).json({
+            success: false,
+            message: 'You have already taken this skill assessment. Please request mentor approval to retake.',
+            requiresReAttempt: true,
+            examId: req.params.id,
+            examTitle: exam.title
+          });
+        }
+      }
     }
 
     // Remove correct answers for students
@@ -129,8 +160,8 @@ const submitExam = async (req, res) => {
       });
     }
     
-    // Check batch access for learners
-    if (req.user.role === 'learner' && exam.batchCode && req.user.batchCode !== exam.batchCode) {
+    // Check batch access for learners (only if both have batchCode)
+    if (req.user.role === 'learner' && exam.batchCode && req.user.batchCode && req.user.batchCode !== exam.batchCode) {
       return res.status(403).json({
         success: false,
         message: 'You do not have access to this exam'
@@ -148,7 +179,6 @@ const submitExam = async (req, res) => {
     });
 
     // Check if there's an approved re-attempt request
-    const { ReAttemptRequest } = require('../models');
     const approvedReAttempt = await ReAttemptRequest.findOne({
       where: {
         studentId: req.user.id,
@@ -157,11 +187,16 @@ const submitExam = async (req, res) => {
       }
     });
 
-    if (existingResult && exam.type !== 'practice' && !approvedReAttempt) {
+    if (existingResult && exam.type === 'skill-assessment' && !approvedReAttempt) {
       return res.status(400).json({
         success: false,
-        message: 'Assessment already submitted'
+        message: 'Skill assessment already submitted. Re-attempt approval required.'
       });
+    }
+
+    // Mark re-attempt as used if this is a re-attempt
+    if (approvedReAttempt) {
+      await approvedReAttempt.update({ status: 'used' });
     }
     
     if (!exam.questions || !Array.isArray(exam.questions) || exam.questions.length === 0) {
@@ -228,10 +263,10 @@ const submitExam = async (req, res) => {
     const passingScore = parseInt(exam.passingScore) || 70;
     const passed = percentage >= passingScore;
 
-    // Handle existing results for practice tests and re-attempts
+    // Handle existing results for practice tests and approved re-attempts
     let result;
-    if (existingResult && (exam.type === 'practice' || approvedReAttempt)) {
-      // Update existing result for practice tests or approved re-attempts
+    if (existingResult && (exam.type === 'practice' || (exam.type === 'skill-assessment' && approvedReAttempt))) {
+      // Update existing result for practice tests or approved skill assessment re-attempts
       await existingResult.update({
         answers: evaluatedAnswers,
         score: finalScore,

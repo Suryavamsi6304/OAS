@@ -17,6 +17,33 @@ const ProctoringMonitor = React.forwardRef(({ sessionId, onViolation }, ref) => 
   const [isBlocked, setIsBlocked] = useState(false);
   const [blockReason, setBlockReason] = useState('');
   const [mentorRequestSent, setMentorRequestSent] = useState(false);
+  const [proctoringSessionId, setProctoringSessionId] = useState(null);
+  
+  // Initialize proctoring session
+  useEffect(() => {
+    const initSession = async () => {
+      if (sessionId && !proctoringSessionId) {
+        try {
+          const token = localStorage.getItem('token');
+          const response = await fetch('/api/proctoring/start', {
+            method: 'POST',
+            headers: { 
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({ assessmentId: sessionId })
+          });
+          const data = await response.json();
+          if (data.session) {
+            setProctoringSessionId(data.session.id);
+          }
+        } catch (error) {
+          console.error('Failed to initialize proctoring session:', error);
+        }
+      }
+    };
+    initSession();
+  }, [sessionId, proctoringSessionId]);
 
   useEffect(() => {
     if (isMonitoring) {
@@ -28,8 +55,22 @@ const ProctoringMonitor = React.forwardRef(({ sessionId, onViolation }, ref) => 
 
   // Cleanup when component unmounts
   useEffect(() => {
-    return () => cleanup();
-  }, []);
+    return () => {
+      cleanup();
+      // End proctoring session
+      if (proctoringSessionId) {
+        const token = localStorage.getItem('token');
+        fetch('/api/proctoring/end', {
+          method: 'POST',
+          headers: { 
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({ sessionId: proctoringSessionId })
+        }).catch(console.error);
+      }
+    };
+  }, [proctoringSessionId]);
 
   const startMonitoring = async () => {
     try {
@@ -50,19 +91,25 @@ const ProctoringMonitor = React.forwardRef(({ sessionId, onViolation }, ref) => 
 
   const setupBehaviorTracking = () => {
     // Tab visibility monitoring
-    document.addEventListener('visibilitychange', () => {
-      if (document.hidden) {
+    const handleVisibilityChange = () => {
+      if (document.hidden && !isBlocked) {
         reportViolation('tab_switch', 'high', 'User switched tabs or minimized window');
       }
-    });
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
 
     // Mouse leave detection
-    document.addEventListener('mouseleave', () => {
-      reportViolation('mouse_leave', 'medium', 'Mouse cursor left the exam window');
-    });
+    const handleMouseLeave = () => {
+      if (!isBlocked) {
+        reportViolation('mouse_leave', 'medium', 'Mouse cursor left the exam window');
+      }
+    };
+    document.addEventListener('mouseleave', handleMouseLeave);
 
     // Keyboard monitoring
-    document.addEventListener('keydown', (e) => {
+    const handleKeyDown = (e) => {
+      if (isBlocked) return;
+      
       const suspiciousKeys = ['F12', 'F11', 'PrintScreen'];
       if (e.ctrlKey && (e.key === 'c' || e.key === 'v' || e.key === 'a')) {
         reportViolation('copy_paste_attempt', 'high', 'Copy/paste keyboard shortcut detected');
@@ -70,21 +117,97 @@ const ProctoringMonitor = React.forwardRef(({ sessionId, onViolation }, ref) => 
       if (suspiciousKeys.includes(e.key)) {
         reportViolation('suspicious_key', 'medium', `Suspicious key pressed: ${e.key}`);
       }
-    });
+    };
+    document.addEventListener('keydown', handleKeyDown);
 
     // Right-click prevention
-    document.addEventListener('contextmenu', (e) => {
+    const handleContextMenu = (e) => {
       e.preventDefault();
-      reportViolation('right_click', 'low', 'Right-click attempt detected');
-    });
+      if (!isBlocked) {
+        reportViolation('right_click', 'low', 'Right-click attempt detected');
+      }
+    };
+    document.addEventListener('contextmenu', handleContextMenu);
+
+    // Cleanup function
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      document.removeEventListener('mouseleave', handleMouseLeave);
+      document.removeEventListener('keydown', handleKeyDown);
+      document.removeEventListener('contextmenu', handleContextMenu);
+    };
   };
 
 
 
 
 
-  const reportViolation = (type, severity, details) => {
+  const reportViolation = async (type, severity, details) => {
     console.log('Violation:', type, severity, details);
+    
+    const newViolation = {
+      id: Date.now(),
+      type,
+      severity,
+      timestamp: new Date().toISOString(),
+      details
+    };
+
+    const updatedViolations = [...violations, newViolation];
+    setViolations(updatedViolations);
+
+    // Calculate new risk score
+    let scoreIncrease = 0;
+    switch (severity) {
+      case 'low': scoreIncrease = 10; break;
+      case 'medium': scoreIncrease = 25; break;
+      case 'high': scoreIncrease = 50; break;
+      case 'critical': scoreIncrease = 100; break;
+    }
+    
+    const newRiskScore = Math.min(riskScore + scoreIncrease, 100);
+    setRiskScore(newRiskScore);
+
+    // Check if violations exceed limit (5)
+    if (updatedViolations.length >= 5) {
+      blockUser(`Violation limit exceeded (${updatedViolations.length}/5): ${details}`);
+      return;
+    }
+
+    // Report to backend if sessionId exists
+    if (proctoringSessionId || sessionId) {
+      try {
+        const token = localStorage.getItem('token');
+        const response = await fetch('/api/proctoring/log-violation', {
+          method: 'POST',
+          headers: { 
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({
+            sessionId: proctoringSessionId || sessionId,
+            examId: sessionId,
+            violationType: type,
+            severity,
+            details,
+            riskScore: scoreIncrease
+          })
+        });
+        
+        const result = await response.json();
+        if (result.shouldBlock) {
+          blockUser(`Violation limit exceeded (${result.violationCount}/5): ${details}`);
+          return;
+        }
+      } catch (error) {
+        console.error('Failed to report violation to backend:', error);
+      }
+    }
+
+    // Show warning for high severity violations
+    if (severity === 'high' || severity === 'critical') {
+      onViolation && onViolation(newViolation);
+    }
   };
 
   const blockUser = (reason) => {
@@ -98,11 +221,15 @@ const ProctoringMonitor = React.forwardRef(({ sessionId, onViolation }, ref) => 
   const sendMentorRequest = async (reason) => {
     try {
       // API call to notify mentor
+      const token = localStorage.getItem('token');
       await fetch('/api/proctoring/mentor-request', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
         body: JSON.stringify({
-          sessionId,
+          sessionId: proctoringSessionId || sessionId,
           reason,
           violations: violations.length,
           riskScore
@@ -116,7 +243,10 @@ const ProctoringMonitor = React.forwardRef(({ sessionId, onViolation }, ref) => 
 
   const checkMentorResponse = async () => {
     try {
-      const response = await fetch(`/api/proctoring/mentor-response/${sessionId}`);
+      const token = localStorage.getItem('token');
+      const response = await fetch(`/api/proctoring/mentor-response/${proctoringSessionId || sessionId}`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
       const data = await response.json();
       
       if (data.approved) {
@@ -124,6 +254,7 @@ const ProctoringMonitor = React.forwardRef(({ sessionId, onViolation }, ref) => 
         setIsMonitoring(true);
         setViolations([]);
         setRiskScore(0);
+        setMentorRequestSent(false);
       } else if (data.rejected) {
         terminateExam();
       }
@@ -143,7 +274,14 @@ const ProctoringMonitor = React.forwardRef(({ sessionId, onViolation }, ref) => 
 
   const terminateExam = () => {
     setIsMonitoring(false);
-    alert('Exam terminated due to multiple violations. Please contact your administrator.');
+    cleanup();
+    // Redirect or show termination message
+    if (window.parent && window.parent.postMessage) {
+      window.parent.postMessage({ type: 'EXAM_TERMINATED', reason: 'Multiple violations' }, '*');
+    } else {
+      alert('Exam terminated due to multiple violations. Please contact your administrator.');
+      window.location.href = '/learner';
+    }
   };
 
   const handleMouseDown = (e) => {
@@ -241,8 +379,9 @@ const ProctoringMonitor = React.forwardRef(({ sessionId, onViolation }, ref) => 
             borderRadius: '8px',
             marginBottom: '24px'
           }}>
-            <p style={{ fontSize: '14px', color: '#9ca3af', marginBottom: '8px' }}>Last Violation:</p>
-            <p style={{ fontSize: '16px', color: '#fbbf24' }}>{blockReason}</p>
+            <p style={{ fontSize: '14px', color: '#9ca3af', marginBottom: '8px' }}>Violation Details:</p>
+            <p style={{ fontSize: '16px', color: '#fbbf24', marginBottom: '8px' }}>{blockReason}</p>
+            <p style={{ fontSize: '14px', color: '#9ca3af' }}>Total Violations: {violations.length}</p>
           </div>
           <div style={{
             backgroundColor: '#065f46',
@@ -250,10 +389,14 @@ const ProctoringMonitor = React.forwardRef(({ sessionId, onViolation }, ref) => 
             borderRadius: '8px',
             marginBottom: '24px'
           }}>
-            <p style={{ fontSize: '16px', color: '#10b981', marginBottom: '8px' }}>📧 Mentor Request Sent</p>
+            <p style={{ fontSize: '16px', color: '#10b981', marginBottom: '8px' }}>📧 Mentor Request Status</p>
             <p style={{ fontSize: '14px', color: '#6ee7b7' }}>
               {mentorRequestSent ? 'Waiting for mentor approval...' : 'Sending request to mentor...'}
             </p>
+            <div style={{ marginTop: '12px', fontSize: '12px', color: '#9ca3af' }}>
+              <p>• Request sent at: {new Date().toLocaleTimeString()}</p>
+              <p>• Risk Score: {riskScore}%</p>
+            </div>
           </div>
           <div style={{ fontSize: '14px', color: '#9ca3af' }}>
             <p>• Contact your mentor if this takes too long</p>
@@ -352,6 +495,24 @@ const ProctoringMonitor = React.forwardRef(({ sessionId, onViolation }, ref) => 
           <span style={{ color: '#dc2626', fontWeight: '500' }}>
             Warning: {faceCount} faces detected. Only 1 person allowed.
           </span>
+        </div>
+      )}
+      
+      {/* Violation Counter */}
+      {violations.length > 0 && violations.length < 5 && (
+        <div style={{
+          position: 'fixed',
+          top: '80px',
+          right: '20px',
+          backgroundColor: violations.length >= 3 ? '#fef2f2' : '#fefbf2',
+          border: `1px solid ${violations.length >= 3 ? '#fecaca' : '#fed7aa'}`,
+          borderRadius: '8px',
+          padding: '8px 12px',
+          zIndex: 1001,
+          fontSize: '14px',
+          color: violations.length >= 3 ? '#dc2626' : '#ea580c'
+        }}>
+          ⚠️ Violations: {violations.length}/5
         </div>
       )}
     </>

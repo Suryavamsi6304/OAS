@@ -2,6 +2,16 @@ const express = require('express');
 const { v4: uuidv4 } = require('uuid');
 const db = require('../config/database');
 const { authenticateToken } = require('../middleware/auth');
+const { 
+  startSession, 
+  reportViolation, 
+  updateBehavior, 
+  endSession, 
+  getSessions,
+  sendMentorRequest,
+  checkMentorResponse,
+  handleMentorRequest
+} = require('../controllers/proctoringController');
 
 const router = express.Router();
 
@@ -13,8 +23,8 @@ router.post('/start', authenticateToken, async (req, res) => {
     const sessionToken = uuidv4();
 
     const result = await db.query(
-      'INSERT INTO proctoring_sessions (student_id, assessment_id, session_token) VALUES ($1, $2, $3) RETURNING *',
-      [studentId, assessmentId, sessionToken]
+      'INSERT INTO proctoring_sessions (student_id, assessment_id, session_token, status, total_violations, risk_score) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *',
+      [studentId, assessmentId, sessionToken, 'active', 0, 0]
     );
 
     res.json({ session: result.rows[0] });
@@ -36,12 +46,30 @@ router.post('/violation', authenticateToken, async (req, res) => {
     
     console.log('Violation logged:', violationResult.rows[0].id, violationType, severity);
 
+    // Get current violation count
+    const countResult = await db.query(
+      'SELECT COUNT(*) as count FROM proctoring_violations WHERE session_id = $1',
+      [sessionId]
+    );
+    
+    const violationCount = parseInt(countResult.rows[0].count);
+    const shouldBlock = violationCount >= 5;
+    
     await db.query(
-      'UPDATE proctoring_sessions SET total_violations = total_violations + 1, risk_score = risk_score + $1 WHERE id = $2',
-      [severity === 'critical' ? 10 : severity === 'high' ? 5 : severity === 'medium' ? 3 : 1, sessionId]
+      'UPDATE proctoring_sessions SET total_violations = $1, risk_score = risk_score + $2, status = $3 WHERE id = $4',
+      [
+        violationCount,
+        severity === 'critical' ? 10 : severity === 'high' ? 5 : severity === 'medium' ? 3 : 1,
+        shouldBlock ? 'blocked' : 'active',
+        sessionId
+      ]
     );
 
-    res.json({ success: true });
+    res.json({ 
+      success: true, 
+      violationCount,
+      shouldBlock
+    });
   } catch (error) {
     console.error('Log violation error:', error);
     res.status(500).json({ error: 'Failed to log violation' });
@@ -53,10 +81,18 @@ router.post('/end', authenticateToken, async (req, res) => {
   try {
     const { sessionId } = req.body;
 
-    await db.query(
-      'UPDATE proctoring_sessions SET end_time = CURRENT_TIMESTAMP, status = $1 WHERE id = $2',
-      ['completed', sessionId]
+    // Only end if not blocked
+    const sessionResult = await db.query(
+      'SELECT status FROM proctoring_sessions WHERE id = $1',
+      [sessionId]
     );
+
+    if (sessionResult.rows.length > 0 && sessionResult.rows[0].status !== 'blocked') {
+      await db.query(
+        'UPDATE proctoring_sessions SET end_time = CURRENT_TIMESTAMP, status = $1 WHERE id = $2',
+        ['completed', sessionId]
+      );
+    }
 
     res.json({ success: true });
   } catch (error) {
@@ -77,7 +113,7 @@ router.get('/settings/:assessmentId', authenticateToken, async (req, res) => {
 
     if (result.rows.length === 0) {
       return res.json({
-        proctoring_enabled: false,
+        proctoring_enabled: true,
         camera_required: true,
         microphone_required: true,
         screen_recording: true,
@@ -88,7 +124,8 @@ router.get('/settings/:assessmentId', authenticateToken, async (req, res) => {
         right_click_disabled: true,
         fullscreen_required: true,
         violation_threshold: 5,
-        auto_submit_on_violation: false
+        auto_submit_on_violation: false,
+        block_on_violations: true
       });
     }
 
@@ -169,6 +206,98 @@ router.get('/logs', authenticateToken, async (req, res) => {
   } catch (error) {
     console.error('Get proctoring logs error:', error);
     res.status(500).json({ error: 'Failed to get proctoring logs', details: error.message });
+  }
+});
+
+// Send mentor request
+router.post('/mentor-request', authenticateToken, async (req, res) => {
+  try {
+    const { sessionId, reason, violations, riskScore } = req.body;
+    
+    await db.query(
+      'UPDATE proctoring_sessions SET status = $1, mentor_request = $2 WHERE id = $3',
+      ['blocked', JSON.stringify({
+        reason,
+        violations,
+        riskScore,
+        timestamp: new Date(),
+        status: 'pending'
+      }), sessionId]
+    );
+
+    res.json({ success: true, message: 'Mentor request sent successfully' });
+  } catch (error) {
+    console.error('Send mentor request error:', error);
+    res.status(500).json({ error: 'Failed to send mentor request' });
+  }
+});
+
+// Check mentor response
+router.get('/mentor-response/:sessionId', authenticateToken, async (req, res) => {
+  try {
+    const { sessionId } = req.params;
+    
+    const result = await db.query(
+      'SELECT mentor_request FROM proctoring_sessions WHERE id = $1',
+      [sessionId]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Session not found' });
+    }
+
+    const mentorRequest = result.rows[0].mentor_request;
+    if (!mentorRequest) {
+      return res.json({ approved: false, rejected: false, pending: false });
+    }
+
+    const request = typeof mentorRequest === 'string' ? JSON.parse(mentorRequest) : mentorRequest;
+    
+    res.json({
+      approved: request.status === 'approved',
+      rejected: request.status === 'rejected',
+      pending: request.status === 'pending'
+    });
+  } catch (error) {
+    console.error('Check mentor response error:', error);
+    res.status(500).json({ error: 'Failed to check mentor response' });
+  }
+});
+
+// Handle mentor request (approve/reject)
+router.post('/mentor-request/:sessionId', authenticateToken, async (req, res) => {
+  try {
+    const { sessionId } = req.params;
+    const { action, comments } = req.body;
+    
+    const sessionResult = await db.query(
+      'SELECT mentor_request FROM proctoring_sessions WHERE id = $1',
+      [sessionId]
+    );
+
+    if (sessionResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Session not found' });
+    }
+
+    const mentorRequest = sessionResult.rows[0].mentor_request;
+    const request = typeof mentorRequest === 'string' ? JSON.parse(mentorRequest) : mentorRequest;
+    
+    const updatedRequest = {
+      ...request,
+      status: action === 'approve' ? 'approved' : 'rejected',
+      mentorComments: comments,
+      responseTime: new Date()
+    };
+
+    await db.query(
+      'UPDATE proctoring_sessions SET mentor_request = $1, status = $2 WHERE id = $3',
+      [JSON.stringify(updatedRequest), action === 'approve' ? 'active' : 'terminated', sessionId]
+    );
+
+    res.json({ success: true, message: `Request ${action}d successfully` });
+  } catch (error) {
+    console.error('Handle mentor request error:', error);
+    res.status(500).json({ error: 'Failed to handle mentor request' });
   }
 });
 

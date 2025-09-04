@@ -4,7 +4,6 @@ const dotenv = require('dotenv');
 const http = require('http');
 const { connectDB } = require('./config/database');
 const { auth, adminOnly, mentorOrAdmin, learnerOnly } = require('./middleware/auth');
-const StreamingSocket = require('./src/socket/streamingSocket');
 const streamingRoutes = require('./src/routes/streaming');
 
 // Controllers
@@ -25,8 +24,6 @@ connectDB();
 
 const app = express();
 const server = http.createServer(app);
-const streamingSocket = new StreamingSocket(server);
-app.set('streamingSocket', streamingSocket);
 
 // Middleware
 app.use(cors());
@@ -139,21 +136,29 @@ app.post('/api/proctoring/:sessionId/violation', auth, proctoringController.repo
 app.post('/api/proctoring/log-violation', auth, async (req, res) => {
   try {
     const { ProctoringLog } = require('./models');
-    const { sessionId, violationType, severity, details, riskScore } = req.body;
+    const { sessionId, violationType, severity, details, riskScore, examId } = req.body;
+    
+    if (!sessionId || !violationType || !severity || !examId) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Missing required fields: sessionId, violationType, severity, examId' 
+      });
+    }
     
     const log = await ProctoringLog.create({
       sessionId,
       studentId: req.user.id,
-      examId: req.body.examId,
+      examId,
       violationType,
       severity,
-      details,
-      riskScore
+      details: details || 'No details provided',
+      riskScore: riskScore || 0
     });
     
     res.json({ success: true, data: log });
   } catch (error) {
-    res.status(500).json({ success: false, message: 'Failed to log violation' });
+    console.error('Error logging violation:', error);
+    res.status(500).json({ success: false, message: 'Failed to log violation', error: error.message });
   }
 });
 app.put('/api/proctoring/:sessionId/behavior', auth, proctoringController.updateBehavior);
@@ -168,20 +173,24 @@ app.get('/api/proctoring/logs', auth, mentorOrAdmin, async (req, res) => {
     
     let whereClause = {};
     if (filter === 'flagged') whereClause.status = 'flagged';
-    if (filter === 'violations') whereClause.severity = ['high', 'critical'];
+    if (filter === 'violations') {
+      const { Op } = require('sequelize');
+      whereClause.severity = { [Op.in]: ['high', 'critical'] };
+    }
     
     const logs = await ProctoringLog.findAll({
       where: whereClause,
       include: [
-        { model: User, as: 'student', attributes: ['name'] },
-        { model: Exam, attributes: ['title'] }
+        { model: User, as: 'student', attributes: ['name', 'username'] },
+        { model: Exam, as: 'exam', attributes: ['title'] }
       ],
       order: [['createdAt', 'DESC']]
     });
     
     res.json({ success: true, data: logs });
   } catch (error) {
-    res.status(500).json({ success: false, message: 'Failed to fetch logs' });
+    console.error('Error fetching proctoring logs:', error);
+    res.status(500).json({ success: false, message: 'Failed to fetch logs', error: error.message });
   }
 });
 
@@ -245,16 +254,228 @@ app.get('/api/notifications', auth, notificationController.getNotifications);
 app.put('/api/notifications/:id/read', auth, notificationController.markAsRead);
 app.get('/api/notifications/unread-count', auth, notificationController.getUnreadCount);
 
-// Meeting routes
-app.get('/api/batches', auth, async (req, res) => {
+// Admin user management routes
+app.get('/api/admin/users', auth, adminOnly, async (req, res) => {
   try {
-    const { User } = require('./models');
-    const batches = await User.findAll({
-      where: { role: 'learner', batchCode: { [require('sequelize').Op.ne]: null } },
-      attributes: ['batchCode'],
-      group: ['batchCode']
+    const User = require('./models/User');
+    const users = await User.findAll({
+      attributes: ['id', 'username', 'email', 'name', 'role', 'batchCode', 'isApproved', 'createdAt'],
+      order: [['createdAt', 'DESC']]
     });
-    const batchCodes = batches.map(b => b.batchCode).filter(Boolean);
+    
+    // Add default isActive field since it doesn't exist in model
+    const usersWithStatus = users.map(user => ({
+      ...user.toJSON(),
+      isActive: true // Default to active since we don't have this field yet
+    }));
+    
+    res.json({ success: true, data: usersWithStatus });
+  } catch (error) {
+    console.error('Admin users error:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// Get pending approvals
+app.get('/api/admin/pending-approvals', auth, mentorOrAdmin, async (req, res) => {
+  try {
+    const User = require('./models/User');
+    const pendingUsers = await User.findAll({
+      where: { isApproved: false },
+      attributes: ['id', 'username', 'email', 'name', 'role', 'batchCode', 'createdAt'],
+      order: [['createdAt', 'DESC']]
+    });
+    res.json({ success: true, data: pendingUsers });
+  } catch (error) {
+    console.error('Get pending approvals error:', error);
+    res.status(500).json({ success: false, error: 'Internal server error' });
+  }
+});
+
+// Approve user
+app.put('/api/admin/approve-user/:id', auth, mentorOrAdmin, async (req, res) => {
+  try {
+    const User = require('./models/User');
+    const userId = req.params.id;
+    const { approved } = req.body;
+    
+    const user = await User.findByPk(userId);
+    if (!user) {
+      return res.status(404).json({ success: false, error: 'User not found' });
+    }
+    
+    if (approved) {
+      await user.update({
+        isApproved: true,
+        approvedBy: req.user.id,
+        approvedAt: new Date()
+      });
+      res.json({ success: true, message: 'User approved successfully' });
+    } else {
+      await user.destroy();
+      res.json({ success: true, message: 'User registration rejected' });
+    }
+  } catch (error) {
+    console.error('Approve user error:', error);
+    res.status(500).json({ success: false, error: 'Internal server error' });
+  }
+});
+
+// Create user
+app.post('/api/admin/users', auth, adminOnly, async (req, res) => {
+  try {
+    const User = require('./models/User');
+    const { username, email, password, name, role, batchCode } = req.body;
+    
+    const user = await User.create({
+      username,
+      email,
+      password,
+      name,
+      role,
+      batchCode
+    });
+    
+    const { password: _, ...userWithoutPassword } = user.toJSON();
+    res.json({ success: true, data: userWithoutPassword });
+  } catch (error) {
+    console.error('Create user error:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// Update user
+app.put('/api/admin/users/:id', auth, adminOnly, async (req, res) => {
+  try {
+    const User = require('./models/User');
+    const { username, email, name, role, batchCode } = req.body;
+    
+    await User.update(
+      { username, email, name, role, batchCode },
+      { where: { id: req.params.id } }
+    );
+    
+    res.json({ success: true, message: 'User updated successfully' });
+  } catch (error) {
+    console.error('Update user error:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// Delete user
+app.delete('/api/admin/users/:id', auth, adminOnly, async (req, res) => {
+  try {
+    const User = require('./models/User');
+    
+    // Check if user exists
+    const user = await User.findByPk(req.params.id);
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+    
+    // Prevent deleting admin users
+    if (user.role === 'admin') {
+      return res.status(403).json({ success: false, message: 'Cannot delete admin users' });
+    }
+    
+    await User.destroy({ where: { id: req.params.id } });
+    res.json({ success: true, message: 'User deleted successfully' });
+  } catch (error) {
+    console.error('Delete user error:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+app.put('/api/admin/users/:id/status', auth, adminOnly, async (req, res) => {
+  try {
+    // For now, just return success since we don't have isActive field in model
+    // In a real implementation, you'd add isActive field to User model
+    res.json({ success: true, message: 'User status updated successfully (simulated)' });
+  } catch (error) {
+    console.error('Update user status error:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// Batch management routes
+app.post('/api/batches', auth, mentorOrAdmin, async (req, res) => {
+  try {
+    const Batch = require('./models/Batch');
+    const { code, name, description } = req.body;
+    
+    const batch = await Batch.create({
+      code,
+      name,
+      description,
+      createdBy: req.user.id
+    });
+    
+    res.json({ success: true, data: batch });
+  } catch (error) {
+    console.error('Create batch error:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+app.get('/api/batches', async (req, res) => {
+  try {
+    const Batch = require('./models/Batch');
+    const User = require('./models/User');
+    
+    const batches = await Batch.findAll({
+      where: { isActive: true },
+      include: [{
+        model: User,
+        as: 'creator',
+        attributes: ['name', 'username']
+      }],
+      order: [['createdAt', 'DESC']]
+    });
+    
+    res.json({ success: true, data: batches });
+  } catch (error) {
+    console.error('Get batches error:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+app.put('/api/batches/:id', auth, mentorOrAdmin, async (req, res) => {
+  try {
+    const Batch = require('./models/Batch');
+    const { name, description, isActive } = req.body;
+    
+    await Batch.update(
+      { name, description, isActive },
+      { where: { id: req.params.id } }
+    );
+    
+    res.json({ success: true, message: 'Batch updated successfully' });
+  } catch (error) {
+    console.error('Update batch error:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+app.delete('/api/batches/:id', auth, mentorOrAdmin, async (req, res) => {
+  try {
+    const Batch = require('./models/Batch');
+    await Batch.destroy({ where: { id: req.params.id } });
+    res.json({ success: true, message: 'Batch deleted successfully' });
+  } catch (error) {
+    console.error('Delete batch error:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// Meeting routes (legacy support)
+app.get('/api/batch-codes', auth, async (req, res) => {
+  try {
+    const Batch = require('./models/Batch');
+    const batches = await Batch.findAll({
+      where: { isActive: true },
+      attributes: ['code']
+    });
+    const batchCodes = batches.map(b => b.code);
     res.json({ success: true, data: batchCodes });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
@@ -494,21 +715,92 @@ if (process.env.NODE_ENV === 'development') {
   });
 }
 
-// Meeting Socket.IO handlers
+// Single Socket.IO setup with proper error handling
 const io = require('socket.io')(server, {
   cors: {
-    origin: "http://localhost:3000",
-    methods: ["GET", "POST"]
+    origin: ["http://localhost:3000", "http://127.0.0.1:3000"],
+    methods: ["GET", "POST"],
+    credentials: true
+  },
+  transports: ['websocket', 'polling'],
+  allowEIO3: true
+});
+
+// Make io available globally
+app.set('io', io);
+
+// Initialize streaming functionality
+const activeStreams = new Map();
+const meetingRooms = new Map();
+const userRooms = new Map();
+
+// Store streaming socket reference
+app.set('streamingSocket', {
+  getActiveStreams: () => Array.from(activeStreams.values()),
+  terminateStream: (sessionId) => {
+    const stream = activeStreams.get(sessionId);
+    if (stream) {
+      io.emit('exam-terminated', {
+        sessionId,
+        reason: 'Terminated by mentor'
+      });
+      activeStreams.delete(sessionId);
+      io.emit('stream-ended', { sessionId });
+      return true;
+    }
+    return false;
   }
 });
 
-// Make io available globally for meeting notifications
-app.set('io', io);
-
-const meetingRooms = new Map();
-
 io.on('connection', (socket) => {
-  console.log('User connected:', socket.id);
+  console.log('✅ User connected:', socket.id);
+  
+  // Handle user room joining for notifications
+  socket.on('join-user-room', (data) => {
+    const { userId, userType } = data;
+    const roomName = `user_${userId}`;
+    socket.join(roomName);
+    userRooms.set(socket.id, { userId, userType, roomName });
+    console.log(`User ${userId} (${userType}) joined room ${roomName}`);
+  });
+  
+  // Streaming handlers
+  socket.on('student-start-stream', (data) => {
+    const { sessionId, studentId, examId, examTitle } = data;
+    
+    activeStreams.set(sessionId, {
+      sessionId, studentId, examId, examTitle,
+      startTime: new Date(), mentorCount: 0
+    });
+    
+    io.emit('new-stream-started', {
+      sessionId, studentId, examId, examTitle,
+      startTime: new Date()
+    });
+  });
+
+  socket.on('video-frame', (data) => {
+    socket.broadcast.emit('video-frame', data);
+  });
+
+  socket.on('student-end-stream', (data) => {
+    activeStreams.delete(data.sessionId);
+    io.emit('stream-ended', data);
+  });
+
+  socket.on('mentor-join-stream', (data) => {
+    const stream = activeStreams.get(data.sessionId);
+    if (stream) stream.mentorCount++;
+  });
+  
+  // Handle connection errors
+  socket.on('connect_error', (error) => {
+    console.error('Socket connection error:', error);
+  });
+  
+  socket.on('error', (error) => {
+    console.error('Socket error:', error);
+  });
   
   socket.on('join-meeting', (data) => {
     const { meetingId, userId } = data;
@@ -594,10 +886,13 @@ io.on('connection', (socket) => {
     }
   });
   
-  socket.on('disconnect', () => {
-    console.log('User disconnected:', socket.id);
+  socket.on('disconnect', (reason) => {
+    console.log('❌ User disconnected:', socket.id, 'Reason:', reason);
     
-    // Clean up from all rooms
+    // Clean up user rooms
+    userRooms.delete(socket.id);
+    
+    // Clean up from all meeting rooms
     meetingRooms.forEach((room, meetingId) => {
       room.forEach(user => {
         if (user.id === socket.id) {
@@ -616,6 +911,21 @@ io.on('connection', (socket) => {
 
 const PORT = process.env.PORT || 3001;
 server.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-  console.log(`Socket.IO server initialized for meetings`);
+  console.log(`🚀 Server running on port ${PORT}`);
+  console.log(`🔌 Socket.IO server initialized`);
+  console.log(`📡 WebSocket available at ws://localhost:${PORT}`);
+});
+
+// Handle server errors
+server.on('error', (error) => {
+  console.error('❌ Server error:', error);
+});
+
+// Graceful shutdown
+process.on('SIGTERM', () => {
+  console.log('🛑 SIGTERM received, shutting down gracefully');
+  server.close(() => {
+    console.log('✅ Server closed');
+    process.exit(0);
+  });
 });

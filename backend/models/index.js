@@ -4,8 +4,10 @@ const Result = require('./Result');
 const JobPosting = require('./JobPosting');
 const Application = require('./Application');
 const ProctoringSession = require('./ProctoringSession');
+const ProctoringLog = require('./ProctoringLog');
 const ReAttemptRequest = require('./ReAttemptRequest');
 const Notification = require('./Notification');
+const Batch = require('./Batch');
 // const CodingQuestion = require('./CodingQuestion');
 
 /**
@@ -18,6 +20,10 @@ User.hasMany(Result, { foreignKey: 'studentId', as: 'results' });
 User.hasMany(JobPosting, { foreignKey: 'createdBy', as: 'createdJobs' });
 User.hasMany(Application, { foreignKey: 'candidateId', as: 'applications' });
 User.hasMany(Application, { foreignKey: 'mentorId', as: 'mentorApplications' });
+User.hasMany(Batch, { foreignKey: 'createdBy', as: 'createdBatches' });
+
+// Batch associations
+Batch.belongsTo(User, { foreignKey: 'createdBy', as: 'creator' });
 
 // Job Posting associations
 JobPosting.belongsTo(User, { foreignKey: 'createdBy', as: 'creator' });
@@ -55,6 +61,12 @@ Result.hasOne(ReAttemptRequest, { foreignKey: 'resultId', as: 'reAttemptRequest'
 Notification.belongsTo(User, { foreignKey: 'userId', as: 'user' });
 User.hasMany(Notification, { foreignKey: 'userId', as: 'notifications' });
 
+// ProctoringLog associations
+ProctoringLog.belongsTo(User, { foreignKey: 'studentId', as: 'student' });
+ProctoringLog.belongsTo(Exam, { foreignKey: 'examId', as: 'exam' });
+User.hasMany(ProctoringLog, { foreignKey: 'studentId', as: 'proctoringLogs' });
+Exam.hasMany(ProctoringLog, { foreignKey: 'examId', as: 'proctoringLogs' });
+
 // CodingQuestion associations (temporarily disabled)
 // CodingQuestion.belongsTo(User, { foreignKey: 'createdBy', as: 'creator' });
 // User.hasMany(CodingQuestion, { foreignKey: 'createdBy', as: 'codingQuestions' });
@@ -66,7 +78,9 @@ module.exports = {
   JobPosting,
   Application,
   ProctoringSession,
+  ProctoringLog,
   ReAttemptRequest,
-  Notification
+  Notification,
+  Batch
   // CodingQuestion
 };

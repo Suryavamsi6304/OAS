@@ -58,29 +58,28 @@ const register = async (req, res) => {
       });
     }
 
-    // Create user
+    // Create user with pending approval
     const user = await User.create({
       username,
       email,
       password,
       name,
       role,
-      batchCode: role === 'learner' ? batchCode : null
+      batchCode: role === 'learner' ? batchCode : null,
+      isApproved: false
     });
-
-    // Generate token
-    const token = generateToken(user.id);
 
     res.status(201).json({
       success: true,
-      token,
+      message: 'Registration successful. Please wait for approval from mentor/admin.',
       user: {
         id: user.id,
         username: user.username,
         email: user.email,
         name: user.name,
         role: user.role,
-        batchCode: user.batchCode
+        batchCode: user.batchCode,
+        isApproved: user.isApproved
       }
     });
   } catch (error) {
@@ -114,6 +113,13 @@ const login = async (req, res) => {
       return res.status(401).json({
         success: false,
         message: 'Invalid credentials'
+      });
+    }
+
+    if (!user.isApproved) {
+      return res.status(403).json({
+        success: false,
+        message: 'Your account is pending approval. Please contact your mentor or admin.'
       });
     }
 

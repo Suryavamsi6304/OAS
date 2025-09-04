@@ -13,6 +13,15 @@ const TestInstructions = () => {
   const { data: exam, isLoading, error } = useQuery(['exam', id], async () => {
     const response = await axios.get(`/api/exams/${id}`);
     return response.data.data;
+  }, {
+    retry: false,
+    onError: (error) => {
+      if (error.response?.status === 403 && error.response?.data?.requiresReAttempt) {
+        // Redirect to skill assessments page where the modal will handle re-attempt
+        navigate('/learner/skill-assessments');
+        toast.error('You have already taken this assessment. Please request a re-attempt.');
+      }
+    }
   });
 
   if (isLoading) {

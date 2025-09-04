@@ -7,6 +7,7 @@ import axios from 'axios';
 import toast from 'react-hot-toast';
 import ExamCamera from '../Proctoring/ExamCamera';
 import CameraRules from '../Proctoring/CameraRules';
+import ProctoringMonitor from '../Proctoring/ProctoringMonitor';
 import CodeEditor from './CodeEditor';
 
 const ExamTaking = () => {
@@ -19,8 +20,12 @@ const ExamTaking = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [, setCameraReady] = useState(false);
   const cameraRef = useRef(null);
+  const proctoringRef = useRef(null);
   const [showCameraRules, setShowCameraRules] = useState(true);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [isExamBlocked, setIsExamBlocked] = useState(false);
+  const [showFullscreenWarning, setShowFullscreenWarning] = useState(false);
+  const [startTime] = useState(Date.now());
 
   const { data: exam, isLoading, error } = useQuery(['exam', id], async () => {
     const response = await axios.get(`/api/exams/${id}`);
@@ -39,22 +44,46 @@ const ExamTaking = () => {
     }
   }, [exam, timeLeft]);
 
-  // Start time tracking
-  const [startTime] = useState(Date.now());
+  // Handle exam blocking from proctoring
+  const handleViolation = (violation) => {
+    console.log('Violation reported:', violation);
+  };
 
+  // Listen for exam termination
+  useEffect(() => {
+    const handleMessage = (event) => {
+      if (event.data.type === 'EXAM_TERMINATED') {
+        setIsExamBlocked(true);
+        toast.error('Exam has been terminated due to violations.');
+      }
+    };
+    
+    window.addEventListener('message', handleMessage);
+    return () => window.removeEventListener('message', handleMessage);
+  }, []);
 
+  // Expose proctoring monitor to global scope for violation reporting
+  useEffect(() => {
+    if (proctoringRef.current) {
+      window.proctoringMonitor = proctoringRef.current;
+    }
+    return () => {
+      window.proctoringMonitor = null;
+    };
+  }, []);
 
   const handleSubmit = useCallback(async () => {
     if (isSubmitting) return;
     
     setIsSubmitting(true);
     
-    // Stop camera before submitting
     if (cameraRef.current && cameraRef.current.stopCamera) {
       cameraRef.current.stopCamera();
     }
+    if (proctoringRef.current && proctoringRef.current.stopMonitoring) {
+      proctoringRef.current.stopMonitoring();
+    }
 
-    // Exit fullscreen
     if (document.fullscreenElement) {
       try {
         await document.exitFullscreen();
@@ -76,7 +105,6 @@ const ExamTaking = () => {
       const response = await axios.post('/api/exams/submit', submissionData);
       if (response.data.success) {
         toast.success('Test submitted successfully!');
-        // Exit fullscreen before navigation
         if (document.fullscreenElement) {
           await document.exitFullscreen().catch(() => {});
         }
@@ -101,7 +129,7 @@ const ExamTaking = () => {
     }
   }, [timeLeft, handleSubmit]);
 
-  // Fullscreen enforcement
+  // Fullscreen enforcement - Only for skill assessments
   useEffect(() => {
     const enterFullscreen = async () => {
       try {
@@ -109,23 +137,36 @@ const ExamTaking = () => {
         setIsFullscreen(true);
       } catch (error) {
         console.error('Failed to enter fullscreen:', error);
-        toast.error('Fullscreen mode is required for the exam');
       }
     };
 
     const handleFullscreenChange = () => {
-      if (!document.fullscreenElement && isFullscreen && !isSubmitting) {
-        toast.error('Exam submitted due to fullscreen violation!');
-        handleSubmit();
+      const isCurrentlyFullscreen = !!(document.fullscreenElement || document.webkitFullscreenElement || document.mozFullScreenElement || document.msFullscreenElement);
+      
+      if (!isCurrentlyFullscreen && isFullscreen && !isSubmitting) {
+        setShowFullscreenWarning(true);
+        
+        toast.error('⚠️ Fullscreen violation detected! Please return to fullscreen mode.', {
+          duration: 3000,
+          position: 'top-center'
+        });
+        
+        if (window.proctoringMonitor && window.proctoringMonitor.reportViolation) {
+          window.proctoringMonitor.reportViolation('fullscreen_exit', 'high', 'Student exited fullscreen mode');
+        }
+      } else if (isCurrentlyFullscreen) {
+        setShowFullscreenWarning(false);
       }
     };
 
-    // Enter fullscreen when exam starts (after camera rules)
-    if (!showCameraRules && exam) {
-      enterFullscreen();
+    // Only try to enter fullscreen after user interaction (camera rules acceptance)
+    if (!showCameraRules && exam && exam.type === 'skill-assessment' && !isFullscreen) {
+      // Add a small delay to ensure user gesture context
+      setTimeout(() => {
+        enterFullscreen();
+      }, 100);
     }
 
-    // Listen for fullscreen changes
     document.addEventListener('fullscreenchange', handleFullscreenChange);
     document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
     document.addEventListener('mozfullscreenchange', handleFullscreenChange);
@@ -137,20 +178,23 @@ const ExamTaking = () => {
       document.removeEventListener('mozfullscreenchange', handleFullscreenChange);
       document.removeEventListener('MSFullscreenChange', handleFullscreenChange);
     };
-  }, [showCameraRules, exam, isFullscreen, isSubmitting, handleSubmit]);
+  }, [showCameraRules, exam, isFullscreen, isSubmitting]);
 
-  // Anti-cheating measures
+  // Anti-cheating measures - Only for skill assessments
   useEffect(() => {
-    if (!showCameraRules && exam) {
-      // Prevent right-click
+    if (!showCameraRules && exam && exam.type === 'skill-assessment') {
       const preventRightClick = (e) => {
         e.preventDefault();
-        toast.error('Right-click is disabled during exam');
+        toast.error('Right-click is disabled during exam', {
+          duration: 2000
+        });
+        
+        if (window.proctoringMonitor && window.proctoringMonitor.reportViolation) {
+          window.proctoringMonitor.reportViolation('right_click', 'low', 'Right-click attempt detected');
+        }
       };
 
-      // Prevent keyboard shortcuts
       const preventKeyboardShortcuts = (e) => {
-        // Prevent F12, Ctrl+Shift+I, Ctrl+U, Ctrl+S, Ctrl+A, Ctrl+C, Ctrl+V
         if (
           e.key === 'F12' ||
           (e.ctrlKey && e.shiftKey && e.key === 'I') ||
@@ -162,24 +206,33 @@ const ExamTaking = () => {
           (e.altKey && e.key === 'Tab')
         ) {
           e.preventDefault();
-          toast.error('This action is not allowed during exam');
+          toast.error('This action is not allowed during exam', {
+            duration: 2000
+          });
+          
+          if (window.proctoringMonitor && window.proctoringMonitor.reportViolation) {
+            window.proctoringMonitor.reportViolation('suspicious_key', 'medium', `Blocked key combination: ${e.key}`);
+          }
         }
       };
 
-      // Prevent tab switching
       const handleVisibilityChange = () => {
         if (document.hidden && !isSubmitting) {
-          toast.error('Exam submitted due to tab switching violation!');
-          handleSubmit();
+          toast.error('⚠️ Tab switching violation detected!', {
+            duration: 3000,
+            position: 'top-center'
+          });
+          
+          if (window.proctoringMonitor && window.proctoringMonitor.reportViolation) {
+            window.proctoringMonitor.reportViolation('tab_switch', 'high', 'Student switched tabs or minimized window');
+          }
         }
       };
 
-      // Add event listeners
       document.addEventListener('contextmenu', preventRightClick);
       document.addEventListener('keydown', preventKeyboardShortcuts);
       document.addEventListener('visibilitychange', handleVisibilityChange);
 
-      // Disable text selection
       document.body.style.userSelect = 'none';
       document.body.style.webkitUserSelect = 'none';
       document.body.style.mozUserSelect = 'none';
@@ -190,14 +243,13 @@ const ExamTaking = () => {
         document.removeEventListener('keydown', preventKeyboardShortcuts);
         document.removeEventListener('visibilitychange', handleVisibilityChange);
         
-        // Re-enable text selection
         document.body.style.userSelect = 'auto';
         document.body.style.webkitUserSelect = 'auto';
         document.body.style.mozUserSelect = 'auto';
         document.body.style.msUserSelect = 'auto';
       };
     }
-  }, [showCameraRules, exam, isSubmitting, handleSubmit]);
+  }, [showCameraRules, exam, isSubmitting]);
 
   const formatTime = (seconds) => {
     const mins = Math.floor(seconds / 60);
@@ -225,7 +277,6 @@ const ExamTaking = () => {
     );
   }
 
-  // Show camera rules first
   if (showCameraRules) {
     return (
       <div>
@@ -233,25 +284,25 @@ const ExamTaking = () => {
           onAccept={() => setShowCameraRules(false)}
           onCancel={() => navigate('/learner')}
         />
-        {/* Fullscreen Warning */}
-        <div style={{
-          position: 'fixed',
-          bottom: '20px',
-          left: '50%',
-          transform: 'translateX(-50%)',
-          backgroundColor: '#fef3c7',
-          border: '1px solid #fbbf24',
-          borderRadius: '8px',
-          padding: '12px 16px',
-          zIndex: 2001,
-          fontSize: '14px',
-          color: '#92400e',
-          textAlign: 'center',
-          maxWidth: '400px'
-        }}>
-          ⚠️ <strong>Notice:</strong> Exam will automatically enter fullscreen mode. 
-          Exiting fullscreen will submit your exam immediately.
-        </div>
+        {exam?.type === 'skill-assessment' && (
+          <div style={{
+            position: 'fixed',
+            bottom: '20px',
+            left: '50%',
+            transform: 'translateX(-50%)',
+            backgroundColor: '#f0fdf4',
+            border: '1px solid #bbf7d0',
+            borderRadius: '8px',
+            padding: '12px 16px',
+            zIndex: 2001,
+            fontSize: '14px',
+            color: '#166534',
+            textAlign: 'center',
+            maxWidth: '450px'
+          }}>
+            ✅ <strong>Proctored Assessment:</strong> Violations are tracked - after 5 violations, exam will be blocked pending mentor approval.
+          </div>
+        )}
       </div>
     );
   }
@@ -286,16 +337,95 @@ const ExamTaking = () => {
     );
   }
 
+  if (isExamBlocked) {
+    return (
+      <div style={{
+        minHeight: '100vh',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: '#f8fafc'
+      }}>
+        <div style={{
+          textAlign: 'center',
+          padding: '40px',
+          backgroundColor: 'white',
+          borderRadius: '16px',
+          boxShadow: '0 10px 25px rgba(0,0,0,0.1)',
+          maxWidth: '500px'
+        }}>
+          <h1 style={{ color: '#ef4444', marginBottom: '16px' }}>Exam Terminated</h1>
+          <p style={{ color: '#6b7280', marginBottom: '24px' }}>
+            Your exam has been terminated due to multiple proctoring violations.
+          </p>
+          <button
+            onClick={() => navigate('/learner')}
+            style={{
+              padding: '12px 24px',
+              backgroundColor: '#3b82f6',
+              color: 'white',
+              border: 'none',
+              borderRadius: '6px',
+              cursor: 'pointer'
+            }}
+          >
+            Return to Dashboard
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   const question = exam.questions[currentQuestion];
   const progress = ((currentQuestion + 1) / exam.questions.length) * 100;
 
-
-
   return (
     <div style={{ minHeight: '100vh', backgroundColor: '#f8fafc' }}>
-      {/* Exam Camera */}
-      {exam?.proctoringEnabled && <ExamCamera ref={cameraRef} onCameraReady={setCameraReady} examId={id} studentId={user?.id} />}
-      {/* Header */}
+      {showFullscreenWarning && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          backgroundColor: '#fef2f2',
+          border: '2px solid #ef4444',
+          padding: '12px',
+          textAlign: 'center',
+          zIndex: 9999,
+          color: '#dc2626',
+          fontWeight: 'bold',
+          fontSize: '16px'
+        }}>
+          ⚠️ FULLSCREEN VIOLATION - Please press F11 or click the fullscreen button to continue
+          <button
+            onClick={() => {
+              document.documentElement.requestFullscreen().catch(console.error);
+            }}
+            style={{
+              marginLeft: '16px',
+              padding: '4px 12px',
+              backgroundColor: '#dc2626',
+              color: 'white',
+              border: 'none',
+              borderRadius: '4px',
+              cursor: 'pointer'
+            }}
+          >
+            Enter Fullscreen
+          </button>
+        </div>
+      )}
+      
+      {exam?.type === 'skill-assessment' && (
+        <ProctoringMonitor 
+          ref={proctoringRef}
+          sessionId={id} 
+          onViolation={handleViolation}
+        />
+      )}
+      
+      {exam?.type === 'skill-assessment' && <ExamCamera ref={cameraRef} onCameraReady={setCameraReady} examId={id} studentId={user?.id} />}
+      
       <div style={{
         backgroundColor: 'white',
         boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
@@ -351,7 +481,6 @@ const ExamTaking = () => {
           </div>
         </div>
         
-        {/* Progress Bar */}
         <div style={{ 
           width: '100%', 
           height: '4px', 
@@ -371,7 +500,6 @@ const ExamTaking = () => {
         </div>
       </div>
 
-      {/* Question Content */}
       <div style={{ 
         maxWidth: '800px', 
         margin: '0 auto', 
@@ -481,7 +609,6 @@ const ExamTaking = () => {
             )}
           </div>
 
-          {/* Answer Options */}
           <div style={{ marginBottom: '32px' }}>
             {question.type === 'multiple-choice' && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
@@ -578,7 +705,6 @@ const ExamTaking = () => {
             )}
           </div>
 
-          {/* Navigation */}
           <div style={{ 
             display: 'flex', 
             justifyContent: 'space-between', 

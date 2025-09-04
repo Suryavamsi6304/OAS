@@ -16,7 +16,8 @@ const CreateSkillAssessment = () => {
     negativeMarkingValue: 0.25,
     passingScore: 60,
     isActive: true,
-    type: 'skill-assessment'
+    type: 'skill-assessment',
+    proctoringEnabled: true
   });
   const [questions, setQuestions] = useState([]);
   const [isQuestionsGenerated, setIsQuestionsGenerated] = useState(false);
@@ -149,7 +150,8 @@ const CreateSkillAssessment = () => {
             _id: `opt${optIndex + 1}`
           })) : undefined
         })),
-        totalPoints
+        totalPoints,
+        proctoringEnabled: true
       };
 
       const response = await axios.post('/api/skill-assessments', skillAssessment);

@@ -21,8 +21,25 @@ export const NotificationProvider = ({ children }) => {
 
   useEffect(() => {
     if (user) {
-      // Initialize socket connection
-      const newSocket = io('http://localhost:3001');
+      // Initialize socket connection with error handling
+      const newSocket = io('http://localhost:3001', {
+        transports: ['websocket', 'polling'],
+        timeout: 20000,
+        forceNew: true
+      });
+      
+      newSocket.on('connect', () => {
+        console.log('✅ Socket connected:', newSocket.id);
+      });
+      
+      newSocket.on('connect_error', (error) => {
+        console.error('❌ Socket connection error:', error);
+      });
+      
+      newSocket.on('disconnect', (reason) => {
+        console.log('🔌 Socket disconnected:', reason);
+      });
+      
       setSocket(newSocket);
 
       // Join user room for notifications
@@ -85,7 +102,9 @@ export const NotificationProvider = ({ children }) => {
       });
 
       return () => {
-        newSocket.disconnect();
+        if (newSocket) {
+          newSocket.disconnect();
+        }
       };
     }
   }, [user]);

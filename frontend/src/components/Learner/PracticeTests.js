@@ -84,6 +84,20 @@ const PracticeTests = () => {
                   <Play size={16} style={{ marginRight: '8px' }} />
                   Start Test
                 </button>
+                
+                <div style={{
+                  marginTop: '12px',
+                  padding: '8px',
+                  backgroundColor: '#f0fdf4',
+                  borderRadius: '6px',
+                  fontSize: '12px',
+                  color: '#166534',
+                  display: 'flex',
+                  alignItems: 'center'
+                }}>
+                  <CheckCircle size={14} style={{ marginRight: '6px' }} />
+                  No proctoring • Unlimited attempts
+                </div>
               </div>
             ))}
           </div>

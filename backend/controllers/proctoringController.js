@@ -1,4 +1,5 @@
 const { ProctoringSession, Exam, User } = require('../models');
+const { Notification } = require('../models');
 
 /**
  * Start proctoring session
@@ -56,18 +57,23 @@ const reportViolation = async (req, res) => {
 
     const updatedViolations = [...session.violations, violation];
     const newRiskScore = calculateRiskScore(updatedViolations);
+    
+    // Check if violations exceed limit (5)
+    const shouldBlock = updatedViolations.length >= 5;
 
     await session.update({
       violations: updatedViolations,
       riskScore: newRiskScore,
-      status: newRiskScore > 80 ? 'flagged' : session.status
+      status: shouldBlock ? 'blocked' : (newRiskScore > 80 ? 'flagged' : session.status)
     });
 
     res.json({
       success: true,
       data: {
         riskScore: newRiskScore,
-        status: session.status
+        status: session.status,
+        violationCount: updatedViolations.length,
+        shouldBlock
       }
     });
   } catch (error) {
@@ -184,6 +190,123 @@ const getSessions = async (req, res) => {
 };
 
 /**
+ * Send mentor request when violations exceed limit
+ */
+const sendMentorRequest = async (req, res) => {
+  try {
+    const { sessionId, reason, violations, riskScore } = req.body;
+
+    const session = await ProctoringSession.findByPk(sessionId);
+    if (!session) {
+      return res.status(404).json({
+        success: false,
+        message: 'Session not found'
+      });
+    }
+
+    await session.update({
+      status: 'blocked',
+      mentorRequest: {
+        reason,
+        violations,
+        riskScore,
+        timestamp: new Date(),
+        status: 'pending'
+      }
+    });
+
+    res.json({
+      success: true,
+      message: 'Mentor request sent successfully'
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Failed to send mentor request'
+    });
+  }
+};
+
+/**
+ * Check mentor response
+ */
+const checkMentorResponse = async (req, res) => {
+  try {
+    const { sessionId } = req.params;
+
+    const session = await ProctoringSession.findByPk(sessionId);
+    if (!session) {
+      return res.status(404).json({
+        success: false,
+        message: 'Session not found'
+      });
+    }
+
+    const mentorRequest = session.mentorRequest;
+    if (!mentorRequest) {
+      return res.json({
+        success: true,
+        approved: false,
+        rejected: false,
+        pending: false
+      });
+    }
+
+    res.json({
+      success: true,
+      approved: mentorRequest.status === 'approved',
+      rejected: mentorRequest.status === 'rejected',
+      pending: mentorRequest.status === 'pending'
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Failed to check mentor response'
+    });
+  }
+};
+
+/**
+ * Approve/reject mentor request (for mentors)
+ */
+const handleMentorRequest = async (req, res) => {
+  try {
+    const { sessionId } = req.params;
+    const { action, comments } = req.body; // action: 'approve' or 'reject'
+
+    const session = await ProctoringSession.findByPk(sessionId);
+    if (!session) {
+      return res.status(404).json({
+        success: false,
+        message: 'Session not found'
+      });
+    }
+
+    const updatedRequest = {
+      ...session.mentorRequest,
+      status: action === 'approve' ? 'approved' : 'rejected',
+      mentorComments: comments,
+      responseTime: new Date()
+    };
+
+    await session.update({
+      mentorRequest: updatedRequest,
+      status: action === 'approve' ? 'active' : 'terminated'
+    });
+
+    res.json({
+      success: true,
+      message: `Request ${action}d successfully`
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Failed to handle mentor request'
+    });
+  }
+};
+
+/**
  * Calculate risk score based on violations
  */
 const calculateRiskScore = (violations) => {
@@ -214,5 +337,8 @@ module.exports = {
   reportViolation,
   updateBehavior,
   endSession,
-  getSessions
+  getSessions,
+  sendMentorRequest,
+  checkMentorResponse,
+  handleMentorRequest
 };

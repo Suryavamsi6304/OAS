@@ -8,6 +8,7 @@ import ReAttemptRequests from './ReAttemptRequests';
 import NotificationBell from '../Notifications/NotificationBell';
 import LiveMonitorDashboard from './LiveMonitorDashboard';
 import BatchPerformance from './BatchPerformance';
+import BatchManagement from './BatchManagement';
 
 
 const EnhancedMentorDashboard = () => {
@@ -525,6 +526,7 @@ const EnhancedMentorDashboard = () => {
           <div style={{ display: 'flex', gap: '8px', minWidth: 'max-content' }}>
             {[
               { id: 'dashboard', label: 'Dashboard', icon: BookOpen },
+              { id: 'batches', label: 'Batches', icon: Users },
               { id: 'performance', label: 'Performance', icon: Trophy },
               { id: 'practice', label: 'Practice', icon: Target },
               { id: 'skills', label: 'Skills', icon: Code },
@@ -570,6 +572,7 @@ const EnhancedMentorDashboard = () => {
       {/* Main Content */}
       <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '24px' }}>
         {activeTab === 'dashboard' && renderDashboard()}
+        {activeTab === 'batches' && <BatchManagement />}
         {activeTab === 'performance' && <BatchPerformance />}
         {activeTab === 'practice' && renderPracticeTests()}
         {activeTab === 'skills' && renderSkillAssessments()}

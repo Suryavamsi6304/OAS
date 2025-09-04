@@ -39,6 +39,18 @@ const User = sequelize.define('User', {
   batchCode: {
     type: DataTypes.STRING,
     allowNull: true
+  },
+  isApproved: {
+    type: DataTypes.BOOLEAN,
+    defaultValue: false
+  },
+  approvedBy: {
+    type: DataTypes.INTEGER,
+    allowNull: true
+  },
+  approvedAt: {
+    type: DataTypes.DATE,
+    allowNull: true
   }
 }, {
   timestamps: true,

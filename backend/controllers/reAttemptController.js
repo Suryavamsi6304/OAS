@@ -5,28 +5,35 @@ const { ReAttemptRequest, Notification, Result, Exam, User } = require('../model
  */
 const requestReAttempt = async (req, res) => {
   try {
-    const { resultId, reason } = req.body;
+    const { examId, reason } = req.body;
     
-    // Check if result exists and belongs to student
+    if (!examId || !reason) {
+      return res.status(400).json({ success: false, message: 'Exam ID and reason are required' });
+    }
+    
+    // Check if exam exists
+    const exam = await Exam.findByPk(examId, {
+      include: [{ model: User, as: 'creator' }]
+    });
+    
+    if (!exam) {
+      return res.status(404).json({ success: false, message: 'Exam not found' });
+    }
+    
+    // Check if student has taken this exam
     const result = await Result.findOne({
-      where: { id: resultId, studentId: req.user.id },
-      include: [{ model: Exam, as: 'exam', include: [{ model: User, as: 'creator' }] }]
+      where: { examId, studentId: req.user.id }
     });
     
     if (!result) {
-      return res.status(404).json({ success: false, message: 'Result not found' });
-    }
-    
-    // Check if student failed (assuming passing score is 60%)
-    if (result.percentage >= (result.exam.passingScore || 60)) {
-      return res.status(400).json({ success: false, message: 'Cannot request re-attempt for passed exam' });
+      return res.status(400).json({ success: false, message: 'You must take the exam first before requesting a re-attempt' });
     }
     
     // Check if any request already exists for this exam (regardless of status)
     const existingRequest = await ReAttemptRequest.findOne({
       where: { 
         studentId: req.user.id,
-        examId: result.examId
+        examId: examId
       }
     });
     
@@ -37,17 +44,17 @@ const requestReAttempt = async (req, res) => {
     // Create re-attempt request
     const request = await ReAttemptRequest.create({
       studentId: req.user.id,
-      examId: result.examId,
-      resultId,
+      examId: examId,
+      resultId: result.id,
       reason
     });
     
     // Create notification for teacher
     await Notification.create({
-      userId: result.exam.createdBy,
+      userId: exam.createdBy,
       type: 're_attempt_request',
       title: 'Re-attempt Request',
-      message: `${req.user.name} failed "${result.exam.title}" and is requesting a re-attempt`,
+      message: `${req.user.name} is requesting a re-attempt for "${exam.title}"`,
       relatedId: request.id
     });
     
@@ -63,7 +70,20 @@ const requestReAttempt = async (req, res) => {
  */
 const getReAttemptRequests = async (req, res) => {
   try {
+    let whereClause = {};
+    
+    // If user is a mentor, only show requests for their exams
+    if (req.user.role === 'mentor') {
+      const mentorExams = await Exam.findAll({
+        where: { createdBy: req.user.id },
+        attributes: ['id']
+      });
+      const examIds = mentorExams.map(exam => exam.id);
+      whereClause.examId = examIds;
+    }
+    
     const requests = await ReAttemptRequest.findAll({
+      where: whereClause,
       include: [
         { model: User, as: 'student', attributes: ['name', 'username'] },
         { model: Exam, as: 'exam', attributes: ['title'] },
@@ -95,6 +115,11 @@ const reviewReAttemptRequest = async (req, res) => {
     
     if (!request) {
       return res.status(404).json({ success: false, message: 'Request not found' });
+    }
+    
+    // Check if mentor can review this request (only for their own exams)
+    if (req.user.role === 'mentor' && request.exam.createdBy !== req.user.id) {
+      return res.status(403).json({ success: false, message: 'You can only review requests for your own exams' });
     }
     
     // Update request
@@ -133,7 +158,8 @@ const getMyReAttemptRequests = async (req, res) => {
     const requests = await ReAttemptRequest.findAll({
       where: { studentId: req.user.id },
       include: [
-        { model: Exam, as: 'exam', attributes: ['id', 'title'] }
+        { model: Exam, as: 'exam', attributes: ['id', 'title'] },
+        { model: Result, as: 'result', attributes: ['score', 'percentage'] }
       ],
       order: [['createdAt', 'DESC']]
     });

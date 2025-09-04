@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useMutation } from 'react-query';
 import { useNavigate, Link } from 'react-router-dom';
 import { User, Mail, Lock, UserCheck, Eye, EyeOff } from 'lucide-react';
@@ -21,8 +21,26 @@ const Register = () => {
   });
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [availableBatches, setAvailableBatches] = useState([]);
   const { login } = useAuth();
   const navigate = useNavigate();
+
+  // Fetch available batches
+  useEffect(() => {
+    const fetchBatches = async () => {
+      try {
+        // Create axios instance without auth headers for public endpoint
+        const publicAxios = axios.create({
+          baseURL: 'http://localhost:3001'
+        });
+        const response = await publicAxios.get('/api/batches');
+        setAvailableBatches(response.data.data || []);
+      } catch (error) {
+        console.error('Failed to fetch batches:', error);
+      }
+    };
+    fetchBatches();
+  }, []);
 
   // Registration mutation
   const registerMutation = useMutation(
@@ -35,9 +53,14 @@ const Register = () => {
     {
       onSuccess: (data) => {
         console.log('Registration successful:', data);
-        login(data.token, data.user);
-        toast.success('Registration successful!');
-        navigate('/');
+        if (data.token) {
+          login(data.token, data.user);
+          toast.success('Registration successful!');
+          navigate('/');
+        } else {
+          toast.success(data.message || 'Registration successful! Please wait for approval.');
+          navigate('/login');
+        }
       },
       onError: (error) => {
         console.error('Registration error:', error);
@@ -238,30 +261,38 @@ const Register = () => {
             </select>
           </div>
 
-          {/* Batch Code for Learners */}
+          {/* Batch Selection for Learners */}
           {formData.role === 'learner' && (
             <div style={{ marginBottom: '20px' }}>
               <label style={{ display: 'block', marginBottom: '6px', fontWeight: '500' }}>
-                Batch Code
+                Select Batch
               </label>
-              <input
-                type="text"
+              <select
                 name="batchCode"
                 value={formData.batchCode}
                 onChange={handleChange}
                 required={formData.role === 'learner'}
-                placeholder="Enter your batch code (e.g., BATCH001)"
                 style={{
                   width: '100%',
                   padding: '12px',
                   border: '2px solid #e5e7eb',
                   borderRadius: '8px',
                   fontSize: '16px',
-                  transition: 'border-color 0.2s'
+                  backgroundColor: 'white'
                 }}
-                onFocus={(e) => e.target.style.borderColor = '#3b82f6'}
-                onBlur={(e) => e.target.style.borderColor = '#e5e7eb'}
-              />
+              >
+                <option value="">Choose your batch</option>
+                {availableBatches.map((batch) => (
+                  <option key={batch.id} value={batch.code}>
+                    {batch.code} - {batch.name}
+                  </option>
+                ))}
+              </select>
+              {availableBatches.length === 0 && (
+                <p style={{ fontSize: '14px', color: '#6b7280', marginTop: '4px' }}>
+                  No batches available. Contact your mentor.
+                </p>
+              )}
             </div>
           )}
 

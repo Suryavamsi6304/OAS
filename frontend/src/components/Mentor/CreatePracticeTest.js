@@ -16,7 +16,8 @@ const CreatePracticeTest = () => {
     negativeMarkingValue: 0.25,
     passingScore: 70,
     isActive: true,
-    type: 'practice'
+    type: 'practice',
+    proctoringEnabled: false
   });
   const [questions, setQuestions] = useState([]);
   const [isQuestionsGenerated, setIsQuestionsGenerated] = useState(false);
@@ -142,7 +143,8 @@ const CreatePracticeTest = () => {
             _id: `opt${optIndex + 1}`
           })) : undefined
         })),
-        totalPoints
+        totalPoints,
+        proctoringEnabled: false
       };
 
       const response = await axios.post('/api/practice-tests', practiceTest);

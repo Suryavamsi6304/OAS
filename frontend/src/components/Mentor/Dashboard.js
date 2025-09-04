@@ -4,6 +4,7 @@ import { Users, BookOpen, Award, TrendingUp, Eye, CheckCircle, XCircle, Clock, S
 import DashboardLayout from '../Layout/DashboardLayout';
 import CommNav from '../Communication/CommNav';
 import ProctoringRequests from './ProctoringRequests';
+import ViolationRequests from './ViolationRequests';
 import ProctoringLogs from './ProctoringLogs';
 import LiveProctoring from './LiveProctoring';
 import BatchPerformance from './BatchPerformance';
@@ -24,6 +25,25 @@ const MentorDashboard = () => {
   }, {
     refetchInterval: 10000
   });
+
+  const { data: pendingApprovals, refetch: refetchApprovals } = useQuery('mentor-pending-approvals', async () => {
+    console.log('Mentor fetching pending approvals...');
+    const response = await axios.get('/api/admin/pending-approvals');
+    console.log('Mentor pending approvals response:', response.data);
+    return response.data.data || [];
+  }, {
+    refetchInterval: 5000 // Refetch every 5 seconds
+  });
+
+  const handleApproveUser = async (userId, approved) => {
+    try {
+      await axios.put(`/api/admin/approve-user/${userId}`, { approved });
+      toast.success(approved ? 'User approved successfully' : 'User rejected successfully');
+      refetchApprovals();
+    } catch (error) {
+      toast.error('Failed to process approval');
+    }
+  };
 
   const handleGradeEssay = async (resultId, questionId, points) => {
     try {
@@ -80,6 +100,37 @@ const MentorDashboard = () => {
           </button>
           
           <button
+            onClick={() => setActiveTab('approvals')}
+            style={{
+              padding: '16px 24px',
+              border: 'none',
+              backgroundColor: 'transparent',
+              borderBottom: activeTab === 'approvals' ? '3px solid #3b82f6' : 'none',
+              color: activeTab === 'approvals' ? '#3b82f6' : '#6b7280',
+              fontWeight: activeTab === 'approvals' ? '600' : '400',
+              cursor: 'pointer',
+              fontSize: '16px',
+              display: 'flex',
+              alignItems: 'center'
+            }}
+          >
+            👥 Approvals
+            {pendingApprovals?.length > 0 && (
+              <span style={{
+                marginLeft: '8px',
+                backgroundColor: '#f59e0b',
+                color: 'white',
+                borderRadius: '12px',
+                padding: '4px 8px',
+                fontSize: '12px',
+                fontWeight: 'bold'
+              }}>
+                {pendingApprovals.length}
+              </span>
+            )}
+          </button>
+          
+          <button
             onClick={() => setActiveTab('requests')}
             style={{
               padding: '16px 24px',
@@ -94,7 +145,7 @@ const MentorDashboard = () => {
               alignItems: 'center'
             }}
           >
-            🛡️ Requests
+            🛡️ Violation Requests
             {proctoringRequests?.length > 0 && (
               <span style={{
                 marginLeft: '8px',
@@ -160,7 +211,68 @@ const MentorDashboard = () => {
         </div>
         
         {/* Tab Content */}
-        {activeTab === 'requests' && <ProctoringRequests />}
+        {activeTab === 'approvals' && (
+          <div className="card">
+            <h2 style={{ fontSize: '20px', fontWeight: 'bold', marginBottom: '24px' }}>
+              User Registration Approvals
+            </h2>
+            {pendingApprovals?.length > 0 ? (
+              <div style={{ overflowX: 'auto' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                  <thead>
+                    <tr style={{ borderBottom: '2px solid #e5e7eb' }}>
+                      <th style={{ textAlign: 'left', padding: '12px', fontWeight: '600' }}>Name</th>
+                      <th style={{ textAlign: 'left', padding: '12px', fontWeight: '600' }}>Email</th>
+                      <th style={{ textAlign: 'left', padding: '12px', fontWeight: '600' }}>Role</th>
+                      <th style={{ textAlign: 'left', padding: '12px', fontWeight: '600' }}>Batch</th>
+                      <th style={{ textAlign: 'left', padding: '12px', fontWeight: '600' }}>Date</th>
+                      <th style={{ textAlign: 'left', padding: '12px', fontWeight: '600' }}>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {pendingApprovals.map((user) => (
+                      <tr key={user.id} style={{ borderBottom: '1px solid #f3f4f6' }}>
+                        <td style={{ padding: '12px' }}>{user.name}</td>
+                        <td style={{ padding: '12px' }}>{user.email}</td>
+                        <td style={{ padding: '12px' }}>{user.role}</td>
+                        <td style={{ padding: '12px' }}>{user.batchCode || 'N/A'}</td>
+                        <td style={{ padding: '12px', color: '#6b7280' }}>
+                          {new Date(user.createdAt).toLocaleDateString()}
+                        </td>
+                        <td style={{ padding: '12px' }}>
+                          <div style={{ display: 'flex', gap: '8px' }}>
+                            <button
+                              onClick={() => handleApproveUser(user.id, true)}
+                              className="btn btn-success"
+                              style={{ padding: '6px 12px', fontSize: '12px' }}
+                            >
+                              <CheckCircle size={14} style={{ marginRight: '4px' }} />
+                              Approve
+                            </button>
+                            <button
+                              onClick={() => handleApproveUser(user.id, false)}
+                              className="btn btn-danger"
+                              style={{ padding: '6px 12px', fontSize: '12px' }}
+                            >
+                              <XCircle size={14} style={{ marginRight: '4px' }} />
+                              Reject
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <div style={{ textAlign: 'center', padding: '48px', color: '#6b7280' }}>
+                <Users size={48} style={{ margin: '0 auto 16px', opacity: 0.5 }} />
+                <p>No pending approvals.</p>
+              </div>
+            )}
+          </div>
+        )}
+        {activeTab === 'requests' && <ViolationRequests />}
         {activeTab === 'logs' && <ProctoringLogs />}
         {activeTab === 'live' && <LiveProctoring />}
         {activeTab === 'performance' && <BatchPerformance />}

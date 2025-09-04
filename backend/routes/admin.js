@@ -1,6 +1,7 @@
 const express = require('express');
 const bcrypt = require('bcryptjs');
 const db = require('../config/database');
+const { User } = require('../models');
 const { authenticateToken, authorizeRoles } = require('../middleware/auth');
 
 const router = express.Router();
@@ -8,13 +9,57 @@ const router = express.Router();
 // Get all users
 router.get('/users', authenticateToken, authorizeRoles('admin'), async (req, res) => {
   try {
-    const result = await db.query(
-      'SELECT id, email, role, first_name, last_name, is_active, created_at FROM users ORDER BY created_at DESC'
-    );
-    res.json(result.rows);
+    const users = await User.findAll({
+      attributes: { exclude: ['password'] },
+      order: [['createdAt', 'DESC']]
+    });
+    res.json({ success: true, data: users });
   } catch (error) {
     console.error('Get users error:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    res.status(500).json({ success: false, error: 'Internal server error' });
+  }
+});
+
+// Get pending approvals
+router.get('/pending-approvals', authenticateToken, authorizeRoles('admin', 'mentor'), async (req, res) => {
+  try {
+    const pendingUsers = await User.findAll({
+      where: { isApproved: false },
+      attributes: { exclude: ['password'] },
+      order: [['createdAt', 'DESC']]
+    });
+    res.json({ success: true, data: pendingUsers });
+  } catch (error) {
+    console.error('Get pending approvals error:', error);
+    res.status(500).json({ success: false, error: 'Internal server error' });
+  }
+});
+
+// Approve user
+router.put('/approve-user/:id', authenticateToken, authorizeRoles('admin', 'mentor'), async (req, res) => {
+  try {
+    const userId = req.params.id;
+    const { approved } = req.body;
+    
+    const user = await User.findByPk(userId);
+    if (!user) {
+      return res.status(404).json({ success: false, error: 'User not found' });
+    }
+    
+    if (approved) {
+      await user.update({
+        isApproved: true,
+        approvedBy: req.user.id,
+        approvedAt: new Date()
+      });
+      res.json({ success: true, message: 'User approved successfully' });
+    } else {
+      await user.destroy();
+      res.json({ success: true, message: 'User registration rejected' });
+    }
+  } catch (error) {
+    console.error('Approve user error:', error);
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
