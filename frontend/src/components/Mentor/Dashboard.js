@@ -2,9 +2,11 @@ import React, { useState } from 'react';
 import { useQuery } from 'react-query';
 import { Users, BookOpen, Award, TrendingUp, Eye, CheckCircle, XCircle, Clock, Shield, FileText, Video } from 'lucide-react';
 import DashboardLayout from '../Layout/DashboardLayout';
+import CommNav from '../Communication/CommNav';
 import ProctoringRequests from './ProctoringRequests';
 import ProctoringLogs from './ProctoringLogs';
 import LiveProctoring from './LiveProctoring';
+import BatchPerformance from './BatchPerformance';
 import axios from 'axios';
 import toast from 'react-hot-toast';
 
@@ -49,6 +51,7 @@ const MentorDashboard = () => {
 
   return (
     <DashboardLayout title="Mentor Dashboard">
+      <CommNav userRole="mentor" />
       <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
         
         {/* Tab Navigation */}
@@ -138,12 +141,29 @@ const MentorDashboard = () => {
           >
             📹 Live Monitor
           </button>
+          
+          <button
+            onClick={() => setActiveTab('performance')}
+            style={{
+              padding: '16px 24px',
+              border: 'none',
+              backgroundColor: 'transparent',
+              borderBottom: activeTab === 'performance' ? '3px solid #3b82f6' : 'none',
+              color: activeTab === 'performance' ? '#3b82f6' : '#6b7280',
+              fontWeight: activeTab === 'performance' ? '600' : '400',
+              cursor: 'pointer',
+              fontSize: '16px'
+            }}
+          >
+            🏆 Batch Performance
+          </button>
         </div>
         
         {/* Tab Content */}
         {activeTab === 'requests' && <ProctoringRequests />}
         {activeTab === 'logs' && <ProctoringLogs />}
         {activeTab === 'live' && <LiveProctoring />}
+        {activeTab === 'performance' && <BatchPerformance />}
         
         {activeTab === 'dashboard' && (
           <>

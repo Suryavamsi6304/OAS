@@ -108,8 +108,8 @@ const TestInstructions = () => {
   const testTypeInfo = getTestTypeInfo();
 
   return (
-    <div style={{ minHeight: '100vh', backgroundColor: '#f8fafc', padding: '24px' }}>
-      <div style={{ maxWidth: '800px', margin: '0 auto' }}>
+    <div style={{ minHeight: '100vh', backgroundColor: '#f8fafc', padding: '16px' }}>
+      <div style={{ maxWidth: '900px', margin: '0 auto' }}>
         {/* Header */}
         <div style={{ marginBottom: '24px' }}>
           <button
@@ -155,178 +155,138 @@ const TestInstructions = () => {
           </div>
         </div>
 
-        {/* Test Information */}
-        <div style={{ backgroundColor: 'white', padding: '32px', borderRadius: '12px', boxShadow: '0 4px 6px rgba(0,0,0,0.1)', marginBottom: '24px' }}>
-          <h1 style={{ fontSize: '28px', fontWeight: 'bold', marginBottom: '8px', color: '#1f2937' }}>
-            {exam.title}
-          </h1>
+        {/* Test Overview Card */}
+        <div style={{ backgroundColor: 'white', padding: '20px', borderRadius: '12px', boxShadow: '0 4px 6px rgba(0,0,0,0.1)', marginBottom: '16px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px' }}>
+            <div style={{ flex: 1 }}>
+              <h1 style={{ fontSize: '22px', fontWeight: 'bold', marginBottom: '6px', color: '#1f2937' }}>
+                {exam.title}
+              </h1>
+              {exam.description && (
+                <p style={{ fontSize: '13px', color: '#6b7280', margin: 0, lineHeight: '1.4' }}>
+                  {exam.description}
+                </p>
+              )}
+            </div>
+            
+            {/* Key Stats - Horizontal */}
+            <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
+              <div style={{ textAlign: 'center' }}>
+                <div style={{ fontSize: '18px', fontWeight: 'bold', color: '#3b82f6' }}>{exam.duration}min</div>
+                <div style={{ fontSize: '10px', color: '#6b7280' }}>Duration</div>
+              </div>
+              <div style={{ textAlign: 'center' }}>
+                <div style={{ fontSize: '18px', fontWeight: 'bold', color: '#10b981' }}>{exam.questions?.length || 0}</div>
+                <div style={{ fontSize: '10px', color: '#6b7280' }}>Questions</div>
+              </div>
+              <div style={{ textAlign: 'center' }}>
+                <div style={{ fontSize: '18px', fontWeight: 'bold', color: '#f59e0b' }}>{exam.totalPoints || 0}</div>
+                <div style={{ fontSize: '10px', color: '#6b7280' }}>Points</div>
+              </div>
+              {exam.passingScore && (
+                <div style={{ textAlign: 'center' }}>
+                  <div style={{ fontSize: '18px', fontWeight: 'bold', color: '#ef4444' }}>{exam.passingScore}%</div>
+                  <div style={{ fontSize: '10px', color: '#6b7280' }}>Pass</div>
+                </div>
+              )}
+            </div>
+          </div>
           
-          {exam.description && (
-            <p style={{ fontSize: '16px', color: '#6b7280', marginBottom: '24px', lineHeight: '1.6' }}>
-              {exam.description}
-            </p>
-          )}
-
-          {/* Test Details Grid */}
-          <div style={{ 
-            display: 'grid', 
-            gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', 
-            gap: '20px',
-            marginBottom: '32px'
-          }}>
-            <div style={{ 
-              padding: '16px', 
-              backgroundColor: '#f8fafc', 
-              borderRadius: '8px',
-              textAlign: 'center'
-            }}>
-              <Clock size={24} style={{ color: '#3b82f6', margin: '0 auto 8px' }} />
-              <h3 style={{ fontSize: '18px', fontWeight: 'bold', margin: '0 0 4px 0' }}>
-                {exam.duration} minutes
-              </h3>
-              <p style={{ fontSize: '14px', color: '#6b7280', margin: 0 }}>Time Limit</p>
-            </div>
-
-            <div style={{ 
-              padding: '16px', 
-              backgroundColor: '#f8fafc', 
-              borderRadius: '8px',
-              textAlign: 'center'
-            }}>
-              <FileText size={24} style={{ color: '#10b981', margin: '0 auto 8px' }} />
-              <h3 style={{ fontSize: '18px', fontWeight: 'bold', margin: '0 0 4px 0' }}>
-                {exam.questions?.length || 0} questions
-              </h3>
-              <p style={{ fontSize: '14px', color: '#6b7280', margin: 0 }}>Total Questions</p>
-            </div>
-
-            <div style={{ 
-              padding: '16px', 
-              backgroundColor: '#f8fafc', 
-              borderRadius: '8px',
-              textAlign: 'center'
-            }}>
-              <CheckCircle size={24} style={{ color: '#f59e0b', margin: '0 auto 8px' }} />
-              <h3 style={{ fontSize: '18px', fontWeight: 'bold', margin: '0 0 4px 0' }}>
-                {exam.totalPoints || 0} points
-              </h3>
-              <p style={{ fontSize: '14px', color: '#6b7280', margin: 0 }}>Total Points</p>
-            </div>
-
-            {exam.passingScore && (
-              <div style={{ 
-                padding: '16px', 
-                backgroundColor: '#f8fafc', 
-                borderRadius: '8px',
-                textAlign: 'center'
+          {/* Alerts Row */}
+          <div style={{ display: 'flex', gap: '12px' }}>
+            {exam.negativeMarking && (
+              <div style={{
+                flex: 1,
+                padding: '8px 12px',
+                backgroundColor: '#fef2f2',
+                borderRadius: '6px',
+                border: '1px solid #fecaca',
+                fontSize: '12px'
               }}>
-                <AlertTriangle size={24} style={{ color: '#ef4444', margin: '0 auto 8px' }} />
-                <h3 style={{ fontSize: '18px', fontWeight: 'bold', margin: '0 0 4px 0' }}>
-                  {exam.passingScore}%
-                </h3>
-                <p style={{ fontSize: '14px', color: '#6b7280', margin: 0 }}>Passing Score</p>
+                <span style={{ color: '#ef4444', fontWeight: '600' }}>⚠️ Negative Marking: </span>
+                <span style={{ color: '#7f1d1d' }}>-{exam.negativeMarkingValue || 0.25} pts for wrong answers</span>
               </div>
             )}
-          </div>
-
-          {/* Additional Information */}
-          {exam.negativeMarking && (
+            
             <div style={{
-              padding: '16px',
-              backgroundColor: '#fef2f2',
-              borderRadius: '8px',
-              border: '1px solid #fecaca',
-              marginBottom: '24px'
+              flex: 1,
+              padding: '8px 12px',
+              backgroundColor: exam.type === 'practice' ? '#f0fdf4' : '#fef2f2',
+              borderRadius: '6px',
+              border: `1px solid ${exam.type === 'practice' ? '#bbf7d0' : '#fecaca'}`,
+              fontSize: '12px'
             }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
-                <AlertTriangle size={20} style={{ color: '#ef4444' }} />
-                <span style={{ fontWeight: 'bold', color: '#ef4444' }}>Negative Marking</span>
-              </div>
-              <p style={{ margin: 0, fontSize: '14px', color: '#7f1d1d' }}>
-                Wrong answers will deduct {exam.negativeMarkingValue || 0.25} points from your total score.
-              </p>
+              <span style={{ color: exam.type === 'practice' ? '#059669' : '#dc2626', fontWeight: '600' }}>
+                {exam.type === 'practice' ? '✅ Practice Mode: ' : '❌ Single Attempt: '}
+              </span>
+              <span style={{ color: exam.type === 'practice' ? '#166534' : '#7f1d1d' }}>
+                {exam.type === 'practice' ? 'Retake allowed' : 'One chance only'}
+              </span>
             </div>
-          )}
+          </div>
         </div>
 
-        {/* Instructions */}
-        <div style={{ backgroundColor: 'white', padding: '32px', borderRadius: '12px', boxShadow: '0 4px 6px rgba(0,0,0,0.1)', marginBottom: '24px' }}>
-          <h2 style={{ fontSize: '20px', fontWeight: 'bold', marginBottom: '20px', color: '#1f2937' }}>
-            Test Instructions
-          </h2>
-
-          <div style={{ fontSize: '16px', lineHeight: '1.6', color: '#374151' }}>
-            <div style={{ marginBottom: '16px' }}>
-              <h3 style={{ fontSize: '16px', fontWeight: '600', marginBottom: '8px', color: '#1f2937' }}>
-                Before You Start:
-              </h3>
-              <ul style={{ paddingLeft: '20px', margin: 0 }}>
-                <li style={{ marginBottom: '4px' }}>Ensure you have a stable internet connection</li>
-                <li style={{ marginBottom: '4px' }}>Close all unnecessary applications and browser tabs</li>
-                <li style={{ marginBottom: '4px' }}>Find a quiet environment free from distractions</li>
-                <li style={{ marginBottom: '4px' }}>Make sure your device is fully charged or plugged in</li>
-              </ul>
+        {/* Instructions Grid */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '16px', marginBottom: '16px' }}>
+          
+          {/* Preparation */}
+          <div style={{ backgroundColor: 'white', padding: '16px', borderRadius: '8px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}>
+            <h3 style={{ fontSize: '14px', fontWeight: '600', marginBottom: '10px', color: '#1f2937', display: 'flex', alignItems: 'center', gap: '6px' }}>
+              🚀 Get Ready
+            </h3>
+            <div style={{ fontSize: '12px', color: '#374151', lineHeight: '1.4' }}>
+              • Stable internet connection<br/>
+              • Close unnecessary tabs<br/>
+              • Quiet environment<br/>
+              • Device charged/plugged in
             </div>
+          </div>
 
-            <div style={{ marginBottom: '16px' }}>
-              <h3 style={{ fontSize: '16px', fontWeight: '600', marginBottom: '8px', color: '#1f2937' }}>
-                During the Test:
-              </h3>
-              <ul style={{ paddingLeft: '20px', margin: 0 }}>
-                <li style={{ marginBottom: '4px' }}>You have {exam.duration} minutes to complete all {exam.questions?.length || 0} questions</li>
-                <li style={{ marginBottom: '4px' }}>You can navigate between questions using the Previous/Next buttons</li>
-                <li style={{ marginBottom: '4px' }}>Your progress is automatically saved as you answer questions</li>
-                <li style={{ marginBottom: '4px' }}>The timer will be visible at the top of the screen</li>
-                <li style={{ marginBottom: '4px' }}>The test will auto-submit when time expires</li>
-                {exam.negativeMarking && (
-                  <li style={{ marginBottom: '4px', color: '#ef4444' }}>
-                    <strong>Negative marking is enabled:</strong> Wrong answers will deduct {exam.negativeMarkingValue || 0.25} points
-                  </li>
-                )}
-              </ul>
+          {/* Test Rules */}
+          <div style={{ backgroundColor: 'white', padding: '16px', borderRadius: '8px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}>
+            <h3 style={{ fontSize: '14px', fontWeight: '600', marginBottom: '10px', color: '#1f2937', display: 'flex', alignItems: 'center', gap: '6px' }}>
+              ⏱️ Test Rules
+            </h3>
+            <div style={{ fontSize: '12px', color: '#374151', lineHeight: '1.4' }}>
+              • {exam.duration} minutes total time<br/>
+              • Auto-save your progress<br/>
+              • Navigate with Prev/Next<br/>
+              • Auto-submit at time end
+              {exam.negativeMarking && (
+                <><br/><span style={{ color: '#ef4444', fontWeight: '500' }}>• Wrong = -{exam.negativeMarkingValue || 0.25} points</span></>
+              )}
             </div>
+          </div>
 
-            <div style={{ marginBottom: '16px' }}>
-              <h3 style={{ fontSize: '16px', fontWeight: '600', marginBottom: '8px', color: '#1f2937' }}>
-                Question Types:
-              </h3>
-              <ul style={{ paddingLeft: '20px', margin: 0 }}>
-                <li style={{ marginBottom: '4px' }}>
-                  <strong>Multiple Choice:</strong> Select the best answer from the given options
-                </li>
-                <li style={{ marginBottom: '4px' }}>
-                  <strong>True/False:</strong> Choose whether the statement is true or false
-                </li>
-                <li style={{ marginBottom: '4px' }}>
-                  <strong>Essay:</strong> Provide detailed written answers
-                </li>
-                <li style={{ marginBottom: '4px' }}>
-                  <strong>Coding:</strong> Write code solutions to programming problems
-                </li>
-              </ul>
+          {/* Question Info */}
+          <div style={{ backgroundColor: 'white', padding: '16px', borderRadius: '8px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}>
+            <h3 style={{ fontSize: '14px', fontWeight: '600', marginBottom: '10px', color: '#1f2937', display: 'flex', alignItems: 'center', gap: '6px' }}>
+              📝 Question Types
+            </h3>
+            <div style={{ fontSize: '12px', color: '#374151', lineHeight: '1.4' }}>
+              • Multiple Choice<br/>
+              • True/False<br/>
+              • Essay Questions<br/>
+              • Code Problems
             </div>
+          </div>
 
-            <div style={{ marginBottom: '16px' }}>
-              <h3 style={{ fontSize: '16px', fontWeight: '600', marginBottom: '8px', color: '#1f2937' }}>
-                Important Notes:
-              </h3>
-              <ul style={{ paddingLeft: '20px', margin: 0 }}>
-                <li style={{ marginBottom: '4px' }}>
-                  {exam.type === 'practice' 
-                    ? 'This is a practice test - you can retake it multiple times'
-                    : 'You can only take this test once, so make sure you are prepared'
-                  }
-                </li>
-                <li style={{ marginBottom: '4px' }}>Do not refresh the page or navigate away during the test</li>
-                <li style={{ marginBottom: '4px' }}>Submit your test before the time expires</li>
-                <li style={{ marginBottom: '4px' }}>Results will be available immediately after submission</li>
-              </ul>
+          {/* Important Notes */}
+          <div style={{ backgroundColor: 'white', padding: '16px', borderRadius: '8px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}>
+            <h3 style={{ fontSize: '14px', fontWeight: '600', marginBottom: '10px', color: '#1f2937', display: 'flex', alignItems: 'center', gap: '6px' }}>
+              ⚠️ Remember
+            </h3>
+            <div style={{ fontSize: '12px', color: '#374151', lineHeight: '1.4' }}>
+              • Don't refresh the page<br/>
+              • Don't navigate away<br/>
+              • Submit before time ends<br/>
+              • Results shown immediately
             </div>
           </div>
         </div>
 
         {/* Agreement and Start */}
-        <div style={{ backgroundColor: 'white', padding: '32px', borderRadius: '12px', boxShadow: '0 4px 6px rgba(0,0,0,0.1)' }}>
+        <div style={{ backgroundColor: 'white', padding: '20px', borderRadius: '12px', boxShadow: '0 4px 6px rgba(0,0,0,0.1)' }}>
           <div style={{ 
             padding: '20px', 
             backgroundColor: '#f8fafc', 

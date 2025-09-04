@@ -3,12 +3,14 @@ import { useNavigate } from 'react-router-dom';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { Plus, Trash2, Save, ArrowLeft } from 'lucide-react';
 import DashboardLayout from '../Layout/DashboardLayout';
+import CodingQuestionForm from './CodingQuestionForm';
 import axios from 'axios';
 import toast from 'react-hot-toast';
 
 const ExamForm = () => {
   const navigate = useNavigate();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showCodingForm, setShowCodingForm] = useState(false);
   
   const { register, control, handleSubmit, watch, formState: { errors } } = useForm({
     defaultValues: {
@@ -174,24 +176,45 @@ const ExamForm = () => {
               <h2 style={{ fontSize: '20px', fontWeight: 'bold', margin: 0 }}>
                 Questions ({questions.length})
               </h2>
-              <button
-                type="button"
-                onClick={() => addQuestion({
-                  type: 'multiple-choice',
-                  question: '',
-                  points: 1,
-                  options: [
-                    { text: '', isCorrect: false },
-                    { text: '', isCorrect: false }
-                  ]
-                })}
-                className="btn btn-primary"
-                style={{ display: 'flex', alignItems: 'center' }}
-              >
-                <Plus size={16} style={{ marginRight: '8px' }} />
-                Add Question
-              </button>
+              <div style={{ display: 'flex', gap: '12px' }}>
+                <button
+                  type="button"
+                  onClick={() => addQuestion({
+                    type: 'multiple-choice',
+                    question: '',
+                    points: 1,
+                    options: [
+                      { text: '', isCorrect: false },
+                      { text: '', isCorrect: false }
+                    ]
+                  })}
+                  className="btn btn-primary"
+                  style={{ display: 'flex', alignItems: 'center' }}
+                >
+                  <Plus size={16} style={{ marginRight: '8px' }} />
+                  Add Question
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowCodingForm(true)}
+                  className="btn btn-secondary"
+                  style={{ display: 'flex', alignItems: 'center' }}
+                >
+                  <Plus size={16} style={{ marginRight: '8px' }} />
+                  Add Coding Question
+                </button>
+              </div>
             </div>
+
+            {showCodingForm && (
+              <CodingQuestionForm
+                onSave={(codingQuestion) => {
+                  addQuestion(codingQuestion);
+                  setShowCodingForm(false);
+                }}
+                onCancel={() => setShowCodingForm(false)}
+              />
+            )}
 
             {questions.map((question, questionIndex) => (
               <div 
@@ -324,6 +347,42 @@ const ExamForm = () => {
                       <option value="true">True</option>
                       <option value="false">False</option>
                     </select>
+                  </div>
+                )}
+
+                {/* Coding Question Details */}
+                {watchedQuestions[questionIndex]?.type === 'coding' && (
+                  <div style={{ backgroundColor: '#f0f9ff', padding: '16px', borderRadius: '8px' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px', marginBottom: '12px' }}>
+                      <div>
+                        <label style={{ fontSize: '12px', color: '#6b7280' }}>Difficulty</label>
+                        <p style={{ margin: 0, fontWeight: '600' }}>{watchedQuestions[questionIndex].difficulty}</p>
+                      </div>
+                      <div>
+                        <label style={{ fontSize: '12px', color: '#6b7280' }}>Time Limit</label>
+                        <p style={{ margin: 0, fontWeight: '600' }}>{watchedQuestions[questionIndex].timeLimit}s</p>
+                      </div>
+                      <div>
+                        <label style={{ fontSize: '12px', color: '#6b7280' }}>Test Cases</label>
+                        <p style={{ margin: 0, fontWeight: '600' }}>{watchedQuestions[questionIndex].testCases?.length || 0}</p>
+                      </div>
+                    </div>
+                    {watchedQuestions[questionIndex].sampleInput && (
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                        <div>
+                          <label style={{ fontSize: '12px', color: '#6b7280' }}>Sample Input</label>
+                          <pre style={{ fontSize: '11px', backgroundColor: 'white', padding: '8px', borderRadius: '4px', margin: '4px 0 0 0' }}>
+                            {watchedQuestions[questionIndex].sampleInput}
+                          </pre>
+                        </div>
+                        <div>
+                          <label style={{ fontSize: '12px', color: '#6b7280' }}>Sample Output</label>
+                          <pre style={{ fontSize: '11px', backgroundColor: 'white', padding: '8px', borderRadius: '4px', margin: '4px 0 0 0' }}>
+                            {watchedQuestions[questionIndex].sampleOutput}
+                          </pre>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>

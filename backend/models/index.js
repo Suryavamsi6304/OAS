@@ -6,6 +6,7 @@ const Application = require('./Application');
 const ProctoringSession = require('./ProctoringSession');
 const ReAttemptRequest = require('./ReAttemptRequest');
 const Notification = require('./Notification');
+// const CodingQuestion = require('./CodingQuestion');
 
 /**
  * Define model associations for Recruitment System
@@ -54,6 +55,10 @@ Result.hasOne(ReAttemptRequest, { foreignKey: 'resultId', as: 'reAttemptRequest'
 Notification.belongsTo(User, { foreignKey: 'userId', as: 'user' });
 User.hasMany(Notification, { foreignKey: 'userId', as: 'notifications' });
 
+// CodingQuestion associations (temporarily disabled)
+// CodingQuestion.belongsTo(User, { foreignKey: 'createdBy', as: 'creator' });
+// User.hasMany(CodingQuestion, { foreignKey: 'createdBy', as: 'codingQuestions' });
+
 module.exports = {
   User,
   Exam,
@@ -63,4 +68,5 @@ module.exports = {
   ProctoringSession,
   ReAttemptRequest,
   Notification
+  // CodingQuestion
 };

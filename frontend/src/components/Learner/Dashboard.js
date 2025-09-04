@@ -3,6 +3,7 @@ import { useQuery } from 'react-query';
 import { useNavigate } from 'react-router-dom';
 import { Briefcase, MapPin, Clock, DollarSign, Building, Eye } from 'lucide-react';
 import DashboardLayout from '../Layout/DashboardLayout';
+import CommNav from '../Communication/CommNav';
 import axios from 'axios';
 
 /**
@@ -47,6 +48,7 @@ const EmployeeDashboard = () => {
 
   return (
     <DashboardLayout title="Find Your Dream Job">
+      <CommNav userRole="learner" userBatch="batch1" />
       <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
         
         {/* Stats Cards */}

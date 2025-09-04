@@ -3,6 +3,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { QueryClient, QueryClientProvider } from 'react-query';
 import { Toaster } from 'react-hot-toast';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { NotificationProvider } from './contexts/NotificationContext';
 import Login from './components/Auth/Login';
 import Register from './components/Auth/Register';
 import AdminDashboard from './components/Admin/Dashboard';
@@ -16,9 +17,7 @@ import ApprovalRequestsPage from './components/Mentor/ApprovalRequestsPage';
 import ReAttemptRequests from './components/Mentor/ReAttemptRequests';
 import EnhancedLearnerDashboard from './components/Learner/EnhancedLearnerDashboard';
 import TestInstructions from './components/Learner/TestInstructions';
-import SimpleDashboard from './components/Learner/SimpleDashboard';
-import TestDashboard from './components/TestDashboard';
-import StudentDashboard from './components/Student/Dashboard';
+
 import ExamTaking from './components/Student/ExamTaking';
 import Results from './components/Learner/Results';
 import ExamResult from './components/Learner/ExamResult';
@@ -29,6 +28,10 @@ import ReAttempts from './components/Learner/ReAttempts';
 import PracticeTests from './components/Learner/PracticeTests';
 import SkillAssessments from './components/Learner/SkillAssessments';
 import Jobs from './components/Learner/Jobs';
+import LiveMonitorDashboard from './components/Mentor/LiveMonitorDashboard';
+import CameraDebug from './components/CameraDebug';
+import MeetingPage from './components/Meeting/MeetingPage';
+import CommunicationHub from './components/Communication/CommunicationHub';
 
 const queryClient = new QueryClient();
 
@@ -36,7 +39,18 @@ const queryClient = new QueryClient();
  * Protected Route Component with Role-Based Access
  */
 const ProtectedRoute = ({ children, allowedRoles }) => {
-  const { user, isAuthenticated } = useAuth();
+  const { user, isAuthenticated, loading } = useAuth();
+  
+  if (loading) {
+    return (
+      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: '#f8fafc' }}>
+        <div style={{ textAlign: 'center' }}>
+          <div style={{ width: '40px', height: '40px', border: '4px solid #e5e7eb', borderTop: '4px solid #3b82f6', borderRadius: '50%', animation: 'spin 1s linear infinite', margin: '0 auto 16px' }}></div>
+          <p>Loading...</p>
+        </div>
+      </div>
+    );
+  }
   
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />;
@@ -53,7 +67,18 @@ const ProtectedRoute = ({ children, allowedRoles }) => {
  * Role-Based Dashboard Router
  */
 const DashboardRouter = () => {
-  const { user } = useAuth();
+  const { user, loading } = useAuth();
+  
+  if (loading) {
+    return (
+      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: '#f8fafc' }}>
+        <div style={{ textAlign: 'center' }}>
+          <div style={{ width: '40px', height: '40px', border: '4px solid #e5e7eb', borderTop: '4px solid #3b82f6', borderRadius: '50%', animation: 'spin 1s linear infinite', margin: '0 auto 16px' }}></div>
+          <p>Loading...</p>
+        </div>
+      </div>
+    );
+  }
   
   switch (user?.role) {
     case 'admin':
@@ -62,8 +87,6 @@ const DashboardRouter = () => {
       return <Navigate to="/mentor" replace />;
     case 'learner':
       return <Navigate to="/learner" replace />;
-    default:
-      return <Navigate to="/login" replace />;
   }
 };
 
@@ -74,7 +97,8 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
-        <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+        <NotificationProvider>
+          <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
           <div style={{ minHeight: '100vh', backgroundColor: '#f8fafc' }}>
             <Routes>
               <Route path="/login" element={<Login />} />
@@ -154,6 +178,14 @@ function App() {
                 element={
                   <ProtectedRoute allowedRoles={['mentor']}>
                     <ReAttemptRequests />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="/mentor/live-monitor" 
+                element={
+                  <ProtectedRoute allowedRoles={['mentor']}>
+                    <LiveMonitorDashboard />
                   </ProtectedRoute>
                 } 
               />
@@ -256,6 +288,27 @@ function App() {
                 } 
               />
               
+              {/* Communication Routes */}
+              <Route 
+                path="/communication" 
+                element={
+                  <ProtectedRoute allowedRoles={['mentor', 'learner']}>
+                    <CommunicationHub />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="/meeting/:meetingId" 
+                element={
+                  <ProtectedRoute allowedRoles={['mentor', 'learner']}>
+                    <MeetingPage />
+                  </ProtectedRoute>
+                } 
+              />
+              
+              {/* Camera Debug Route */}
+              <Route path="/camera-debug" element={<CameraDebug />} />
+              
               <Route path="/unauthorized" element={
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh' }}>
                   <div style={{ textAlign: 'center' }}>
@@ -268,6 +321,7 @@ function App() {
             <Toaster position="top-right" />
           </div>
         </Router>
+        </NotificationProvider>
       </AuthProvider>
     </QueryClientProvider>
   );

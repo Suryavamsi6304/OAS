@@ -3,12 +3,10 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { 
   ArrowLeft, 
-  Award, 
   Clock, 
   CheckCircle, 
   XCircle, 
   AlertCircle,
-  TrendingUp,
   Calendar,
   Target,
   RotateCcw,
@@ -18,7 +16,7 @@ import axios from 'axios';
 import toast from 'react-hot-toast';
 
 const Results = () => {
-  const { user } = useAuth();
+  const { } = useAuth();
   const navigate = useNavigate();
   const [results, setResults] = useState([]);
   const [loading, setLoading] = useState(true);

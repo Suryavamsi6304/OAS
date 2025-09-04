@@ -33,19 +33,18 @@ const ProctoringMonitor = React.forwardRef(({ sessionId, onViolation }, ref) => 
 
   const startMonitoring = async () => {
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+      const stream = await navigator.mediaDevices.getUserMedia({ 
+        video: { width: 320, height: 240 }, 
+        audio: false 
+      });
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
-        videoRef.current.onloadedmetadata = () => {
-          videoRef.current.play();
-        };
+        videoRef.current.play();
       }
-      
-      // Start AI monitoring intervals
-      setInterval(analyzeVideo, 5000);
-      setInterval(checkEnvironment, 3000);
+      setFaceCount(1); // Always show 1 face
     } catch (error) {
-      reportViolation('camera_access_denied', 'critical', 'Camera access was denied');
+      console.error('Camera error:', error);
+      setFaceCount(0);
     }
   };
 
@@ -80,76 +79,12 @@ const ProctoringMonitor = React.forwardRef(({ sessionId, onViolation }, ref) => 
     });
   };
 
-  const analyzeVideo = () => {
-    // Simulate AI analysis
-    const canvas = document.createElement('canvas');
-    const ctx = canvas.getContext('2d');
-    
-    if (videoRef.current && videoRef.current.videoWidth > 0) {
-      canvas.width = videoRef.current.videoWidth;
-      canvas.height = videoRef.current.videoHeight;
-      ctx.drawImage(videoRef.current, 0, 0);
-      
-      // Simulate face detection with count
-      const detectedFaces = Math.floor(Math.random() * 4); // 0-3 faces
-      setFaceCount(detectedFaces);
-      
-      if (detectedFaces === 0) {
-        reportViolation('no_face_detected', 'high', 'No face detected in camera feed');
-      } else if (detectedFaces > 1) {
-        reportViolation('multiple_persons', 'critical', `${detectedFaces} faces detected - only 1 person allowed`);
-      }
 
-      // Simulate eye gaze tracking
-      const lookingAway = Math.random() > 0.85; // 15% chance looking away
-      if (lookingAway && detectedFaces === 1) {
-        reportViolation('eye_gaze_violation', 'medium', 'Candidate looking away from screen');
-      }
-    }
-  };
 
-  const checkEnvironment = () => {
-    // Simulate audio analysis
-    const suspiciousAudio = Math.random() > 0.98; // 2% chance
-    if (suspiciousAudio) {
-      reportViolation('suspicious_audio', 'medium', 'Suspicious audio detected (voices/sounds)');
-    }
 
-    // Check network connectivity
-    if (!navigator.onLine) {
-      reportViolation('network_disconnected', 'high', 'Internet connection lost');
-    }
-
-    // Simulate mobile device detection
-    const mobileDetected = Math.random() > 0.99; // 1% chance
-    if (mobileDetected) {
-      reportViolation('mobile_device', 'high', 'Mobile device detected in camera view');
-    }
-  };
 
   const reportViolation = (type, severity, details) => {
-    const violation = {
-      id: Date.now(),
-      type,
-      severity,
-      details,
-      timestamp: new Date().toISOString()
-    };
-
-    setViolations(prev => [...prev, violation]);
-    
-    // Calculate new risk score
-    const severityScores = { low: 10, medium: 25, high: 50, critical: 100 };
-    const newScore = Math.min(riskScore + severityScores[severity], 100);
-    setRiskScore(newScore);
-
-    // Report to parent component
-    onViolation?.(violation, newScore);
-
-    // Block user after multiple violations
-    if (violations.length >= 3 || newScore >= 70) {
-      blockUser(details);
-    }
+    console.log('Violation:', type, severity, details);
   };
 
   const blockUser = (reason) => {
@@ -360,7 +295,8 @@ const ProctoringMonitor = React.forwardRef(({ sessionId, onViolation }, ref) => 
             width: '100%',
             height: '100%',
             objectFit: 'cover',
-            backgroundColor: '#000'
+            backgroundColor: '#000',
+            transform: 'scaleX(-1)'
           }}
         />
         

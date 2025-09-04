@@ -18,7 +18,7 @@ const StudentDashboard = () => {
     }
   });
 
-  const { data: results, error: resultsError } = useQuery('student-results', async () => {
+  const { data: results } = useQuery('student-results', async () => {
     try {
       const response = await axios.get('/api/results/student');
       return response.data.data || [];

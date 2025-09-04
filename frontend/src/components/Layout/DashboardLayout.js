@@ -2,8 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { 
   Menu, X, Bell, User, LogOut, 
-  Briefcase, Users, BarChart3, Settings,
-  Calendar, FileText, Search, Home, Shield, Eye, AlertTriangle
+  Briefcase, Users, BarChart3,
+  FileText, Search, Home, Shield, Eye, AlertTriangle
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 

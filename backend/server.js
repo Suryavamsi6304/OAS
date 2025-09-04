@@ -1,8 +1,11 @@
 const express = require('express');
 const cors = require('cors');
 const dotenv = require('dotenv');
+const http = require('http');
 const { connectDB } = require('./config/database');
 const { auth, adminOnly, mentorOrAdmin, learnerOnly } = require('./middleware/auth');
+const StreamingSocket = require('./src/socket/streamingSocket');
+const streamingRoutes = require('./src/routes/streaming');
 
 // Controllers
 const authController = require('./controllers/authController');
@@ -12,6 +15,7 @@ const jobController = require('./controllers/jobController');
 const proctoringController = require('./controllers/proctoringController');
 const reAttemptController = require('./controllers/reAttemptController');
 const notificationController = require('./controllers/notificationController');
+const compilerRoutes = require('./routes/compiler');
 
 // Load environment variables
 dotenv.config();
@@ -20,6 +24,9 @@ dotenv.config();
 connectDB();
 
 const app = express();
+const server = http.createServer(app);
+const streamingSocket = new StreamingSocket(server);
+app.set('streamingSocket', streamingSocket);
 
 // Middleware
 app.use(cors());
@@ -46,6 +53,8 @@ app.post('/api/exams/submit', auth, examController.submitExam);
 // Result routes
 app.get('/api/results/student', auth, resultController.getStudentResults);
 app.get('/api/results/all', auth, mentorOrAdmin, resultController.getAllResults);
+app.get('/api/results/batch-performance', auth, mentorOrAdmin, resultController.getBatchPerformance);
+app.get('/api/results/my-batch-leaderboard', auth, resultController.getMyBatchLeaderboard);
 app.put('/api/results/:id/grade', auth, mentorOrAdmin, resultController.gradeAnswer);
 app.get('/api/analytics', auth, adminOnly, resultController.getAnalytics);
 
@@ -219,6 +228,12 @@ app.post('/api/proctoring/:sessionId/terminate', auth, mentorOrAdmin, async (req
   }
 });
 
+// Live streaming routes
+app.use('/api/streaming', auth, mentorOrAdmin, streamingRoutes);
+
+// Compiler routes
+app.use('/api/compiler', compilerRoutes);
+
 // Re-attempt routes
 app.post('/api/re-attempt/request', auth, learnerOnly, reAttemptController.requestReAttempt);
 app.get('/api/re-attempt/requests', auth, mentorOrAdmin, reAttemptController.getReAttemptRequests);
@@ -229,6 +244,109 @@ app.put('/api/re-attempt/requests/:id/review', auth, mentorOrAdmin, reAttemptCon
 app.get('/api/notifications', auth, notificationController.getNotifications);
 app.put('/api/notifications/:id/read', auth, notificationController.markAsRead);
 app.get('/api/notifications/unread-count', auth, notificationController.getUnreadCount);
+
+// Meeting routes
+app.get('/api/batches', auth, async (req, res) => {
+  try {
+    const { User } = require('./models');
+    const batches = await User.findAll({
+      where: { role: 'learner', batchCode: { [require('sequelize').Op.ne]: null } },
+      attributes: ['batchCode'],
+      group: ['batchCode']
+    });
+    const batchCodes = batches.map(b => b.batchCode).filter(Boolean);
+    res.json({ success: true, data: batchCodes });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// Store active meetings in memory (in production, use database)
+let activeMeetings = {};
+
+app.post('/api/meetings/invite', auth, mentorOrAdmin, async (req, res) => {
+  try {
+    const { title, batches, meetingId } = req.body;
+    const mentorName = req.user.name || req.user.username;
+    
+    // Store meeting for each batch
+    batches.forEach(batch => {
+      activeMeetings[batch] = {
+        title,
+        batches,
+        meetingId,
+        mentorName,
+        startTime: new Date()
+      };
+    });
+    
+    // Notify all learners in the batches via Socket.IO
+    const socketIO = req.app.get('io');
+    if (socketIO) {
+      batches.forEach(batch => {
+        socketIO.emit('meeting-started', {
+          batch,
+          title,
+          meetingId,
+          mentorName,
+          message: `${mentorName} has started a meeting: ${title}`
+        });
+      });
+    }
+    
+    res.json({ 
+      success: true, 
+      message: `Meeting started and notifications sent to batches: ${batches.join(', ')}`,
+      meetingId 
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+app.get('/api/meetings/invites/:batchCode', auth, async (req, res) => {
+  try {
+    const { batchCode } = req.params;
+    const meeting = activeMeetings[batchCode];
+    
+    if (meeting) {
+      res.json({ success: true, data: meeting });
+    } else {
+      res.json({ success: true, data: null });
+    }
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+app.post('/api/meetings/end', auth, mentorOrAdmin, async (req, res) => {
+  try {
+    const { meetingId, batches } = req.body;
+    
+    // Remove meeting from active meetings
+    batches.forEach(batch => {
+      delete activeMeetings[batch];
+    });
+    
+    // Notify all learners in the batches via Socket.IO
+    const socketIO = req.app.get('io');
+    if (socketIO) {
+      batches.forEach(batch => {
+        socketIO.emit('meeting-ended', {
+          batch,
+          meetingId
+        });
+      });
+    }
+    
+    res.json({ 
+      success: true, 
+      message: `Meeting ended for batches: ${batches.join(', ')}` 
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
 
 // Profile routes
 app.put('/api/profile', auth, async (req, res) => {
@@ -277,16 +395,40 @@ if (process.env.NODE_ENV === 'development') {
         }
       });
 
-      // Create learner user
-      const [learner] = await User.findOrCreate({
-        where: { username: 'learner' },
+      // Create learner users
+      const [learner1] = await User.findOrCreate({
+        where: { username: 'learner1' },
         defaults: {
-          username: 'learner',
-          email: 'learner@test.com',
+          username: 'learner1',
+          email: 'learner1@test.com',
           password: 'password',
-          name: 'Learner User',
+          name: 'Alice Johnson',
           role: 'learner',
           batchCode: 'BATCH001'
+        }
+      });
+
+      const [learner2] = await User.findOrCreate({
+        where: { username: 'learner2' },
+        defaults: {
+          username: 'learner2',
+          email: 'learner2@test.com',
+          password: 'password',
+          name: 'Bob Smith',
+          role: 'learner',
+          batchCode: 'BATCH001'
+        }
+      });
+
+      const [learner3] = await User.findOrCreate({
+        where: { username: 'learner3' },
+        defaults: {
+          username: 'learner3',
+          email: 'learner3@test.com',
+          password: 'password',
+          name: 'Carol Davis',
+          role: 'learner',
+          batchCode: 'BATCH002'
         }
       });
 
@@ -341,7 +483,7 @@ if (process.env.NODE_ENV === 'development') {
       res.json({
         success: true,
         message: 'Seed data created',
-        data: { admin, mentor, learner, sampleExam, sampleJob }
+        data: { admin, mentor, learner1, learner2, learner3, sampleExam, sampleJob }
       });
     } catch (error) {
       res.status(500).json({
@@ -352,7 +494,128 @@ if (process.env.NODE_ENV === 'development') {
   });
 }
 
+// Meeting Socket.IO handlers
+const io = require('socket.io')(server, {
+  cors: {
+    origin: "http://localhost:3000",
+    methods: ["GET", "POST"]
+  }
+});
+
+// Make io available globally for meeting notifications
+app.set('io', io);
+
+const meetingRooms = new Map();
+
+io.on('connection', (socket) => {
+  console.log('User connected:', socket.id);
+  
+  socket.on('join-meeting', (data) => {
+    const { meetingId, userId } = data;
+    socket.join(meetingId);
+    
+    if (!meetingRooms.has(meetingId)) {
+      meetingRooms.set(meetingId, new Set());
+    }
+    
+    const room = meetingRooms.get(meetingId);
+    const user = { id: socket.id, userId, name: `User ${room.size + 1}` };
+    room.add(user);
+    
+    // Notify others in the room
+    socket.to(meetingId).emit('user-joined', { user });
+    
+    console.log(`User ${socket.id} joined meeting ${meetingId}`);
+  });
+  
+  socket.on('offer', (data) => {
+    socket.to(data.meetingId).emit('offer', {
+      offer: data.offer,
+      userId: socket.id,
+      targetUserId: data.targetUserId
+    });
+  });
+  
+  socket.on('answer', (data) => {
+    socket.to(data.meetingId).emit('answer', {
+      answer: data.answer,
+      userId: socket.id,
+      targetUserId: data.targetUserId
+    });
+  });
+  
+  socket.on('ice-candidate', (data) => {
+    socket.to(data.meetingId).emit('ice-candidate', {
+      candidate: data.candidate,
+      userId: socket.id,
+      targetUserId: data.targetUserId
+    });
+  });
+  
+  socket.on('chat-message', (data) => {
+    socket.to(data.meetingId).emit('chat-message', {
+      sender: data.sender,
+      message: data.message,
+      userId: socket.id
+    });
+  });
+  
+  socket.on('toggle-audio', (data) => {
+    socket.to(data.meetingId).emit('user-toggle-audio', {
+      userId: socket.id,
+      isAudioOn: data.isAudioOn
+    });
+  });
+  
+  socket.on('toggle-video', (data) => {
+    socket.to(data.meetingId).emit('user-toggle-video', {
+      userId: socket.id,
+      isVideoOn: data.isVideoOn
+    });
+  });
+  
+  socket.on('leave-meeting', (data) => {
+    socket.to(data.meetingId).emit('user-left', {
+      userId: socket.id
+    });
+    socket.leave(data.meetingId);
+    
+    // Clean up room
+    const room = meetingRooms.get(data.meetingId);
+    if (room) {
+      room.forEach(user => {
+        if (user.id === socket.id) {
+          room.delete(user);
+        }
+      });
+      if (room.size === 0) {
+        meetingRooms.delete(data.meetingId);
+      }
+    }
+  });
+  
+  socket.on('disconnect', () => {
+    console.log('User disconnected:', socket.id);
+    
+    // Clean up from all rooms
+    meetingRooms.forEach((room, meetingId) => {
+      room.forEach(user => {
+        if (user.id === socket.id) {
+          room.delete(user);
+          socket.to(meetingId).emit('user-left', {
+            userId: socket.id
+          });
+        }
+      });
+      if (room.size === 0) {
+        meetingRooms.delete(meetingId);
+      }
+    });
+  });
+});
+
 const PORT = process.env.PORT || 3001;
-app.listen(PORT, () => {
+server.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
+  console.log(`Socket.IO server initialized for meetings`);
 });

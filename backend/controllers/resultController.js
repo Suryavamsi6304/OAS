@@ -158,9 +158,180 @@ const gradeAnswer = async (req, res) => {
   }
 };
 
+/**
+ * Get batch-wise performance (Mentor only)
+ */
+const getBatchPerformance = async (req, res) => {
+  try {
+    const results = await Result.findAll({
+      include: [
+        {
+          model: User,
+          as: 'student',
+          attributes: ['name', 'username', 'batchCode'],
+          where: { role: 'learner' }
+        },
+        {
+          model: Exam,
+          as: 'exam',
+          attributes: ['title', 'type', 'questions']
+        }
+      ],
+      order: [['percentage', 'DESC']]
+    });
+
+    // Group by batch and question type
+    const batchData = {};
+    const batchStats = {};
+    
+    results.forEach(result => {
+      const batchCode = result.student.batchCode || 'No Batch';
+      
+      // Determine dominant question type in exam
+      const questions = result.exam.questions || [];
+      const questionTypes = questions.map(q => q.type || 'multiple-choice');
+      const typeCount = {};
+      questionTypes.forEach(type => {
+        typeCount[type] = (typeCount[type] || 0) + 1;
+      });
+      
+      const dominantType = Object.keys(typeCount).reduce((a, b) => 
+        typeCount[a] > typeCount[b] ? a : b, 'multiple-choice'
+      );
+      
+      const questionType = dominantType === 'multiple-choice' ? 'MCQ' :
+                          dominantType === 'coding' ? 'Coding' :
+                          dominantType === 'true-false' ? 'True/False' :
+                          dominantType === 'essay' ? 'Essay' : 'Mixed';
+      
+      if (!batchData[batchCode]) {
+        batchData[batchCode] = {};
+        batchStats[batchCode] = {};
+      }
+      
+      if (!batchData[batchCode][questionType]) {
+        batchData[batchCode][questionType] = [];
+        batchStats[batchCode][questionType] = {
+          totalLearners: new Set(),
+          totalSubmissions: 0,
+          averageScore: 0,
+          topScore: 0
+        };
+      }
+      
+      batchData[batchCode][questionType].push({
+        id: result.id,
+        studentName: result.student.name,
+        examTitle: result.exam.title,
+        questionType: questionType,
+        score: result.score,
+        percentage: result.percentage,
+        submittedAt: result.submittedAt
+      });
+      
+      // Update stats
+      batchStats[batchCode][questionType].totalLearners.add(result.student.name);
+      batchStats[batchCode][questionType].totalSubmissions++;
+      batchStats[batchCode][questionType].topScore = Math.max(batchStats[batchCode][questionType].topScore, result.percentage);
+    });
+
+    // Sort each batch and question type by percentage (top to bottom) and calculate averages
+    Object.keys(batchData).forEach(batch => {
+      Object.keys(batchData[batch]).forEach(questionType => {
+        batchData[batch][questionType].sort((a, b) => b.percentage - a.percentage);
+        
+        // Calculate average score
+        const totalScore = batchData[batch][questionType].reduce((sum, result) => sum + result.percentage, 0);
+        batchStats[batch][questionType].averageScore = Math.round(totalScore / batchData[batch][questionType].length);
+        batchStats[batch][questionType].totalLearners = batchStats[batch][questionType].totalLearners.size;
+      });
+    });
+
+    res.json({
+      success: true,
+      data: {
+        batches: batchData,
+        stats: batchStats
+      }
+    });
+  } catch (error) {
+    console.error('Get batch performance error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error'
+    });
+  }
+};
+
+/**
+ * Get my batch leaderboard (Learner only)
+ */
+const getMyBatchLeaderboard = async (req, res) => {
+  try {
+    const currentUser = await User.findByPk(req.user.id);
+    if (!currentUser || !currentUser.batchCode) {
+      return res.json({ success: true, data: [] });
+    }
+
+    const results = await Result.findAll({
+      include: [
+        {
+          model: User,
+          as: 'student',
+          attributes: ['name', 'batchCode'],
+          where: { 
+            role: 'learner',
+            batchCode: currentUser.batchCode
+          }
+        },
+        {
+          model: Exam,
+          as: 'exam',
+          attributes: ['title']
+        }
+      ],
+      order: [['percentage', 'DESC']]
+    });
+
+    // Group by student and get their best performance
+    const studentPerformance = {};
+    results.forEach(result => {
+      const studentName = result.student.name;
+      if (!studentPerformance[studentName] || result.percentage > studentPerformance[studentName].percentage) {
+        studentPerformance[studentName] = {
+          name: studentName,
+          percentage: result.percentage,
+          examTitle: result.exam.title,
+          isCurrentUser: result.student.name === currentUser.name
+        };
+      }
+    });
+
+    const leaderboard = Object.values(studentPerformance)
+      .sort((a, b) => b.percentage - a.percentage)
+      .map((student, index) => ({
+        ...student,
+        rank: index + 1
+      }));
+
+    res.json({
+      success: true,
+      data: leaderboard
+    });
+  } catch (error) {
+    console.error('Get batch leaderboard error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error'
+    });
+  }
+};
+
 module.exports = {
   getStudentResults,
   getAllResults,
   getAnalytics,
-  gradeAnswer
+  gradeAnswer,
+  getBatchPerformance,
+  getMyBatchLeaderboard
 };

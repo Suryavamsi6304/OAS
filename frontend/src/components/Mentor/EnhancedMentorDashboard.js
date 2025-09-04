@@ -1,11 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
-import { Users, BookOpen, Award, TrendingUp, Eye, CheckCircle, XCircle, Clock, Plus, Code, Target, Edit, Trash2, RefreshCw, Shield, AlertTriangle } from 'lucide-react';
+import { Users, BookOpen, Clock, Plus, Code, Target, Edit, Trash2, RefreshCw, Shield, AlertTriangle, Eye, Trophy, Video as VideoIcon } from 'lucide-react';
 import axios from 'axios';
 import toast from 'react-hot-toast';
 import ReAttemptRequests from './ReAttemptRequests';
 import NotificationBell from '../Notifications/NotificationBell';
+import LiveMonitorDashboard from './LiveMonitorDashboard';
+import BatchPerformance from './BatchPerformance';
+
 
 const EnhancedMentorDashboard = () => {
   const { user, logout } = useAuth();
@@ -15,15 +18,18 @@ const EnhancedMentorDashboard = () => {
   const [skillAssessments, setSkillAssessments] = useState([]);
   const [reAttemptRequests, setReAttemptRequests] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState('dashboard');
+  const [activeTab, setActiveTab] = useState(() => {
+    return localStorage.getItem('mentorActiveTab') || 'dashboard';
+  });
   const [showCreatePractice, setShowCreatePractice] = useState(false);
   const [showCreateSkill, setShowCreateSkill] = useState(false);
+
 
   useEffect(() => {
     fetchData();
     const interval = setInterval(fetchData, 15000); // Refresh every 15 seconds
     return () => clearInterval(interval);
-  }, []);
+  }, [user.id]);
 
   const fetchData = async () => {
     try {
@@ -486,44 +492,70 @@ const EnhancedMentorDashboard = () => {
             <p style={{ color: '#6b7280', margin: 0 }}>Manage assessments and student progress</p>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-            <NotificationBell />
-            <button onClick={logout} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 16px', backgroundColor: '#ef4444', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '14px' }}>
+            <button
+              onClick={() => navigate('/communication')}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                padding: '8px 16px',
+                backgroundColor: '#10b981',
+                color: 'white',
+                border: 'none',
+                borderRadius: '6px',
+                cursor: 'pointer',
+                fontSize: '14px',
+                fontWeight: '500'
+              }}
+            >
+              <VideoIcon size={16} />
+              Meeting
+            </button>
+            <button onClick={logout} style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 16px', backgroundColor: '#ef4444', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '14px', fontWeight: '500' }}>
               Logout
             </button>
+            <NotificationBell />
           </div>
         </div>
       </div>
 
       {/* Navigation Tabs */}
-      <div style={{ backgroundColor: 'white', borderBottom: '1px solid #e5e7eb', padding: '0 24px' }}>
+      <div style={{ backgroundColor: 'white', borderBottom: '1px solid #e5e7eb', padding: '0 24px', overflowX: 'auto' }}>
         <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
-          <div style={{ display: 'flex', gap: '32px' }}>
+          <div style={{ display: 'flex', gap: '8px', minWidth: 'max-content' }}>
             {[
               { id: 'dashboard', label: 'Dashboard', icon: BookOpen },
-              { id: 'practice', label: 'Practice Tests', icon: Target },
-              { id: 'skills', label: 'Skill Assessments', icon: Code },
-              { id: 'requests', label: 'Re-attempt Requests', icon: RefreshCw },
-              { id: 'proctoring', label: 'Proctoring Logs', icon: Shield },
-              { id: 'live', label: 'Live Monitor', icon: Eye },
-              { id: 'approvals', label: 'Approval Requests', icon: AlertTriangle }
+              { id: 'performance', label: 'Performance', icon: Trophy },
+              { id: 'practice', label: 'Practice', icon: Target },
+              { id: 'skills', label: 'Skills', icon: Code },
+              { id: 'requests', label: 'Requests', icon: RefreshCw },
+              { id: 'proctoring', label: 'Proctoring', icon: Shield },
+              { id: 'live', label: 'Live', icon: Eye },
+              { id: 'approvals', label: 'Approvals', icon: AlertTriangle }
             ].map(tab => {
               const Icon = tab.icon;
               return (
                 <button
                   key={tab.id}
-                  onClick={() => setActiveTab(tab.id)}
+                  onClick={() => {
+                    setActiveTab(tab.id);
+                    localStorage.setItem('mentorActiveTab', tab.id);
+                  }}
                   style={{
                     display: 'flex',
                     alignItems: 'center',
-                    gap: '8px',
-                    padding: '16px 0',
+                    gap: '6px',
+                    padding: '12px 16px',
                     border: 'none',
-                    backgroundColor: 'transparent',
-                    color: activeTab === tab.id ? '#3b82f6' : '#6b7280',
-                    borderBottom: activeTab === tab.id ? '2px solid #3b82f6' : '2px solid transparent',
+                    backgroundColor: activeTab === tab.id ? '#f0f9ff' : 'transparent',
+                    color: activeTab === tab.id ? '#0369a1' : '#6b7280',
+                    borderBottom: activeTab === tab.id ? '3px solid #0369a1' : '3px solid transparent',
                     cursor: 'pointer',
-                    fontSize: '14px',
-                    fontWeight: '500'
+                    fontSize: '13px',
+                    fontWeight: activeTab === tab.id ? '600' : '500',
+                    borderRadius: '6px 6px 0 0',
+                    whiteSpace: 'nowrap',
+                    transition: 'all 0.2s ease'
                   }}
                 >
                   <Icon size={16} />
@@ -538,6 +570,7 @@ const EnhancedMentorDashboard = () => {
       {/* Main Content */}
       <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '24px' }}>
         {activeTab === 'dashboard' && renderDashboard()}
+        {activeTab === 'performance' && <BatchPerformance />}
         {activeTab === 'practice' && renderPracticeTests()}
         {activeTab === 'skills' && renderSkillAssessments()}
         {activeTab === 'requests' && <ReAttemptRequests />}
@@ -547,12 +580,7 @@ const EnhancedMentorDashboard = () => {
             <p>View proctoring session logs and violations here.</p>
           </div>
         )}
-        {activeTab === 'live' && (
-          <div style={{ backgroundColor: 'white', padding: '24px', borderRadius: '8px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}>
-            <h2 style={{ fontSize: '20px', fontWeight: 'bold', marginBottom: '20px' }}>Live Monitor</h2>
-            <p>Monitor ongoing exams in real-time.</p>
-          </div>
-        )}
+        {activeTab === 'live' && <LiveMonitorDashboard />}
         {activeTab === 'approvals' && (
           <div style={{ backgroundColor: 'white', padding: '24px', borderRadius: '8px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}>
             <h2 style={{ fontSize: '20px', fontWeight: 'bold', marginBottom: '20px' }}>Approval Requests</h2>
@@ -564,6 +592,8 @@ const EnhancedMentorDashboard = () => {
       {/* Modals */}
       {showCreatePractice && <CreatePracticeTestForm />}
       {showCreateSkill && <CreateSkillAssessmentForm />}
+      
+
     </div>
   );
 };

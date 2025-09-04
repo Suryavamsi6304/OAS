@@ -1,17 +1,37 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { RefreshCw, Clock, CheckCircle, XCircle, AlertCircle, ArrowLeft } from 'lucide-react';
+import { RefreshCw, Clock, CheckCircle, XCircle, AlertCircle, ArrowLeft, Plus } from 'lucide-react';
 import axios from 'axios';
 import toast from 'react-hot-toast';
+import { useNotifications } from '../../contexts/NotificationContext';
 
 const ReAttempts = () => {
   const navigate = useNavigate();
+  const { socket } = useNotifications();
   const [requests, setRequests] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [failedExams, setFailedExams] = useState([]);
+  const [selectedExam, setSelectedExam] = useState('');
+  const [reason, setReason] = useState('');
+  const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
     fetchReAttemptRequests();
-  }, []);
+    fetchFailedExams();
+    
+    // Listen for real-time updates
+    if (socket) {
+      socket.on('reattempt-response', (data) => {
+        // Refresh requests when response received
+        fetchReAttemptRequests();
+      });
+      
+      return () => {
+        socket.off('reattempt-response');
+      };
+    }
+  }, [socket]);
 
   const fetchReAttemptRequests = async () => {
     try {
@@ -22,6 +42,54 @@ const ReAttempts = () => {
       toast.error('Failed to load re-attempt requests');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchFailedExams = async () => {
+    try {
+      const response = await axios.get('/api/results/failed-skill-assessments');
+      setFailedExams(response.data.data || []);
+    } catch (error) {
+      console.error('Error fetching failed exams:', error);
+    }
+  };
+
+  const createReAttemptRequest = async () => {
+    if (!selectedExam || !reason.trim()) {
+      toast.error('Please select an exam and provide a reason');
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      const response = await axios.post('/api/re-attempt/request', {
+        examId: selectedExam,
+        reason: reason.trim()
+      });
+
+      if (response.data.success) {
+        toast.success('Re-attempt request submitted successfully!');
+        setShowCreateModal(false);
+        setSelectedExam('');
+        setReason('');
+        fetchReAttemptRequests();
+        
+        // Emit real-time notification to mentors
+        if (socket) {
+          socket.emit('new-reattempt-request', {
+            requestId: response.data.data.id,
+            studentId: response.data.data.studentId,
+            studentName: response.data.data.studentName,
+            examId: selectedExam,
+            examTitle: response.data.data.examTitle,
+            reason: reason.trim()
+          });
+        }
+      }
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Failed to submit request');
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -89,6 +157,30 @@ const ReAttempts = () => {
 
       {/* Content */}
       <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '24px' }}>
+        {/* Create Request Button */}
+        {failedExams.length > 0 && (
+          <div style={{ marginBottom: '24px' }}>
+            <button
+              onClick={() => setShowCreateModal(true)}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                padding: '12px 20px',
+                backgroundColor: '#3b82f6',
+                color: 'white',
+                border: 'none',
+                borderRadius: '8px',
+                cursor: 'pointer',
+                fontSize: '14px',
+                fontWeight: '500'
+              }}
+            >
+              <Plus size={16} />
+              Request Re-attempt
+            </button>
+          </div>
+        )}
         {requests.length === 0 ? (
           <div style={{ backgroundColor: 'white', padding: '48px', borderRadius: '8px', textAlign: 'center', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}>
             <RefreshCw size={48} style={{ color: '#d1d5db', margin: '0 auto 16px' }} />
@@ -200,6 +292,108 @@ const ReAttempts = () => {
                 </div>
               </div>
             ))}
+          </div>
+        )}
+        
+        {/* Create Request Modal */}
+        {showCreateModal && (
+          <div style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(0,0,0,0.5)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1000
+          }}>
+            <div style={{
+              backgroundColor: 'white',
+              padding: '24px',
+              borderRadius: '12px',
+              maxWidth: '500px',
+              width: '90%'
+            }}>
+              <h3 style={{ fontSize: '18px', fontWeight: 'bold', marginBottom: '16px' }}>Request Re-attempt</h3>
+              
+              <div style={{ marginBottom: '16px' }}>
+                <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', marginBottom: '8px' }}>Select Failed Exam:</label>
+                <select
+                  value={selectedExam}
+                  onChange={(e) => setSelectedExam(e.target.value)}
+                  style={{
+                    width: '100%',
+                    padding: '10px',
+                    border: '1px solid #d1d5db',
+                    borderRadius: '6px',
+                    fontSize: '14px'
+                  }}
+                >
+                  <option value="">Choose an exam...</option>
+                  {failedExams.map((exam) => (
+                    <option key={exam.id} value={exam.id}>
+                      {exam.title} - Score: {exam.percentage}%
+                    </option>
+                  ))}
+                </select>
+              </div>
+              
+              <div style={{ marginBottom: '20px' }}>
+                <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', marginBottom: '8px' }}>Reason for Re-attempt:</label>
+                <textarea
+                  value={reason}
+                  onChange={(e) => setReason(e.target.value)}
+                  placeholder="Please explain why you need a re-attempt..."
+                  rows={4}
+                  style={{
+                    width: '100%',
+                    padding: '10px',
+                    border: '1px solid #d1d5db',
+                    borderRadius: '6px',
+                    fontSize: '14px',
+                    resize: 'vertical'
+                  }}
+                />
+              </div>
+              
+              <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
+                <button
+                  onClick={() => {
+                    setShowCreateModal(false);
+                    setSelectedExam('');
+                    setReason('');
+                  }}
+                  style={{
+                    padding: '10px 20px',
+                    backgroundColor: '#6b7280',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '6px',
+                    cursor: 'pointer',
+                    fontSize: '14px'
+                  }}
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={createReAttemptRequest}
+                  disabled={submitting}
+                  style={{
+                    padding: '10px 20px',
+                    backgroundColor: submitting ? '#9ca3af' : '#3b82f6',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '6px',
+                    cursor: submitting ? 'not-allowed' : 'pointer',
+                    fontSize: '14px'
+                  }}
+                >
+                  {submitting ? 'Submitting...' : 'Submit Request'}
+                </button>
+              </div>
+            </div>
           </div>
         )}
       </div>

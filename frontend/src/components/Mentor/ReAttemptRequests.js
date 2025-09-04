@@ -2,8 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { CheckCircle, XCircle, Clock, User, FileText, Calendar } from 'lucide-react';
 import axios from 'axios';
 import toast from 'react-hot-toast';
+import { useNotifications } from '../../contexts/NotificationContext';
 
 const ReAttemptRequests = () => {
+  const { socket } = useNotifications();
   const [requests, setRequests] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedRequest, setSelectedRequest] = useState(null);
@@ -12,9 +14,19 @@ const ReAttemptRequests = () => {
 
   useEffect(() => {
     fetchRequests();
-    const interval = setInterval(fetchRequests, 10000); // Refresh every 10 seconds
-    return () => clearInterval(interval);
-  }, []);
+    
+    // Listen for real-time updates
+    if (socket) {
+      socket.on('new-reattempt-request', (data) => {
+        // Refresh requests when new request received
+        fetchRequests();
+      });
+      
+      return () => {
+        socket.off('new-reattempt-request');
+      };
+    }
+  }, [socket]);
 
   const fetchRequests = async () => {
     try {
@@ -30,16 +42,27 @@ const ReAttemptRequests = () => {
   const reviewRequest = async (requestId, status) => {
     setSubmitting(true);
     try {
-      await axios.put(`/api/re-attempt/requests/${requestId}/review`, {
+      const response = await axios.put(`/api/re-attempt/requests/${requestId}/review`, {
         status,
         comment: reviewComment
       });
       
       toast.success(`Request ${status} successfully`);
+      
+      // Emit real-time notification to student
+      if (socket && response.data.data) {
+        socket.emit('reattempt-response', {
+          studentId: response.data.data.studentId,
+          examId: response.data.data.examId,
+          examTitle: response.data.data.examTitle,
+          status: status,
+          comment: reviewComment
+        });
+      }
+      
       setSelectedRequest(null);
       setReviewComment('');
-      // Immediate refresh after action
-      setTimeout(fetchRequests, 500);
+      fetchRequests();
     } catch (error) {
       toast.error(error.response?.data?.message || 'Failed to review request');
     } finally {

@@ -1,22 +1,26 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery } from 'react-query';
-import { Clock, ChevronLeft, ChevronRight, Flag, Send } from 'lucide-react';
+import { useAuth } from '../../contexts/AuthContext';
+import { Clock, ChevronLeft, ChevronRight, Send, Code } from 'lucide-react';
 import axios from 'axios';
 import toast from 'react-hot-toast';
-import ProctoringSetup from '../Proctoring/ProctoringSetup';
-import ProctoringMonitor from '../Proctoring/ProctoringMonitor';
+import ExamCamera from '../Proctoring/ExamCamera';
+import CameraRules from '../Proctoring/CameraRules';
+import CodeEditor from './CodeEditor';
 
 const ExamTaking = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [currentQuestion, setCurrentQuestion] = useState(0);
   const [answers, setAnswers] = useState({});
   const [timeLeft, setTimeLeft] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [proctoringSession, setProctoringSession] = useState(null);
-  const [showProctoringSetup, setShowProctoringSetup] = useState(false);
-  const proctoringMonitorRef = useRef(null);
+  const [, setCameraReady] = useState(false);
+  const cameraRef = useRef(null);
+  const [showCameraRules, setShowCameraRules] = useState(true);
+  const [isFullscreen, setIsFullscreen] = useState(false);
 
   const { data: exam, isLoading, error } = useQuery(['exam', id], async () => {
     const response = await axios.get(`/api/exams/${id}`);
@@ -33,24 +37,60 @@ const ExamTaking = () => {
     if (exam?.duration && timeLeft === null) {
       setTimeLeft(exam.duration * 60);
     }
-    
-    // Check if proctoring is enabled
-    if (exam?.proctoringEnabled && !proctoringSession) {
-      setShowProctoringSetup(true);
-    }
-  }, [exam, timeLeft, proctoringSession]);
-
-  // Cleanup when component unmounts
-  useEffect(() => {
-    return () => {
-      if (proctoringMonitorRef.current) {
-        proctoringMonitorRef.current.stopMonitoring();
-      }
-    };
-  }, []);
+  }, [exam, timeLeft]);
 
   // Start time tracking
   const [startTime] = useState(Date.now());
+
+
+
+  const handleSubmit = useCallback(async () => {
+    if (isSubmitting) return;
+    
+    setIsSubmitting(true);
+    
+    // Stop camera before submitting
+    if (cameraRef.current && cameraRef.current.stopCamera) {
+      cameraRef.current.stopCamera();
+    }
+
+    // Exit fullscreen
+    if (document.fullscreenElement) {
+      try {
+        await document.exitFullscreen();
+      } catch (error) {
+        console.error('Failed to exit fullscreen:', error);
+      }
+    }
+    
+    try {
+      const submissionData = {
+        examId: id,
+        answers: Object.entries(answers).map(([questionId, answer]) => ({
+          questionId,
+          answer
+        })),
+        timeSpent: Math.floor((Date.now() - startTime) / 1000)
+      };
+
+      const response = await axios.post('/api/exams/submit', submissionData);
+      if (response.data.success) {
+        toast.success('Test submitted successfully!');
+        // Exit fullscreen before navigation
+        if (document.fullscreenElement) {
+          await document.exitFullscreen().catch(() => {});
+        }
+        navigate('/learner/results');
+      } else {
+        toast.error(response.data.message || 'Failed to submit test');
+        setIsSubmitting(false);
+      }
+    } catch (error) {
+      console.error('Error submitting exam:', error);
+      toast.error(error.response?.data?.message || 'Failed to submit test');
+      setIsSubmitting(false);
+    }
+  }, [id, answers, startTime, navigate, isSubmitting]);
 
   useEffect(() => {
     if (timeLeft > 0) {
@@ -59,7 +99,105 @@ const ExamTaking = () => {
     } else if (timeLeft === 0 && timeLeft !== null) {
       handleSubmit();
     }
-  }, [timeLeft]);
+  }, [timeLeft, handleSubmit]);
+
+  // Fullscreen enforcement
+  useEffect(() => {
+    const enterFullscreen = async () => {
+      try {
+        await document.documentElement.requestFullscreen();
+        setIsFullscreen(true);
+      } catch (error) {
+        console.error('Failed to enter fullscreen:', error);
+        toast.error('Fullscreen mode is required for the exam');
+      }
+    };
+
+    const handleFullscreenChange = () => {
+      if (!document.fullscreenElement && isFullscreen && !isSubmitting) {
+        toast.error('Exam submitted due to fullscreen violation!');
+        handleSubmit();
+      }
+    };
+
+    // Enter fullscreen when exam starts (after camera rules)
+    if (!showCameraRules && exam) {
+      enterFullscreen();
+    }
+
+    // Listen for fullscreen changes
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
+    document.addEventListener('mozfullscreenchange', handleFullscreenChange);
+    document.addEventListener('MSFullscreenChange', handleFullscreenChange);
+
+    return () => {
+      document.removeEventListener('fullscreenchange', handleFullscreenChange);
+      document.removeEventListener('webkitfullscreenchange', handleFullscreenChange);
+      document.removeEventListener('mozfullscreenchange', handleFullscreenChange);
+      document.removeEventListener('MSFullscreenChange', handleFullscreenChange);
+    };
+  }, [showCameraRules, exam, isFullscreen, isSubmitting, handleSubmit]);
+
+  // Anti-cheating measures
+  useEffect(() => {
+    if (!showCameraRules && exam) {
+      // Prevent right-click
+      const preventRightClick = (e) => {
+        e.preventDefault();
+        toast.error('Right-click is disabled during exam');
+      };
+
+      // Prevent keyboard shortcuts
+      const preventKeyboardShortcuts = (e) => {
+        // Prevent F12, Ctrl+Shift+I, Ctrl+U, Ctrl+S, Ctrl+A, Ctrl+C, Ctrl+V
+        if (
+          e.key === 'F12' ||
+          (e.ctrlKey && e.shiftKey && e.key === 'I') ||
+          (e.ctrlKey && e.key === 'u') ||
+          (e.ctrlKey && e.key === 's') ||
+          (e.ctrlKey && e.key === 'a') ||
+          (e.ctrlKey && e.key === 'c') ||
+          (e.ctrlKey && e.key === 'v') ||
+          (e.altKey && e.key === 'Tab')
+        ) {
+          e.preventDefault();
+          toast.error('This action is not allowed during exam');
+        }
+      };
+
+      // Prevent tab switching
+      const handleVisibilityChange = () => {
+        if (document.hidden && !isSubmitting) {
+          toast.error('Exam submitted due to tab switching violation!');
+          handleSubmit();
+        }
+      };
+
+      // Add event listeners
+      document.addEventListener('contextmenu', preventRightClick);
+      document.addEventListener('keydown', preventKeyboardShortcuts);
+      document.addEventListener('visibilitychange', handleVisibilityChange);
+
+      // Disable text selection
+      document.body.style.userSelect = 'none';
+      document.body.style.webkitUserSelect = 'none';
+      document.body.style.mozUserSelect = 'none';
+      document.body.style.msUserSelect = 'none';
+
+      return () => {
+        document.removeEventListener('contextmenu', preventRightClick);
+        document.removeEventListener('keydown', preventKeyboardShortcuts);
+        document.removeEventListener('visibilitychange', handleVisibilityChange);
+        
+        // Re-enable text selection
+        document.body.style.userSelect = 'auto';
+        document.body.style.webkitUserSelect = 'auto';
+        document.body.style.mozUserSelect = 'auto';
+        document.body.style.msUserSelect = 'auto';
+      };
+    }
+  }, [showCameraRules, exam, isSubmitting, handleSubmit]);
 
   const formatTime = (seconds) => {
     const mins = Math.floor(seconds / 60);
@@ -74,44 +212,6 @@ const ExamTaking = () => {
     }));
   };
 
-  const handleProctoringSetupComplete = (sessionData) => {
-    setProctoringSession(sessionData);
-    setShowProctoringSetup(false);
-  };
-
-  const handleSubmit = async () => {
-    if (isSubmitting) return;
-    
-    setIsSubmitting(true);
-    try {
-      const submissionData = {
-        examId: id,
-        answers: Object.entries(answers).map(([questionId, answer]) => ({
-          questionId,
-          answer
-        })),
-        timeSpent: Math.floor((Date.now() - startTime) / 1000)
-      };
-
-      const response = await axios.post('/api/exams/submit', submissionData);
-      if (response.data.success) {
-        // Stop proctoring monitoring
-        if (proctoringMonitorRef.current) {
-          proctoringMonitorRef.current.stopMonitoring();
-        }
-        toast.success('Test submitted successfully!');
-        navigate('/learner/results');
-      } else {
-        toast.error(response.data.message || 'Failed to submit test');
-        setIsSubmitting(false);
-      }
-    } catch (error) {
-      console.error('Error submitting exam:', error);
-      toast.error(error.response?.data?.message || 'Failed to submit test');
-      setIsSubmitting(false);
-    }
-  };
-
   if (isLoading) {
     return (
       <div style={{ 
@@ -121,6 +221,37 @@ const ExamTaking = () => {
         justifyContent: 'center' 
       }}>
         <p>Loading exam...</p>
+      </div>
+    );
+  }
+
+  // Show camera rules first
+  if (showCameraRules) {
+    return (
+      <div>
+        <CameraRules 
+          onAccept={() => setShowCameraRules(false)}
+          onCancel={() => navigate('/learner')}
+        />
+        {/* Fullscreen Warning */}
+        <div style={{
+          position: 'fixed',
+          bottom: '20px',
+          left: '50%',
+          transform: 'translateX(-50%)',
+          backgroundColor: '#fef3c7',
+          border: '1px solid #fbbf24',
+          borderRadius: '8px',
+          padding: '12px 16px',
+          zIndex: 2001,
+          fontSize: '14px',
+          color: '#92400e',
+          textAlign: 'center',
+          maxWidth: '400px'
+        }}>
+          ⚠️ <strong>Notice:</strong> Exam will automatically enter fullscreen mode. 
+          Exiting fullscreen will submit your exam immediately.
+        </div>
       </div>
     );
   }
@@ -158,26 +289,12 @@ const ExamTaking = () => {
   const question = exam.questions[currentQuestion];
   const progress = ((currentQuestion + 1) / exam.questions.length) * 100;
 
-  // Show proctoring setup if required
-  if (showProctoringSetup) {
-    return (
-      <ProctoringSetup 
-        examId={id}
-        onSetupComplete={handleProctoringSetupComplete}
-      />
-    );
-  }
+
 
   return (
     <div style={{ minHeight: '100vh', backgroundColor: '#f8fafc' }}>
-      {/* Proctoring Monitor */}
-      {proctoringSession && (
-        <ProctoringMonitor 
-          ref={proctoringMonitorRef}
-          sessionId={proctoringSession.sessionId}
-          examId={id}
-        />
-      )}
+      {/* Exam Camera */}
+      {exam?.proctoringEnabled && <ExamCamera ref={cameraRef} onCameraReady={setCameraReady} examId={id} studentId={user?.id} />}
       {/* Header */}
       <div style={{
         backgroundColor: 'white',
@@ -268,14 +385,30 @@ const ExamTaking = () => {
               alignItems: 'center',
               marginBottom: '16px'
             }}>
-              <span style={{ 
-                fontSize: '14px', 
-                color: '#6b7280',
-                textTransform: 'uppercase',
-                fontWeight: '500'
-              }}>
-                {question.type.replace('-', ' ')}
-              </span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                {question.type === 'coding' && <Code size={16} style={{ color: '#3b82f6' }} />}
+                <span style={{ 
+                  fontSize: '14px', 
+                  color: '#6b7280',
+                  textTransform: 'uppercase',
+                  fontWeight: '500'
+                }}>
+                  {question.type.replace('-', ' ')}
+                </span>
+                {question.type === 'coding' && question.difficulty && (
+                  <span style={{
+                    fontSize: '12px',
+                    padding: '2px 8px',
+                    borderRadius: '12px',
+                    backgroundColor: question.difficulty === 'Easy' ? '#dcfce7' : 
+                                   question.difficulty === 'Medium' ? '#fef3c7' : '#fecaca',
+                    color: question.difficulty === 'Easy' ? '#166534' : 
+                           question.difficulty === 'Medium' ? '#92400e' : '#991b1b'
+                  }}>
+                    {question.difficulty}
+                  </span>
+                )}
+              </div>
               <span style={{ 
                 fontSize: '14px', 
                 color: '#6b7280' 
@@ -290,8 +423,62 @@ const ExamTaking = () => {
               lineHeight: '1.4',
               margin: 0
             }}>
-              {question.question}
+              {question.title || question.question}
             </h2>
+            
+            {question.type === 'coding' && question.description && (
+              <div style={{ 
+                marginTop: '16px',
+                padding: '16px',
+                backgroundColor: '#f8fafc',
+                borderRadius: '8px',
+                border: '1px solid #e2e8f0'
+              }}>
+                <div style={{ whiteSpace: 'pre-wrap', lineHeight: '1.6' }}>
+                  {question.description}
+                </div>
+                
+                {question.constraints && (
+                  <div style={{ marginTop: '12px' }}>
+                    <h4 style={{ fontSize: '14px', fontWeight: '600', margin: '0 0 8px 0' }}>Constraints:</h4>
+                    <div style={{ fontSize: '14px', color: '#6b7280', whiteSpace: 'pre-wrap' }}>
+                      {question.constraints}
+                    </div>
+                  </div>
+                )}
+                
+                {question.sampleInput && question.sampleOutput && (
+                  <div style={{ marginTop: '12px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                    <div>
+                      <h4 style={{ fontSize: '14px', fontWeight: '600', margin: '0 0 8px 0' }}>Sample Input:</h4>
+                      <pre style={{ 
+                        fontSize: '12px', 
+                        backgroundColor: 'white', 
+                        padding: '8px', 
+                        borderRadius: '4px',
+                        margin: 0,
+                        border: '1px solid #d1d5db'
+                      }}>
+                        {question.sampleInput}
+                      </pre>
+                    </div>
+                    <div>
+                      <h4 style={{ fontSize: '14px', fontWeight: '600', margin: '0 0 8px 0' }}>Sample Output:</h4>
+                      <pre style={{ 
+                        fontSize: '12px', 
+                        backgroundColor: 'white', 
+                        padding: '8px', 
+                        borderRadius: '4px',
+                        margin: 0,
+                        border: '1px solid #d1d5db'
+                      }}>
+                        {question.sampleOutput}
+                      </pre>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
 
           {/* Answer Options */}
@@ -360,11 +547,11 @@ const ExamTaking = () => {
               </div>
             )}
 
-            {(question.type === 'essay' || question.type === 'coding') && (
+            {question.type === 'essay' && (
               <textarea
                 value={answers[question._id] || ''}
                 onChange={(e) => handleAnswerChange(question._id, e.target.value)}
-                placeholder={`Enter your ${question.type} answer here...`}
+                placeholder="Enter your essay answer here..."
                 style={{
                   width: '100%',
                   minHeight: '200px',
@@ -372,10 +559,22 @@ const ExamTaking = () => {
                   border: '2px solid #e5e7eb',
                   borderRadius: '8px',
                   fontSize: '16px',
-                  fontFamily: question.type === 'coding' ? 'monospace' : 'inherit',
                   resize: 'vertical'
                 }}
               />
+            )}
+
+            {question.type === 'coding' && (
+              <div style={{ height: '600px', border: '2px solid #e5e7eb', borderRadius: '8px', overflow: 'hidden' }}>
+                <CodeEditor
+                  question={question}
+                  initialCode={answers[question._id]?.code || ''}
+                  onSubmit={(solution) => {
+                    handleAnswerChange(question._id, solution);
+                    toast.success('Code solution saved!');
+                  }}
+                />
+              </div>
             )}
           </div>
 

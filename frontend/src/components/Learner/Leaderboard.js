@@ -1,0 +1,117 @@
+import React from 'react';
+import { useQuery } from 'react-query';
+import { Trophy, Medal, Award, Users } from 'lucide-react';
+import axios from 'axios';
+
+const Leaderboard = () => {
+  const { data: leaderboard, isLoading } = useQuery('batch-leaderboard', async () => {
+    const response = await axios.get('/api/results/my-batch-leaderboard');
+    return response.data.data || [];
+  });
+
+  if (isLoading) {
+    return (
+      <div style={{ textAlign: 'center', padding: '48px' }}>
+        <p>Loading leaderboard...</p>
+      </div>
+    );
+  }
+
+  if (leaderboard.length === 0) {
+    return (
+      <div style={{ textAlign: 'center', padding: '48px', color: '#6b7280' }}>
+        <Users size={48} style={{ margin: '0 auto 16px', opacity: 0.5 }} />
+        <p>No leaderboard data available for your batch.</p>
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ maxWidth: '800px', margin: '0 auto' }}>
+      <div style={{ textAlign: 'center', marginBottom: '32px' }}>
+        <Trophy size={48} style={{ color: '#fbbf24', margin: '0 auto 16px' }} />
+        <h2 style={{ fontSize: '24px', fontWeight: 'bold', marginBottom: '8px' }}>
+          Batch Leaderboard
+        </h2>
+        <p style={{ color: '#374151', fontSize: '16px', fontWeight: '500' }}>Top performers in your batch</p>
+      </div>
+
+      <div className="card">
+        <div style={{ overflowX: 'auto' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+            <thead>
+              <tr style={{ borderBottom: '2px solid #e5e7eb' }}>
+                <th style={{ textAlign: 'left', padding: '16px', fontWeight: '600' }}>Rank</th>
+                <th style={{ textAlign: 'left', padding: '16px', fontWeight: '600' }}>Student</th>
+                <th style={{ textAlign: 'left', padding: '16px', fontWeight: '600' }}>Best Score</th>
+                <th style={{ textAlign: 'left', padding: '16px', fontWeight: '600' }}>Exam</th>
+              </tr>
+            </thead>
+            <tbody>
+              {leaderboard.map((student) => (
+                <tr 
+                  key={student.name} 
+                  style={{ 
+                    borderBottom: '1px solid #f3f4f6',
+                    backgroundColor: student.isCurrentUser ? '#f0f9ff' : 'transparent'
+                  }}
+                >
+                  <td style={{ padding: '16px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center' }}>
+                      {student.rank === 1 && <Trophy size={20} style={{ color: '#fbbf24', marginRight: '8px' }} />}
+                      {student.rank === 2 && <Medal size={20} style={{ color: '#9ca3af', marginRight: '8px' }} />}
+                      {student.rank === 3 && <Award size={20} style={{ color: '#cd7c2f', marginRight: '8px' }} />}
+                      <span style={{ 
+                        fontWeight: student.rank <= 3 ? '700' : '500',
+                        fontSize: '18px',
+                        color: student.rank <= 3 ? '#1f2937' : '#6b7280'
+                      }}>
+                        #{student.rank}
+                      </span>
+                    </div>
+                  </td>
+                  <td style={{ padding: '16px' }}>
+                    <span style={{ 
+                      fontWeight: student.isCurrentUser ? '600' : '500',
+                      color: student.isCurrentUser ? '#0369a1' : '#1f2937'
+                    }}>
+                      {student.name}
+                      {student.isCurrentUser && (
+                        <span style={{ 
+                          marginLeft: '8px',
+                          padding: '2px 6px',
+                          backgroundColor: '#0369a1',
+                          color: 'white',
+                          borderRadius: '4px',
+                          fontSize: '10px',
+                          fontWeight: 'bold'
+                        }}>
+                          YOU
+                        </span>
+                      )}
+                    </span>
+                  </td>
+                  <td style={{ padding: '16px' }}>
+                    <span style={{ 
+                      color: student.percentage >= 80 ? '#10b981' : 
+                             student.percentage >= 60 ? '#f59e0b' : '#ef4444',
+                      fontWeight: '600',
+                      fontSize: '18px'
+                    }}>
+                      {student.percentage}%
+                    </span>
+                  </td>
+                  <td style={{ padding: '16px', color: '#6b7280' }}>
+                    {student.examTitle}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default Leaderboard;

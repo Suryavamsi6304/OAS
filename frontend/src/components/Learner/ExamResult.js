@@ -8,7 +8,6 @@ import {
   AlertCircle,
   Calendar,
   Clock,
-  Target,
   RefreshCw
 } from 'lucide-react';
 import axios from 'axios';
@@ -16,7 +15,7 @@ import toast from 'react-hot-toast';
 
 const ExamResult = () => {
   const { examId } = useParams();
-  const { user } = useAuth();
+  const { } = useAuth();
   const navigate = useNavigate();
   const [result, setResult] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -26,13 +25,13 @@ const ExamResult = () => {
 
   useEffect(() => {
     fetchResult();
-  }, [examId]);
+  }, [examId, navigate]);
 
   const fetchResult = async () => {
     try {
       const response = await axios.get('/api/results/student');
       const results = response.data.data || [];
-      const examResult = results.find(r => r.examId === examId);
+      const examResult = results.find(r => r.examId === parseInt(examId));
       
       if (!examResult) {
         toast.error('Result not found');

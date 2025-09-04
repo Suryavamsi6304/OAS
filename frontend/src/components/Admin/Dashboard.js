@@ -9,7 +9,7 @@ import toast from 'react-hot-toast';
 const AdminDashboard = () => {
   const navigate = useNavigate();
 
-  const { data: analytics, isLoading: analyticsLoading } = useQuery('analytics', async () => {
+  const { data: analytics } = useQuery('analytics', async () => {
     const response = await axios.get('/api/analytics');
     return response.data.data || {};
   });
