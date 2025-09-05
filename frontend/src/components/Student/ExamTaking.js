@@ -416,15 +416,13 @@ const ExamTaking = () => {
         </div>
       )}
       
-      {exam?.type === 'skill-assessment' && (
-        <ProctoringMonitor 
-          ref={proctoringRef}
-          sessionId={id} 
-          onViolation={handleViolation}
-        />
-      )}
+      <ProctoringMonitor 
+        ref={proctoringRef}
+        sessionId={id} 
+        onViolation={handleViolation}
+      />
       
-      {exam?.type === 'skill-assessment' && <ExamCamera ref={cameraRef} onCameraReady={setCameraReady} examId={id} studentId={user?.id} />}
+      <ExamCamera ref={cameraRef} onCameraReady={setCameraReady} examId={id} studentId={user?.id} />
       
       <div style={{
         backgroundColor: 'white',

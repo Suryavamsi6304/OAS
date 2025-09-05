@@ -269,60 +269,104 @@ const getBatchPerformance = async (req, res) => {
 const getMyBatchLeaderboard = async (req, res) => {
   try {
     const currentUser = await User.findByPk(req.user.id);
-    if (!currentUser || !currentUser.batchCode) {
-      return res.json({ success: true, data: [] });
+    if (!currentUser) {
+      return res.status(401).json({ success: false, message: 'User not found' });
     }
 
+    // If user has no batch, show empty leaderboard
+    if (!currentUser.batchCode) {
+      return res.json({ 
+        success: true, 
+        data: [],
+        message: 'No batch assigned to user'
+      });
+    }
+
+    // Get all results for users in the same batch
     const results = await Result.findAll({
       include: [
         {
           model: User,
           as: 'student',
-          attributes: ['name', 'batchCode'],
+          attributes: ['id', 'name', 'username', 'batchCode'],
           where: { 
             role: 'learner',
-            batchCode: currentUser.batchCode
-          }
+            batchCode: currentUser.batchCode,
+            isApproved: true
+          },
+          required: true
         },
         {
           model: Exam,
           as: 'exam',
-          attributes: ['title']
+          attributes: ['id', 'title', 'type'],
+          required: true
         }
       ],
-      order: [['percentage', 'DESC']]
+      where: {
+        percentage: { [Op.gte]: 0 } // Only include valid results
+      },
+      order: [['percentage', 'DESC'], ['submittedAt', 'ASC']]
     });
+
+    console.log(`Found ${results.length} results for batch ${currentUser.batchCode}`);
+
+    if (results.length === 0) {
+      return res.json({ 
+        success: true, 
+        data: [],
+        message: 'No exam results found for your batch'
+      });
+    }
 
     // Group by student and get their best performance
     const studentPerformance = {};
+    
     results.forEach(result => {
+      const studentId = result.student.id;
       const studentName = result.student.name;
-      if (!studentPerformance[studentName] || result.percentage > studentPerformance[studentName].percentage) {
-        studentPerformance[studentName] = {
+      
+      if (!studentPerformance[studentId] || result.percentage > studentPerformance[studentId].percentage) {
+        studentPerformance[studentId] = {
+          id: studentId,
           name: studentName,
-          percentage: result.percentage,
+          username: result.student.username,
+          percentage: Math.round(result.percentage * 100) / 100, // Round to 2 decimal places
+          score: result.score,
           examTitle: result.exam.title,
-          isCurrentUser: result.student.name === currentUser.name
+          examType: result.exam.type,
+          submittedAt: result.submittedAt,
+          isCurrentUser: studentId === currentUser.id
         };
       }
     });
 
+    // Convert to array and sort by percentage (highest first)
     const leaderboard = Object.values(studentPerformance)
-      .sort((a, b) => b.percentage - a.percentage)
+      .sort((a, b) => {
+        if (b.percentage === a.percentage) {
+          return new Date(a.submittedAt) - new Date(b.submittedAt); // Earlier submission wins tie
+        }
+        return b.percentage - a.percentage;
+      })
       .map((student, index) => ({
         ...student,
         rank: index + 1
       }));
 
+    console.log(`Leaderboard generated with ${leaderboard.length} students`);
+
     res.json({
       success: true,
-      data: leaderboard
+      data: leaderboard,
+      batchCode: currentUser.batchCode,
+      totalStudents: leaderboard.length
     });
   } catch (error) {
     console.error('Get batch leaderboard error:', error);
     res.status(500).json({
       success: false,
-      message: 'Server error'
+      message: 'Server error: ' + error.message
     });
   }
 };

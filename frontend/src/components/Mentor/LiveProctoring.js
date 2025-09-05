@@ -1,18 +1,79 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Eye, Video, AlertTriangle, User, Clock, Shield, Maximize2 } from 'lucide-react';
 import axios from 'axios';
+import { io } from 'socket.io-client';
 
 const LiveProctoring = () => {
   const [activeSessions, setActiveSessions] = useState([]);
   const [selectedSession, setSelectedSession] = useState(null);
   const [loading, setLoading] = useState(true);
   const videoRef = useRef(null);
+  const canvasRef = useRef(null);
+  const socketRef = useRef(null);
+  const [isConnected, setIsConnected] = useState(false);
+  const [lastFrameTime, setLastFrameTime] = useState(null);
 
   useEffect(() => {
     fetchActiveSessions();
+    initializeSocket();
     const interval = setInterval(fetchActiveSessions, 10000); // Refresh every 10 seconds
-    return () => clearInterval(interval);
+    return () => {
+      clearInterval(interval);
+      if (socketRef.current) {
+        socketRef.current.disconnect();
+      }
+    };
   }, []);
+
+  const initializeSocket = () => {
+    socketRef.current = io(process.env.REACT_APP_API_URL || 'http://localhost:3001');
+    
+    socketRef.current.on('connect', () => {
+      setIsConnected(true);
+      console.log('Connected to streaming server');
+    });
+
+    socketRef.current.on('disconnect', () => {
+      setIsConnected(false);
+      console.log('Disconnected from streaming server');
+    });
+
+    socketRef.current.on('video-frame', (data) => {
+      if (selectedSession && data.sessionId === selectedSession.sessionId) {
+        displayVideoFrame(data.frameData);
+        setLastFrameTime(new Date());
+      }
+    });
+
+    socketRef.current.on('new-stream-started', (data) => {
+      console.log('New stream started:', data);
+      fetchActiveSessions(); // Refresh sessions when new stream starts
+    });
+
+    socketRef.current.on('stream-ended', (data) => {
+      console.log('Stream ended:', data);
+      if (selectedSession && data.sessionId === selectedSession.sessionId) {
+        setSelectedSession(null);
+      }
+      fetchActiveSessions();
+    });
+  };
+
+  const displayVideoFrame = (frameData) => {
+    if (!canvasRef.current) return;
+    
+    const canvas = canvasRef.current;
+    const ctx = canvas.getContext('2d');
+    const img = new Image();
+    
+    img.onload = () => {
+      canvas.width = img.width;
+      canvas.height = img.height;
+      ctx.drawImage(img, 0, 0);
+    };
+    
+    img.src = frameData;
+  };
 
   const fetchActiveSessions = async () => {
     try {
@@ -27,16 +88,20 @@ const LiveProctoring = () => {
 
   const connectToStudentCamera = async (sessionId) => {
     try {
-      // In a real implementation, this would establish a WebRTC connection
-      // For demo purposes, we'll simulate the connection
       const session = activeSessions.find(s => s.sessionId === sessionId);
       setSelectedSession(session);
       
-      // Simulate video stream (in real app, this would be WebRTC stream)
-      if (videoRef.current) {
-        // This would be replaced with actual WebRTC stream from student
-        const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-        videoRef.current.srcObject = stream;
+      // Join the student's stream room
+      if (socketRef.current && socketRef.current.connected) {
+        socketRef.current.emit('mentor-join-stream', { sessionId });
+        console.log('Joined stream for session:', sessionId);
+      }
+      
+      // Clear any existing video
+      if (videoRef.current && videoRef.current.srcObject) {
+        const tracks = videoRef.current.srcObject.getTracks();
+        tracks.forEach(track => track.stop());
+        videoRef.current.srcObject = null;
       }
     } catch (error) {
       console.error('Failed to connect to student camera:', error);
@@ -216,16 +281,43 @@ const LiveProctoring = () => {
               
               <div className="card" style={{ flex: 1, padding: '16px', display: 'flex', flexDirection: 'column' }}>
                 <div style={{ position: 'relative', flex: 1, backgroundColor: '#000', borderRadius: '8px', overflow: 'hidden' }}>
-                  <video
-                    ref={videoRef}
-                    autoPlay
-                    muted
+                  <canvas
+                    ref={canvasRef}
                     style={{
                       width: '100%',
                       height: '100%',
-                      objectFit: 'cover'
+                      objectFit: 'contain',
+                      backgroundColor: '#000'
                     }}
                   />
+                  
+                  {/* Connection Status */}
+                  {!isConnected && (
+                    <div style={{
+                      position: 'absolute',
+                      top: '50%',
+                      left: '50%',
+                      transform: 'translate(-50%, -50%)',
+                      color: 'white',
+                      textAlign: 'center'
+                    }}>
+                      <div>Connecting to stream...</div>
+                    </div>
+                  )}
+                  
+                  {isConnected && !lastFrameTime && selectedSession && (
+                    <div style={{
+                      position: 'absolute',
+                      top: '50%',
+                      left: '50%',
+                      transform: 'translate(-50%, -50%)',
+                      color: 'white',
+                      textAlign: 'center'
+                    }}>
+                      <div>Waiting for student video...</div>
+                      <div style={{ fontSize: '12px', marginTop: '8px', opacity: 0.7 }}>Session: {selectedSession.sessionId}</div>
+                    </div>
+                  )}
                   
                   {/* Video Controls Overlay */}
                   <div style={{
@@ -237,7 +329,7 @@ const LiveProctoring = () => {
                   }}>
                     <div style={{
                       padding: '4px 8px',
-                      backgroundColor: 'rgba(0,0,0,0.7)',
+                      backgroundColor: isConnected && lastFrameTime ? 'rgba(16,185,129,0.8)' : 'rgba(239,68,68,0.8)',
                       color: 'white',
                       borderRadius: '4px',
                       fontSize: '12px',
@@ -245,7 +337,7 @@ const LiveProctoring = () => {
                       alignItems: 'center'
                     }}>
                       <Video size={12} style={{ marginRight: '4px' }} />
-                      LIVE
+                      {isConnected && lastFrameTime ? 'LIVE' : 'NO SIGNAL'}
                     </div>
                     <div style={{
                       padding: '4px 8px',

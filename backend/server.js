@@ -27,7 +27,7 @@ const server = http.createServer(app);
 
 // Middleware
 app.use(cors({
-  origin: true,
+  origin: ['http://localhost:3000', 'http://127.0.0.1:3000'],
   credentials: true
 }));
 app.use(express.json());
@@ -55,6 +55,35 @@ app.get('/api/results/student', auth, resultController.getStudentResults);
 app.get('/api/results/all', auth, mentorOrAdmin, resultController.getAllResults);
 app.get('/api/results/batch-performance', auth, mentorOrAdmin, resultController.getBatchPerformance);
 app.get('/api/results/my-batch-leaderboard', auth, resultController.getMyBatchLeaderboard);
+
+// Debug endpoint for batch data
+app.get('/api/debug/batch-data', auth, async (req, res) => {
+  try {
+    const { User, Result, Exam } = require('./models');
+    
+    const currentUser = await User.findByPk(req.user.id);
+    const allUsers = await User.findAll({ 
+      where: { role: 'learner' },
+      attributes: ['id', 'name', 'batchCode', 'isApproved']
+    });
+    const allResults = await Result.findAll({
+      include: [{ model: User, as: 'student' }, { model: Exam, as: 'exam' }]
+    });
+    
+    res.json({
+      success: true,
+      data: {
+        currentUser: { id: currentUser.id, name: currentUser.name, batchCode: currentUser.batchCode },
+        totalUsers: allUsers.length,
+        usersInSameBatch: allUsers.filter(u => u.batchCode === currentUser.batchCode).length,
+        totalResults: allResults.length,
+        resultsInSameBatch: allResults.filter(r => r.student?.batchCode === currentUser.batchCode).length
+      }
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
 app.put('/api/results/:id/grade', auth, mentorOrAdmin, resultController.gradeAnswer);
 app.get('/api/analytics', auth, adminOnly, resultController.getAnalytics);
 
@@ -135,7 +164,6 @@ app.get('/api/skill-assessments', auth, async (req, res) => {
 
 // Proctoring routes
 app.post('/api/proctoring/start', auth, proctoringController.startSession);
-app.post('/api/proctoring/:sessionId/violation', auth, proctoringController.reportViolation);
 app.post('/api/proctoring/log-violation', auth, async (req, res) => {
   try {
     const { ProctoringLog } = require('./models');
@@ -164,6 +192,7 @@ app.post('/api/proctoring/log-violation', auth, async (req, res) => {
     res.status(500).json({ success: false, message: 'Failed to log violation', error: error.message });
   }
 });
+app.post('/api/proctoring/:sessionId/violation', auth, proctoringController.reportViolation);
 app.put('/api/proctoring/:sessionId/behavior', auth, proctoringController.updateBehavior);
 app.post('/api/proctoring/:sessionId/end', auth, proctoringController.endSession);
 app.get('/api/proctoring/sessions', auth, mentorOrAdmin, proctoringController.getSessions);
@@ -251,6 +280,33 @@ app.post('/api/re-attempt/request', auth, learnerOnly, reAttemptController.reque
 app.get('/api/re-attempt/requests', auth, mentorOrAdmin, reAttemptController.getReAttemptRequests);
 app.get('/api/re-attempt/my-requests', auth, learnerOnly, reAttemptController.getMyReAttemptRequests);
 app.put('/api/re-attempt/requests/:id/review', auth, mentorOrAdmin, reAttemptController.reviewReAttemptRequest);
+
+// Failed skill assessments for re-attempts
+app.get('/api/results/failed-skill-assessments', auth, learnerOnly, async (req, res) => {
+  try {
+    const { Result, Exam } = require('./models');
+    const { Op } = require('sequelize');
+    
+    const failedResults = await Result.findAll({
+      where: {
+        studentId: req.user.id,
+        percentage: { [Op.lt]: 60 } // Failed if less than 60%
+      },
+      include: [{
+        model: Exam,
+        as: 'exam',
+        where: { type: 'skill-assessment' },
+        attributes: ['id', 'title', 'description', 'passingScore']
+      }],
+      order: [['submittedAt', 'DESC']]
+    });
+    
+    res.json({ success: true, data: failedResults });
+  } catch (error) {
+    console.error('Failed skill assessments error:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
 
 // Notification routes
 app.get('/api/notifications', auth, notificationController.getNotifications);
@@ -721,7 +777,7 @@ if (process.env.NODE_ENV === 'development') {
 // Single Socket.IO setup with proper error handling
 const io = require('socket.io')(server, {
   cors: {
-    origin: true,
+    origin: ["http://localhost:3000", "http://127.0.0.1:3000"],
     methods: ["GET", "POST"],
     credentials: true
   },
@@ -913,11 +969,10 @@ io.on('connection', (socket) => {
 });
 
 const PORT = process.env.PORT || 3001;
-server.listen(PORT, '0.0.0.0', () => {
+server.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);
   console.log(`🔌 Socket.IO server initialized`);
-  console.log(`📡 WebSocket available at ws://10.211.190.206:${PORT}`);
-  console.log(`🌐 Network access: http://10.211.190.206:${PORT}`);
+  console.log(`📡 WebSocket available at ws://localhost:${PORT}`);
 });
 
 // Handle server errors

@@ -21,17 +21,10 @@ const ExamCamera = forwardRef(({ onCameraReady, examId, studentId }, ref) => {
   const [sessionId] = useState(`session-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`);
 
   useEffect(() => {
-    // Check if camera is already active globally
-    if (globalCameraActive) {
-      return; // Don't initialize if already active
-    }
-    
-    globalCameraActive = true;
     initializeCamera();
     initializeSocket();
     
     return () => {
-      globalCameraActive = false;
       stopCamera();
       stopStreaming();
     };
@@ -56,7 +49,7 @@ const ExamCamera = forwardRef(({ onCameraReady, examId, studentId }, ref) => {
   }, [isDragging, dragOffset]);
 
   const initializeCamera = async () => {
-    if (isActive || videoRef.current?.srcObject) {
+    if (videoRef.current?.srcObject) {
       return; // Prevent duplicate initialization
     }
     
@@ -476,10 +469,7 @@ const ExamCamera = forwardRef(({ onCameraReady, examId, studentId }, ref) => {
     }, 2000);
   };
 
-  // Don't render if another camera instance is already active
-  if (globalCameraActive && !isActive) {
-    return null;
-  }
+  // Always render the camera component
   
   if (error || isExamTerminated) {
     return (
