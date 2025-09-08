@@ -42,6 +42,11 @@ const AdminDashboard = () => {
     refetchInterval: 5000 // Refetch every 5 seconds
   });
 
+  const { data: batches } = useQuery('batches', async () => {
+    const response = await axios.get('/api/batches');
+    return response.data.data || [];
+  });
+
   const handleApproveUser = async (userId, approved) => {
     try {
       await axios.put(`/api/admin/approve-user/${userId}`, { approved });
@@ -377,14 +382,25 @@ const AdminDashboard = () => {
               
               {userForm.role === 'learner' && (
                 <div style={{ marginBottom: '16px' }}>
-                  <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500' }}>Batch Code</label>
-                  <input
-                    type="text"
+                  <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500' }}>Batch</label>
+                  <select
                     value={userForm.batchCode}
                     onChange={(e) => setUserForm({...userForm, batchCode: e.target.value})}
                     className="form-input"
-                    placeholder="e.g., BATCH001"
-                  />
+                    required
+                  >
+                    <option value="">Select a batch</option>
+                    {batches?.map((batch) => (
+                      <option key={batch.id} value={batch.code}>
+                        {batch.name} ({batch.code})
+                      </option>
+                    ))}
+                  </select>
+                  {(!batches || batches.length === 0) && (
+                    <p style={{ fontSize: '12px', color: '#ef4444', marginTop: '4px' }}>
+                      No batches available. Please create a batch first.
+                    </p>
+                  )}
                 </div>
               )}
               

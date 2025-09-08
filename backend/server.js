@@ -909,6 +909,28 @@ if (process.env.NODE_ENV === 'development') {
         }
       });
 
+      // Create sample batches
+      const { Batch } = require('./models');
+      const [batch1] = await Batch.findOrCreate({
+        where: { code: 'BATCH001' },
+        defaults: {
+          code: 'BATCH001',
+          name: 'Full Stack Development - Batch 1',
+          description: 'Complete full stack development program covering React, Node.js, and databases',
+          createdBy: admin.id
+        }
+      });
+
+      const [batch2] = await Batch.findOrCreate({
+        where: { code: 'BATCH002' },
+        defaults: {
+          code: 'BATCH002',
+          name: 'Data Science - Batch 1',
+          description: 'Data science program covering Python, machine learning, and analytics',
+          createdBy: admin.id
+        }
+      });
+
       // Create sample job posting
       const [sampleJob] = await JobPosting.findOrCreate({
         where: { title: 'Software Developer' },
@@ -927,7 +949,7 @@ if (process.env.NODE_ENV === 'development') {
       res.json({
         success: true,
         message: 'Seed data created',
-        data: { admin, mentor, learner1, learner2, learner3, sampleExam, sampleJob }
+        data: { admin, mentor, learner1, learner2, learner3, sampleExam, sampleJob, batch1, batch2 }
       });
     } catch (error) {
       res.status(500).json({

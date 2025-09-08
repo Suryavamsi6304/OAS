@@ -3,7 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { 
   Menu, X, Bell, User, LogOut, 
   Briefcase, Users, BarChart3,
-  FileText, Search, Home, Shield, Eye, AlertTriangle
+  FileText, Search, Home, Shield, Eye, AlertTriangle, Layers
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 
@@ -14,6 +14,7 @@ const getNavItems = (role) => {
   const navItems = {
     admin: [
       { icon: Home, label: 'Dashboard', path: '/admin' },
+      { icon: Layers, label: 'Batches', path: '/admin/batches' },
       { icon: Briefcase, label: 'Jobs', path: '/admin/jobs' },
       { icon: Users, label: 'Applications', path: '/admin/applications' },
       { icon: Users, label: 'Users', path: '/admin/users' },

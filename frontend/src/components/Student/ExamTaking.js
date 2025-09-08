@@ -9,6 +9,7 @@ import ExamCamera from '../Proctoring/ExamCamera';
 import CameraRules from '../Proctoring/CameraRules';
 import ProctoringMonitor from '../Proctoring/ProctoringMonitor';
 import CodeEditor from './CodeEditor';
+import CameraStream from './CameraStream';
 
 const ExamTaking = () => {
   const { id } = useParams();
@@ -423,6 +424,14 @@ const ExamTaking = () => {
       />
       
       <ExamCamera ref={cameraRef} onCameraReady={setCameraReady} examId={id} studentId={user?.id} />
+      
+      <CameraStream 
+        examId={id}
+        examTitle={exam.title}
+        isExamActive={!showCameraRules && !isExamBlocked}
+        onStreamStart={(sessionId) => console.log('Stream started:', sessionId)}
+        onStreamEnd={() => console.log('Stream ended')}
+      />
       
       <div style={{
         backgroundColor: 'white',

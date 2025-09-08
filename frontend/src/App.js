@@ -8,11 +8,14 @@ import Login from './components/Auth/Login';
 import Register from './components/Auth/Register';
 import AdminDashboard from './components/Admin/Dashboard';
 import ExamForm from './components/Admin/ExamForm';
+import BatchManagement from './components/Admin/BatchManagement';
 import EnhancedMentorDashboard from './components/Mentor/EnhancedMentorDashboard';
 import CreatePracticeTest from './components/Mentor/CreatePracticeTest';
 import CreateSkillAssessment from './components/Mentor/CreateSkillAssessment';
 import ProctoringLogsPage from './components/Mentor/ProctoringLogsPage';
 import LiveMonitorPage from './components/Mentor/LiveMonitorPage';
+import LiveStreamMonitor from './components/Mentor/LiveStreamMonitor';
+import LiveStreamTest from './components/Test/LiveStreamTest';
 import ApprovalRequestsPage from './components/Mentor/ApprovalRequestsPage';
 import ReAttemptRequests from './components/Mentor/ReAttemptRequests';
 import EnhancedLearnerDashboard from './components/Learner/EnhancedLearnerDashboard';
@@ -131,6 +134,14 @@ function App() {
                 } 
               />
               <Route 
+                path="/admin/batches" 
+                element={
+                  <ProtectedRoute allowedRoles={['admin']}>
+                    <BatchManagement />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
                 path="/admin/users" 
                 element={
                   <ProtectedRoute allowedRoles={['admin']}>
@@ -184,7 +195,7 @@ function App() {
                 path="/mentor/live-monitor" 
                 element={
                   <ProtectedRoute allowedRoles={['mentor']}>
-                    <LiveMonitorPage />
+                    <LiveStreamMonitor />
                   </ProtectedRoute>
                 } 
               />
@@ -347,6 +358,9 @@ function App() {
               
               {/* Camera Debug Route */}
               <Route path="/camera-debug" element={<CameraDebug />} />
+              
+              {/* Live Stream Test Route */}
+              <Route path="/live-stream-test" element={<LiveStreamTest />} />
               
               <Route path="/unauthorized" element={
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh' }}>
