@@ -105,17 +105,17 @@ app.post('/api/create-users', async (req, res) => {
 app.get('/api/csrf-token', auth, getCSRFToken);
 
 // Auth routes
-app.post('/api/auth/register', csrfProtection, authController.register);
-app.post('/api/auth/login', csrfProtection, authController.login);
+app.post('/api/auth/register', authController.register);
+app.post('/api/auth/login', authController.login);
 app.get('/api/auth/verify', auth, authController.verifyToken);
 
 // Exam routes (includes practice tests and skill assessments)
-app.post('/api/exams', auth, adminOnly, csrfProtection, examController.createExam);
+app.post('/api/exams', auth, adminOnly, examController.createExam);
 app.get('/api/exams', auth, examController.getExams);
 app.get('/api/exams/:id', auth, examController.getExamById);
-app.put('/api/exams/:id', auth, adminOnly, csrfProtection, examController.updateExam);
-app.delete('/api/exams/:id', auth, mentorOrAdmin, csrfProtection, examController.deleteExam);
-app.post('/api/exams/submit', auth, csrfProtection, examController.submitExam);
+app.put('/api/exams/:id', auth, adminOnly, examController.updateExam);
+app.delete('/api/exams/:id', auth, mentorOrAdmin, examController.deleteExam);
+app.post('/api/exams/submit', auth, examController.submitExam);
 
 // Result routes
 app.get('/api/results/student', auth, resultController.getStudentResults);
