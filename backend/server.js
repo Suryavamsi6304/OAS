@@ -27,16 +27,78 @@ const app = express();
 const server = http.createServer(app);
 
 // Middleware
-const allowedOrigins = process.env.SOCKET_ORIGINS ? process.env.SOCKET_ORIGINS.split(',') : ['http://localhost:3000', 'http://127.0.0.1:3000'];
+const allowedOrigins = process.env.NODE_ENV === 'production' 
+  ? ['https://monumental-kataifi-3b4c02.netlify.app']
+  : ['http://localhost:3000', 'http://127.0.0.1:3000', 'https://monumental-kataifi-3b4c02.netlify.app'];
+
 app.use(cors({
   origin: allowedOrigins,
   credentials: true
 }));
 app.use(express.json());
 
+// Root route
+app.get('/', (req, res) => {
+  res.json({ 
+    success: true, 
+    message: 'OAS Backend API is running!',
+    version: '1.0.0',
+    endpoints: {
+      test: '/api/test',
+      auth: '/api/auth/*',
+      exams: '/api/exams/*'
+    }
+  });
+});
+
 // Test route
 app.get('/api/test', (req, res) => {
   res.json({ success: true, message: 'Server is running!' });
+});
+
+// Create initial users endpoint
+app.post('/api/create-users', async (req, res) => {
+  try {
+    const { User } = require('./models');
+    
+    // Create admin user
+    const [admin] = await User.findOrCreate({
+      where: { username: 'admin' },
+      defaults: {
+        username: 'admin',
+        email: 'admin@test.com',
+        password: 'password',
+        name: 'Admin User',
+        role: 'admin',
+        isApproved: true
+      }
+    });
+
+    // Create learner user
+    const [learner] = await User.findOrCreate({
+      where: { username: 'learner1' },
+      defaults: {
+        username: 'learner1',
+        email: 'learner1@test.com',
+        password: 'password',
+        name: 'Alice Johnson',
+        role: 'learner',
+        batchCode: 'BATCH001',
+        isApproved: true
+      }
+    });
+
+    res.json({
+      success: true,
+      message: 'Users created successfully',
+      users: [
+        { username: 'admin', role: 'admin' },
+        { username: 'learner1', role: 'learner' }
+      ]
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
 });
 
 // CSRF token endpoint
@@ -1071,7 +1133,7 @@ io.on('connection', (socket) => {
 });
 
 const PORT = process.env.PORT || 3001;
-server.listen(PORT, () => {
+server.listen(PORT, '0.0.0.0', () => {
   console.log(`🚀 Server running on port ${PORT}`);
   console.log(`🔌 Socket.IO server initialized`);
   console.log(`📡 WebSocket available at ws://localhost:${PORT}`);
