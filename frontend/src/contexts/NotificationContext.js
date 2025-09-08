@@ -21,8 +21,14 @@ export const NotificationProvider = ({ children }) => {
 
   useEffect(() => {
     if (user) {
+      // Get token from localStorage
+      const token = localStorage.getItem('token');
+      
       // Initialize socket connection with error handling
       const newSocket = io('http://localhost:3001', {
+        auth: {
+          token: token
+        },
         transports: ['websocket', 'polling'],
         timeout: 20000,
         forceNew: true

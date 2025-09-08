@@ -1,4 +1,5 @@
 const { Server } = require('socket.io');
+const jwt = require('jsonwebtoken');
 
 let io;
 
@@ -10,12 +11,35 @@ const initializeNotificationSocket = (server) => {
     }
   });
 
+  // Authentication middleware
+  io.use((socket, next) => {
+    const token = socket.handshake.auth.token;
+    if (!token) {
+      return next(new Error('Authentication error'));
+    }
+    
+    try {
+      const decoded = jwt.verify(token, process.env.JWT_SECRET);
+      socket.userId = decoded.id;
+      socket.userRole = decoded.role;
+      next();
+    } catch (err) {
+      next(new Error('Authentication error'));
+    }
+  });
+
   io.on('connection', (socket) => {
     console.log('User connected for notifications:', socket.id);
 
     // Join user-specific room
     socket.on('join-user-room', (data) => {
+      if (!socket.userId) return;
+      
       const { userId, userType } = data;
+      if (userId !== socket.userId || userType !== socket.userRole) {
+        return socket.emit('error', 'Unauthorized');
+      }
+      
       const roomName = `${userType}-${userId}`;
       socket.join(roomName);
       console.log(`User ${userId} (${userType}) joined room: ${roomName}`);
@@ -23,6 +47,10 @@ const initializeNotificationSocket = (server) => {
 
     // Handle new re-attempt request from learner
     socket.on('new-reattempt-request', (data) => {
+      if (socket.userRole !== 'learner') {
+        return socket.emit('error', 'Unauthorized');
+      }
+      
       console.log('New re-attempt request:', data);
       
       // Broadcast to all mentors
@@ -39,6 +67,10 @@ const initializeNotificationSocket = (server) => {
 
     // Handle re-attempt response from mentor
     socket.on('reattempt-response', (data) => {
+      if (socket.userRole !== 'mentor' && socket.userRole !== 'admin') {
+        return socket.emit('error', 'Unauthorized');
+      }
+      
       console.log('Re-attempt response:', data);
       
       // Send to specific student

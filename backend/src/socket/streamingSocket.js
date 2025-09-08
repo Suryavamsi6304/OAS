@@ -1,4 +1,5 @@
 const { Server } = require('socket.io');
+const jwt = require('jsonwebtoken');
 
 class StreamingSocket {
   constructor(server) {
@@ -14,8 +15,28 @@ class StreamingSocket {
   }
 
   setupSocketHandlers() {
+    // Authentication middleware
+    this.io.use((socket, next) => {
+      const token = socket.handshake.auth.token;
+      if (!token) {
+        return next(new Error('Authentication error'));
+      }
+      
+      try {
+        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        socket.userId = decoded.id;
+        socket.userRole = decoded.role;
+        next();
+      } catch (err) {
+        next(new Error('Authentication error'));
+      }
+    });
+
     this.io.on('connection', (socket) => {
       socket.on('student-start-stream', (data) => {
+        if (socket.userRole !== 'learner') {
+          return socket.emit('error', 'Unauthorized');
+        }
         const { sessionId, studentId, examId, examTitle } = data;
         
         this.activeStreams.set(sessionId, {
@@ -39,6 +60,10 @@ class StreamingSocket {
       });
 
       socket.on('mentor-join-stream', (data) => {
+        if (socket.userRole !== 'mentor' && socket.userRole !== 'admin') {
+          return socket.emit('error', 'Unauthorized');
+        }
+        
         const stream = this.activeStreams.get(data.sessionId);
         if (stream) stream.mentorCount++;
       });

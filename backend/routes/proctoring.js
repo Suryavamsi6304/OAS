@@ -2,6 +2,7 @@ const express = require('express');
 const { v4: uuidv4 } = require('uuid');
 const db = require('../config/database');
 const { authenticateToken } = require('../middleware/auth');
+const { sanitizeForLog } = require('../utils/sanitize');
 const { 
   startSession, 
   reportViolation, 
@@ -44,7 +45,7 @@ router.post('/violation', authenticateToken, async (req, res) => {
       [sessionId, violationType, severity, description, JSON.stringify(metadata)]
     );
     
-    console.log('Violation logged:', violationResult.rows[0].id, violationType, severity);
+    console.log('Violation logged:', violationResult.rows[0].id, sanitizeForLog(violationType), sanitizeForLog(severity));
 
     // Get current violation count
     const countResult = await db.query(
@@ -142,7 +143,7 @@ router.get('/logs', authenticateToken, async (req, res) => {
     const teacherId = req.user.userId;
     const { assessmentId } = req.query;
 
-    console.log('Getting logs for teacher:', teacherId, 'assessment:', assessmentId);
+    console.log('Getting logs for teacher:', sanitizeForLog(teacherId), 'assessment:', sanitizeForLog(assessmentId));
 
     // First get teacher's assessments
     let assessmentQuery = 'SELECT id, title FROM assessments WHERE creator_id = $1';
@@ -191,7 +192,7 @@ router.get('/logs', authenticateToken, async (req, res) => {
       ORDER BY ps.start_time DESC, pv.timestamp DESC
     `;
 
-    console.log('Executing query with assessment IDs:', assessmentIds);
+    console.log('Executing query with assessment IDs:', assessmentIds.map(id => sanitizeForLog(id)));
     const result = await db.query(query, assessmentIds);
     console.log('Query result rows:', result.rows.length);
     

@@ -15,8 +15,8 @@ async function testResultsEndpoint() {
     // Test login with learner credentials
     console.log('\n2. Testing login...');
     const loginResponse = await axios.post('/api/auth/login', {
-      username: 'learner',
-      password: 'password'
+      username: process.env.TEST_USERNAME || 'test_user',
+      password: process.env.TEST_PASSWORD || 'test_pass'
     });
     
     if (loginResponse.data.success) {
@@ -36,7 +36,8 @@ async function testResultsEndpoint() {
     }
     
   } catch (error) {
-    console.error('❌ Error:', error.response?.data || error.message);
+    const errorMsg = error.response?.data ? JSON.stringify(error.response.data) : error.message;
+    console.error('❌ Error:', encodeURIComponent(errorMsg));
     
     if (error.code === 'ECONNREFUSED') {
       console.log('\n💡 Make sure the backend server is running on port 3000');
