@@ -131,7 +131,7 @@ const ProctoringMonitor = React.forwardRef(({ sessionId, onViolation }, ref) => 
 
 
   const reportViolation = async (type, severity, details) => {
-    console.log('Violation:', type, severity, details);
+    console.log('Proctoring violation detected');
     
     const newViolation = {
       id: Date.now(),
@@ -156,9 +156,9 @@ const ProctoringMonitor = React.forwardRef(({ sessionId, onViolation }, ref) => 
     const newRiskScore = Math.min(riskScore + scoreIncrease, 100);
     setRiskScore(newRiskScore);
 
-    // Check if violations exceed limit (5)
-    if (updatedViolations.length >= 5) {
-      blockUser(`Violation limit exceeded (${updatedViolations.length}/5): ${details}`);
+    // Check if violations exceed limit (3)
+    if (updatedViolations.length >= 3) {
+      blockUser(`Violation limit exceeded (${updatedViolations.length}/3): ${details}`);
       return;
     }
 
@@ -184,7 +184,7 @@ const ProctoringMonitor = React.forwardRef(({ sessionId, onViolation }, ref) => 
         
         const result = await response.json();
         if (result.shouldBlock) {
-          blockUser(`Violation limit exceeded (${result.violationCount}/5): ${details}`);
+          blockUser(`Violation limit exceeded (${result.violationCount}/3): ${details}`);
           return;
         }
       } catch (error) {
@@ -424,7 +424,7 @@ const ProctoringMonitor = React.forwardRef(({ sessionId, onViolation }, ref) => 
       )}
       
       {/* Violation Counter */}
-      {violations.length > 0 && violations.length < 5 && (
+      {violations.length > 0 && violations.length < 3 && (
         <div style={{
           position: 'fixed',
           top: '80px',
@@ -437,7 +437,7 @@ const ProctoringMonitor = React.forwardRef(({ sessionId, onViolation }, ref) => 
           fontSize: '14px',
           color: violations.length >= 3 ? '#dc2626' : '#ea580c'
         }}>
-          ⚠️ Violations: {violations.length}/5
+          ⚠️ Violations: {violations.length}/3
         </div>
       )}
     </>

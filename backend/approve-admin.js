@@ -19,7 +19,7 @@ async function approveAdmin() {
     console.log('✅ Admin approved successfully');
     
   } catch (error) {
-    console.error('❌ Error:', sanitizeForLog(error.message));
+    console.error('❌ Error: Failed to approve admin user');
   }
 }
 

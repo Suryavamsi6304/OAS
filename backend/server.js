@@ -274,6 +274,103 @@ app.post('/api/proctoring/:sessionId/terminate', auth, mentorOrAdmin, async (req
   }
 });
 
+// Mentor request endpoints
+app.post('/api/proctoring/mentor-request', auth, async (req, res) => {
+  try {
+    const { sessionId, reason, violations, riskScore } = req.body;
+    
+    // Initialize global storage for mentor requests
+    if (!global.mentorRequests) global.mentorRequests = new Map();
+    
+    global.mentorRequests.set(sessionId, {
+      sessionId,
+      studentId: req.user.id,
+      reason,
+      violations,
+      riskScore,
+      status: 'pending',
+      timestamp: new Date()
+    });
+    
+    console.log(`Mentor request sent for session ${sessionId}`);
+    res.json({ success: true, message: 'Mentor request sent successfully' });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Failed to send mentor request' });
+  }
+});
+
+app.get('/api/proctoring/mentor-response/:sessionId', auth, async (req, res) => {
+  try {
+    const { sessionId } = req.params;
+    
+    if (!global.mentorRequests) global.mentorRequests = new Map();
+    
+    const request = global.mentorRequests.get(sessionId);
+    if (!request) {
+      return res.json({ approved: false, rejected: false, pending: false });
+    }
+    
+    res.json({
+      approved: request.status === 'approved',
+      rejected: request.status === 'rejected',
+      pending: request.status === 'pending'
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Failed to check mentor response' });
+  }
+});
+
+app.post('/api/proctoring/mentor-request/:sessionId', auth, mentorOrAdmin, async (req, res) => {
+  try {
+    const { sessionId } = req.params;
+    const { action, comments } = req.body;
+    
+    if (!global.mentorRequests) global.mentorRequests = new Map();
+    
+    const request = global.mentorRequests.get(sessionId);
+    if (!request) {
+      return res.status(404).json({ success: false, message: 'Request not found' });
+    }
+    
+    request.status = action === 'approve' ? 'approved' : 'rejected';
+    request.mentorComments = comments;
+    request.responseTime = new Date();
+    
+    console.log(`Mentor request ${action}d for session ${sessionId}`);
+    res.json({ success: true, message: `Request ${action}d successfully` });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Failed to handle mentor request' });
+  }
+});
+
+// Get pending mentor requests
+app.get('/api/proctoring/mentor-requests', auth, mentorOrAdmin, async (req, res) => {
+  try {
+    if (!global.mentorRequests) global.mentorRequests = new Map();
+    
+    const { User, Exam } = require('./models');
+    const pendingRequests = [];
+    
+    for (const [sessionId, request] of global.mentorRequests.entries()) {
+      if (request.status === 'pending') {
+        try {
+          const user = await User.findByPk(request.studentId);
+          pendingRequests.push({
+            ...request,
+            studentName: user?.name || 'Unknown Student'
+          });
+        } catch (err) {
+          console.error('Error processing mentor request:', err);
+        }
+      }
+    }
+    
+    res.json({ success: true, data: pendingRequests });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Failed to fetch mentor requests' });
+  }
+});
+
 // Live streaming routes
 app.use('/api/streaming', auth, mentorOrAdmin, streamingRoutes);
 

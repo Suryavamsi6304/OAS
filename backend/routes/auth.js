@@ -1,3 +1,4 @@
+require('dotenv').config();
 const express = require('express');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
@@ -24,10 +25,10 @@ const registerSchema = Joi.object({
 // Admin Login
 router.post('/admin/login', async (req, res) => {
   try {
-    console.log('Admin login attempt:', encodeURIComponent(req.body.email || 'undefined'));
+    console.log('Admin login attempt received');
     const { error } = loginSchema.validate(req.body);
     if (error) {
-      console.log('Admin validation error:', encodeURIComponent(error.details[0].message));
+      console.log('Admin validation error occurred');
       return res.status(400).json({ error: error.details[0].message });
     }
 
@@ -80,10 +81,10 @@ router.post('/admin/login', async (req, res) => {
 // Login (Teacher/Student only)
 router.post('/login', async (req, res) => {
   try {
-    console.log('Login attempt:', encodeURIComponent(req.body.email || 'undefined'));
+    console.log('Login attempt received');
     const { error } = loginSchema.validate(req.body);
     if (error) {
-      console.log('Validation error:', encodeURIComponent(error.details[0].message));
+      console.log('Validation error occurred');
       return res.status(400).json({ error: error.details[0].message });
     }
 
@@ -100,10 +101,7 @@ router.post('/login', async (req, res) => {
     }
 
     const user = result.rows[0];
-    console.log('Password check for user:', encodeURIComponent(user.email));
-    console.log('Received password: [REDACTED]');
-    console.log('Stored password hash starts with: [REDACTED]');
-    console.log('Hash length:', user.password.length);
+    console.log('Checking password for user authentication');
     const validPassword = await bcrypt.compare(password, user.password);
     console.log('Password valid:', validPassword);
 

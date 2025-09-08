@@ -8,7 +8,7 @@ const router = express.Router();
 // Get all assessments for current user
 router.get('/', authenticateToken, async (req, res) => {
   try {
-    console.log('Getting assessments for user:', req.user.id, 'role:', req.user.role);
+    console.log('Getting assessments for user');
     let query, params;
     
     if (req.user.role === 'student') {
@@ -47,7 +47,6 @@ router.get('/', authenticateToken, async (req, res) => {
 
     const result = await db.query(query, params);
     console.log('Found assessments:', result.rows.length);
-    result.rows.forEach(row => console.log('Assessment ID:', row.id, 'Title:', row.title));
     res.json(result.rows);
   } catch (error) {
     console.error('Get assessments error:', error);
@@ -59,7 +58,7 @@ router.get('/', authenticateToken, async (req, res) => {
 router.get('/:id', authenticateToken, async (req, res) => {
   try {
     const assessmentId = req.params.id;
-    console.log('Getting assessment by ID:', assessmentId, 'for user:', req.user.id);
+    console.log('Getting assessment by ID');
     
     const result = await db.query(
       'SELECT * FROM assessments WHERE id = $1',

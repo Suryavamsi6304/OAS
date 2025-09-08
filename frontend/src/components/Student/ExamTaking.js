@@ -300,7 +300,7 @@ const ExamTaking = () => {
             textAlign: 'center',
             maxWidth: '450px'
           }}>
-            ✅ <strong>Proctored Assessment:</strong> Violations are tracked - after 5 violations, exam will be blocked pending mentor approval.
+            ✅ <strong>Proctored Assessment:</strong> Violations are tracked - after 3 violations, exam will be blocked pending mentor approval.
           </div>
         )}
       </div>
