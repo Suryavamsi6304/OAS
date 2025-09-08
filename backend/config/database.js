@@ -3,40 +3,6 @@ const { Sequelize } = require('sequelize');
 /**
  * PostgreSQL database connection configuration
  */
-<<<<<<< HEAD
-const sequelize = process.env.DATABASE_URL 
-  ? new Sequelize(process.env.DATABASE_URL, {
-      dialect: 'postgres',
-      logging: false,
-      dialectOptions: {
-        ssl: {
-          require: true,
-          rejectUnauthorized: false
-        }
-      },
-      pool: {
-        max: 5,
-        min: 0,
-        acquire: 30000,
-        idle: 10000
-      }
-    })
-  : new Sequelize({
-      dialect: 'postgres',
-      host: process.env.DB_HOST || 'localhost',
-      port: parseInt(process.env.DB_PORT) || 5432,
-      database: process.env.DB_NAME || 'oas_db',
-      username: process.env.DB_USER || 'postgres',
-      password: process.env.DB_PASSWORD || 'surya',
-      logging: false,
-      pool: {
-        max: 5,
-        min: 0,
-        acquire: 30000,
-        idle: 10000
-      }
-    });
-=======
 let sequelize;
 
 if (process.env.DATABASE_URL) {
@@ -75,7 +41,6 @@ if (process.env.DATABASE_URL) {
     }
   });
 }
->>>>>>> e80dc66b74e604440342bb0400e18fdd11f1a7ae
 
 const connectDB = async () => {
   try {
