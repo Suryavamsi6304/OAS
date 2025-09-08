@@ -4,9 +4,10 @@ const jwt = require('jsonwebtoken');
 let io;
 
 const initializeNotificationSocket = (server) => {
+  const allowedOrigins = process.env.SOCKET_ORIGINS ? process.env.SOCKET_ORIGINS.split(',') : ['http://localhost:3000'];
   io = new Server(server, {
     cors: {
-      origin: "http://localhost:3000",
+      origin: allowedOrigins,
       methods: ["GET", "POST"]
     }
   });

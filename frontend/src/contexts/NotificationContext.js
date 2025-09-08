@@ -25,7 +25,8 @@ export const NotificationProvider = ({ children }) => {
       const token = localStorage.getItem('token');
       
       // Initialize socket connection with error handling
-      const newSocket = io('http://localhost:3001', {
+      const backendUrl = process.env.REACT_APP_BACKEND_URL || 'http://localhost:3001';
+      const newSocket = io(backendUrl, {
         auth: {
           token: token
         },
@@ -40,6 +41,11 @@ export const NotificationProvider = ({ children }) => {
       
       newSocket.on('connect_error', (error) => {
         console.error('❌ Socket connection error:', error);
+        if (error.message === 'Authentication error') {
+          // Handle authentication failure
+          localStorage.removeItem('token');
+          window.location.href = '/login';
+        }
       });
       
       newSocket.on('disconnect', (reason) => {
@@ -50,6 +56,14 @@ export const NotificationProvider = ({ children }) => {
 
       // Join user room for notifications
       newSocket.emit('join-user-room', { userId: user.id, userType: user.role });
+
+      // Handle socket errors
+      newSocket.on('error', (error) => {
+        console.error('Socket error:', error);
+        if (error === 'Unauthorized') {
+          toast.error('Unauthorized socket operation');
+        }
+      });
 
       // Listen for re-attempt request notifications (for mentors)
       newSocket.on('new-reattempt-request', (data) => {

@@ -3,9 +3,10 @@ const jwt = require('jsonwebtoken');
 
 class StreamingSocket {
   constructor(server) {
+    const allowedOrigins = process.env.SOCKET_ORIGINS ? process.env.SOCKET_ORIGINS.split(',') : ['http://localhost:3000'];
     this.io = new Server(server, {
       cors: {
-        origin: "http://localhost:3000",
+        origin: allowedOrigins,
         methods: ["GET", "POST"]
       }
     });

@@ -4,6 +4,7 @@ const dotenv = require('dotenv');
 const http = require('http');
 const { connectDB } = require('./config/database');
 const { auth, adminOnly, mentorOrAdmin, learnerOnly } = require('./middleware/auth');
+const { csrfProtection, getCSRFToken } = require('./middleware/csrf');
 const streamingRoutes = require('./src/routes/streaming');
 
 // Controllers
@@ -26,8 +27,9 @@ const app = express();
 const server = http.createServer(app);
 
 // Middleware
+const allowedOrigins = process.env.SOCKET_ORIGINS ? process.env.SOCKET_ORIGINS.split(',') : ['http://localhost:3000', 'http://127.0.0.1:3000'];
 app.use(cors({
-  origin: ['http://localhost:3000', 'http://127.0.0.1:3000'],
+  origin: allowedOrigins,
   credentials: true
 }));
 app.use(express.json());
@@ -37,18 +39,21 @@ app.get('/api/test', (req, res) => {
   res.json({ success: true, message: 'Server is running!' });
 });
 
+// CSRF token endpoint
+app.get('/api/csrf-token', auth, getCSRFToken);
+
 // Auth routes
-app.post('/api/auth/register', authController.register);
-app.post('/api/auth/login', authController.login);
+app.post('/api/auth/register', csrfProtection, authController.register);
+app.post('/api/auth/login', csrfProtection, authController.login);
 app.get('/api/auth/verify', auth, authController.verifyToken);
 
 // Exam routes (includes practice tests and skill assessments)
-app.post('/api/exams', auth, adminOnly, examController.createExam);
+app.post('/api/exams', auth, adminOnly, csrfProtection, examController.createExam);
 app.get('/api/exams', auth, examController.getExams);
 app.get('/api/exams/:id', auth, examController.getExamById);
-app.put('/api/exams/:id', auth, adminOnly, examController.updateExam);
-app.delete('/api/exams/:id', auth, mentorOrAdmin, examController.deleteExam);
-app.post('/api/exams/submit', auth, examController.submitExam);
+app.put('/api/exams/:id', auth, adminOnly, csrfProtection, examController.updateExam);
+app.delete('/api/exams/:id', auth, mentorOrAdmin, csrfProtection, examController.deleteExam);
+app.post('/api/exams/submit', auth, csrfProtection, examController.submitExam);
 
 // Result routes
 app.get('/api/results/student', auth, resultController.getStudentResults);
@@ -777,7 +782,7 @@ if (process.env.NODE_ENV === 'development') {
 // Single Socket.IO setup with proper error handling
 const io = require('socket.io')(server, {
   cors: {
-    origin: ["http://localhost:3000", "http://127.0.0.1:3000"],
+    origin: allowedOrigins,
     methods: ["GET", "POST"],
     credentials: true
   },

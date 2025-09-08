@@ -1,5 +1,6 @@
 require('dotenv').config();
 const { User } = require('./models');
+const { sanitizeForLog } = require('./utils/sanitize');
 
 async function approveAdmin() {
   try {
@@ -18,7 +19,7 @@ async function approveAdmin() {
     console.log('✅ Admin approved successfully');
     
   } catch (error) {
-    console.error('❌ Error:', error.message);
+    console.error('❌ Error:', sanitizeForLog(error.message));
   }
 }
 
