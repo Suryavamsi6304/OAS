@@ -27,7 +27,10 @@ const app = express();
 const server = http.createServer(app);
 
 // Middleware
-const allowedOrigins = process.env.SOCKET_ORIGINS ? process.env.SOCKET_ORIGINS.split(',') : ['http://localhost:3000', 'http://127.0.0.1:3000'];
+const allowedOrigins = process.env.NODE_ENV === 'production' 
+  ? ['https://monumental-kataifi-3b4c02.netlify.app']
+  : ['http://localhost:3000', 'http://127.0.0.1:3000', 'https://monumental-kataifi-3b4c02.netlify.app'];
+
 app.use(cors({
   origin: allowedOrigins,
   credentials: true
@@ -1071,7 +1074,7 @@ io.on('connection', (socket) => {
 });
 
 const PORT = process.env.PORT || 3001;
-server.listen(PORT, () => {
+server.listen(PORT, '0.0.0.0', () => {
   console.log(`🚀 Server running on port ${PORT}`);
   console.log(`🔌 Socket.IO server initialized`);
   console.log(`📡 WebSocket available at ws://localhost:${PORT}`);
