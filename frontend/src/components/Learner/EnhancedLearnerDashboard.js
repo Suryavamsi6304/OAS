@@ -32,7 +32,10 @@ const EnhancedLearnerDashboard = () => {
   }, [user?.batchCode]);
 
   const setupMeetingNotifications = () => {
-    const socket = io('http://localhost:3001');
+    const apiUrl = process.env.REACT_APP_API_URL || 'http://localhost:3001';
+    const socket = io(apiUrl, {
+      transports: ['polling', 'websocket']
+    });
     
     socket.on('meeting-started', (data) => {
       if (data.batch === user?.batchCode) {

@@ -32,7 +32,7 @@ const CameraStream = ({ examId, examTitle, onStreamStart, onStreamEnd, isExamAct
   const initializeSocket = () => {
     const apiUrl = process.env.REACT_APP_API_URL || 'http://localhost:3001';
     socketRef.current = io(apiUrl, {
-      transports: ['websocket', 'polling']
+      transports: ['polling', 'websocket']
     });
 
     socketRef.current.on('connect', () => {

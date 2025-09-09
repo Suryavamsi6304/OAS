@@ -25,12 +25,12 @@ export const NotificationProvider = ({ children }) => {
       const token = localStorage.getItem('token');
       
       // Initialize socket connection with error handling
-      const backendUrl = process.env.REACT_APP_BACKEND_URL || 'http://localhost:3001';
+      const backendUrl = process.env.REACT_APP_API_URL || 'http://localhost:3001';
       const newSocket = io(backendUrl, {
         auth: {
           token: token
         },
-        transports: ['websocket', 'polling'],
+        transports: ['polling', 'websocket'],
         timeout: 20000,
         forceNew: true
       });

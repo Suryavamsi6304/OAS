@@ -967,7 +967,7 @@ const io = require('socket.io')(server, {
     methods: ["GET", "POST"],
     credentials: true
   },
-  transports: ['websocket', 'polling'],
+  transports: ['polling', 'websocket'],
   allowEIO3: true
 });
 
