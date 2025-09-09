@@ -32,7 +32,7 @@ const LiveStreamMonitor = () => {
   }, []);
 
   const initializeSocket = () => {
-    const apiUrl = process.env.REACT_APP_API_URL || 'http://localhost:3001';
+    const apiUrl = process.env.REACT_APP_API_URL;
     socketRef.current = io(apiUrl, {
       transports: ['websocket', 'polling']
     });

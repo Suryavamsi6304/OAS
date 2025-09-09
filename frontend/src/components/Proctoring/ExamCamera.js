@@ -77,7 +77,7 @@ const ExamCamera = forwardRef(({ onCameraReady, examId, studentId }, ref) => {
   };
 
   const initializeSocket = () => {
-    socketRef.current = io(process.env.REACT_APP_API_URL || 'http://localhost:3001');
+    socketRef.current = io(process.env.REACT_APP_API_URL);
     
     socketRef.current.on('connect', () => {
       socketRef.current.emit('student-start-stream', {
