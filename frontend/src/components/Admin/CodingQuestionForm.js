@@ -1,13 +1,12 @@
 import React, { useState } from 'react';
 import { useForm, useFieldArray } from 'react-hook-form';
-import { Plus, Trash2, Save, Play } from 'lucide-react';
-import axios from 'axios';
+import { Plus, Trash2, Save } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 const CodingQuestionForm = ({ onSave, onCancel }) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   
-  const { register, control, handleSubmit, watch, formState: { errors } } = useForm({
+  const { register, control, handleSubmit, formState: { errors } } = useForm({
     defaultValues: {
       title: '',
       description: '',

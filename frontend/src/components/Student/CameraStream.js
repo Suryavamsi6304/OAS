@@ -1,5 +1,5 @@
 import React, { useRef, useEffect, useState } from 'react';
-import { Camera, CameraOff, Mic, MicOff, AlertTriangle } from 'lucide-react';
+import { Camera, CameraOff, AlertTriangle } from 'lucide-react';
 import { io } from 'socket.io-client';
 
 const CameraStream = ({ examId, examTitle, onStreamStart, onStreamEnd, isExamActive = false }) => {

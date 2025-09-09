@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { Play, Square, Eye, Users, Activity } from 'lucide-react';
+import React, { useState } from 'react';
+import { Play, Eye, Users, Activity } from 'lucide-react';
 import LiveStreamMonitor from '../Mentor/LiveStreamMonitor';
 import CameraStream from '../Student/CameraStream';
 

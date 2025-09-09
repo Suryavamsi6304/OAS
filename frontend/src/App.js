@@ -13,9 +13,7 @@ import EnhancedMentorDashboard from './components/Mentor/EnhancedMentorDashboard
 import CreatePracticeTest from './components/Mentor/CreatePracticeTest';
 import CreateSkillAssessment from './components/Mentor/CreateSkillAssessment';
 import ProctoringLogsPage from './components/Mentor/ProctoringLogsPage';
-import LiveMonitorPage from './components/Mentor/LiveMonitorPage';
 import LiveStreamMonitor from './components/Mentor/LiveStreamMonitor';
-import LiveStreamTest from './components/Test/LiveStreamTest';
 import ApprovalRequestsPage from './components/Mentor/ApprovalRequestsPage';
 import ReAttemptRequests from './components/Mentor/ReAttemptRequests';
 import EnhancedLearnerDashboard from './components/Learner/EnhancedLearnerDashboard';
@@ -32,7 +30,6 @@ import ReAttemptRequest from './components/Learner/ReAttemptRequest';
 import PracticeTests from './components/Learner/PracticeTests';
 import SkillAssessments from './components/Learner/SkillAssessments';
 import Jobs from './components/Learner/Jobs';
-import LiveMonitorDashboard from './components/Mentor/LiveMonitorDashboard';
 import CameraDebug from './components/CameraDebug';
 import MeetingPage from './components/Meeting/MeetingPage';
 import CommunicationHub from './components/Communication/CommunicationHub';
