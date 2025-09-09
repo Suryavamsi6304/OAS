@@ -31,6 +31,7 @@ import PracticeTests from './components/Learner/PracticeTests';
 import SkillAssessments from './components/Learner/SkillAssessments';
 import Jobs from './components/Learner/Jobs';
 import CameraDebug from './components/CameraDebug';
+import LiveStreamTest from './components/Test/LiveStreamTest';
 import MeetingPage from './components/Meeting/MeetingPage';
 import CommunicationHub from './components/Communication/CommunicationHub';
 
