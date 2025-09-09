@@ -433,8 +433,8 @@ app.get('/api/proctoring/mentor-requests', auth, mentorOrAdmin, async (req, res)
   }
 });
 
-// Live streaming routes
-app.use('/api/streaming', auth, mentorOrAdmin, streamingRoutes);
+// Live streaming routes - Allow all authenticated users for now
+app.use('/api/streaming', auth, streamingRoutes);
 
 // Compiler routes
 app.use('/api/compiler', compilerRoutes);

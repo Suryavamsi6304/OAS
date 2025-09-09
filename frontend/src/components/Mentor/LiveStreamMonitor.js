@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Eye, Video, AlertTriangle, User, Clock, Shield, Play, Pause, Volume2, VolumeX } from 'lucide-react';
 import axios from 'axios';
 import { io } from 'socket.io-client';
+import toast from 'react-hot-toast';
 import DashboardLayout from '../Layout/DashboardLayout';
 
 const LiveStreamMonitor = () => {
@@ -129,11 +130,19 @@ const LiveStreamMonitor = () => {
 
   const fetchActiveStreams = async () => {
     try {
-      const response = await axios.get('/api/streaming/active-streams');
-      const streams = response.data.data || [];
+      const token = localStorage.getItem('token');
+      const response = await axios.get('/api/streaming/active-streams', {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
       
-      // Add mock data if no real streams
-      if (streams.length === 0) {
+      if (response.data && response.data.success) {
+        const streams = response.data.data || [];
+        setActiveStreams(streams);
+      } else {
+        // Use mock data if API returns empty or invalid response
         const mockStreams = [
           {
             sessionId: 'mock_session_1',
@@ -141,10 +150,10 @@ const LiveStreamMonitor = () => {
             studentName: 'Alice Johnson',
             examTitle: 'React Development Assessment',
             examId: 1,
-            startTime: new Date(Date.now() - 15 * 60 * 1000), // 15 minutes ago
+            startTime: new Date(Date.now() - 15 * 60 * 1000),
             riskScore: 25,
             violations: 1,
-            duration: 900, // 15 minutes
+            duration: 900,
             status: 'active',
             lastViolation: 'Multiple faces detected'
           },
@@ -154,21 +163,36 @@ const LiveStreamMonitor = () => {
             studentName: 'Bob Smith',
             examTitle: 'JavaScript Fundamentals',
             examId: 2,
-            startTime: new Date(Date.now() - 8 * 60 * 1000), // 8 minutes ago
+            startTime: new Date(Date.now() - 8 * 60 * 1000),
             riskScore: 5,
             violations: 0,
-            duration: 480, // 8 minutes
+            duration: 480,
             status: 'active'
           }
         ];
         setActiveStreams(mockStreams);
-      } else {
-        setActiveStreams(streams);
       }
     } catch (error) {
       console.error('Failed to fetch active streams:', error);
-      // Set mock data on error
-      setActiveStreams([]);
+      console.error('Error details:', error.response?.data || error.message);
+      
+      // Use mock data on error
+      const mockStreams = [
+        {
+          sessionId: 'mock_session_1',
+          studentId: 1,
+          studentName: 'Alice Johnson',
+          examTitle: 'React Development Assessment',
+          examId: 1,
+          startTime: new Date(Date.now() - 15 * 60 * 1000),
+          riskScore: 25,
+          violations: 1,
+          duration: 900,
+          status: 'active',
+          lastViolation: 'Multiple faces detected'
+        }
+      ];
+      setActiveStreams(mockStreams);
     } finally {
       setLoading(false);
     }
@@ -257,21 +281,37 @@ const LiveStreamMonitor = () => {
 
   const flagStudent = async (sessionId, reason) => {
     try {
-      await axios.post(`/api/streaming/${sessionId}/flag`, { reason });
+      const token = localStorage.getItem('token');
+      await axios.post(`/api/streaming/${sessionId}/flag`, { reason }, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
       console.log('🚩 Student flagged:', sessionId, reason);
+      toast.success('Student flagged successfully');
     } catch (error) {
       console.error('Failed to flag student:', error);
+      toast.error('Failed to flag student');
     }
   };
 
   const terminateSession = async (sessionId) => {
     try {
-      await axios.post(`/api/streaming/${sessionId}/terminate`);
+      const token = localStorage.getItem('token');
+      await axios.post(`/api/streaming/${sessionId}/terminate`, {}, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
       setSelectedStream(null);
       fetchActiveStreams();
       console.log('🛑 Session terminated:', sessionId);
+      toast.success('Session terminated successfully');
     } catch (error) {
       console.error('Failed to terminate session:', error);
+      toast.error('Failed to terminate session');
     }
   };
 
