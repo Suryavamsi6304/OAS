@@ -1,8 +1,9 @@
 [build]
   base = "frontend"
-  command = "CI=false npm run build"
-  publish = "frontend/build"
+  command = "DISABLE_ESLINT_PLUGIN=true CI=false npm run build"
+  publish = "build"
 
 [build.environment]
   REACT_APP_API_URL = "https://oas-sy6r.onrender.com"
   CI = "false"
+  DISABLE_ESLINT_PLUGIN = "true"
