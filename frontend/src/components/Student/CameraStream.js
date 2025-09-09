@@ -124,8 +124,12 @@ const CameraStream = ({ examId, examTitle, onStreamStart, onStreamEnd, isExamAct
       socketRef.current.emit('student-end-stream', { sessionId });
     }
 
+    // Properly stop all camera tracks
     if (streamRef.current) {
-      streamRef.current.getTracks().forEach(track => track.stop());
+      streamRef.current.getTracks().forEach(track => {
+        track.stop();
+        console.log('🛑 Stopped track:', track.kind);
+      });
       streamRef.current = null;
     }
 
@@ -134,7 +138,8 @@ const CameraStream = ({ examId, examTitle, onStreamStart, onStreamEnd, isExamAct
     }
 
     setSessionId(null);
-    console.log('🛑 Stopped streaming');
+    setHasPermission(false);
+    console.log('🛑 Stopped streaming and camera');
   };
 
   const captureAndSendFrame = (currentSessionId) => {
@@ -179,18 +184,9 @@ const CameraStream = ({ examId, examTitle, onStreamStart, onStreamEnd, isExamAct
     return null;
   }
 
+  // Hidden streaming - no UI for learners, only background streaming
   return (
-    <div style={{
-      position: 'fixed',
-      top: '20px',
-      right: '20px',
-      width: '300px',
-      backgroundColor: 'white',
-      borderRadius: '8px',
-      boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
-      border: '1px solid #e5e7eb',
-      zIndex: 1000
-    }}>
+    <div style={{ display: 'none' }}>
       {/* Header */}
       <div style={{
         padding: '12px 16px',

@@ -9,7 +9,7 @@ import ExamCamera from '../Proctoring/ExamCamera';
 import CameraRules from '../Proctoring/CameraRules';
 import ProctoringMonitor from '../Proctoring/ProctoringMonitor';
 import CodeEditor from './CodeEditor';
-import CameraStream from './CameraStream';
+
 
 const ExamTaking = () => {
   const { id } = useParams();
@@ -63,6 +63,19 @@ const ExamTaking = () => {
     return () => window.removeEventListener('message', handleMessage);
   }, []);
 
+  // Cleanup on component unmount
+  useEffect(() => {
+    return () => {
+      console.log('🧹 Cleaning up ExamTaking component...');
+      if (cameraRef.current && cameraRef.current.stopCamera) {
+        cameraRef.current.stopCamera();
+      }
+      if (proctoringRef.current && proctoringRef.current.stopMonitoring) {
+        proctoringRef.current.stopMonitoring();
+      }
+    };
+  }, []);
+
   // Expose proctoring monitor to global scope for violation reporting
   useEffect(() => {
     if (proctoringRef.current) {
@@ -78,6 +91,8 @@ const ExamTaking = () => {
     
     setIsSubmitting(true);
     
+    // Stop camera and proctoring first
+    console.log('🛑 Stopping camera and proctoring...');
     if (cameraRef.current && cameraRef.current.stopCamera) {
       cameraRef.current.stopCamera();
     }
@@ -85,6 +100,7 @@ const ExamTaking = () => {
       proctoringRef.current.stopMonitoring();
     }
 
+    // Exit fullscreen
     if (document.fullscreenElement) {
       try {
         await document.exitFullscreen();
@@ -92,6 +108,9 @@ const ExamTaking = () => {
         console.error('Failed to exit fullscreen:', error);
       }
     }
+    
+    // Small delay to ensure camera stops before navigation
+    await new Promise(resolve => setTimeout(resolve, 500));
     
     try {
       const submissionData = {
@@ -425,13 +444,7 @@ const ExamTaking = () => {
       
       <ExamCamera ref={cameraRef} onCameraReady={setCameraReady} examId={id} studentId={user?.id} />
       
-      <CameraStream 
-        examId={id}
-        examTitle={exam.title}
-        isExamActive={!showCameraRules && !isExamBlocked}
-        onStreamStart={(sessionId) => console.log('Stream started:', sessionId)}
-        onStreamEnd={() => console.log('Stream ended')}
-      />
+
       
       <div style={{
         backgroundColor: 'white',

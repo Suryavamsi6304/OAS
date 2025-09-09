@@ -141,17 +141,27 @@ const ExamCamera = forwardRef(({ onCameraReady, examId, studentId }, ref) => {
   };
 
   const stopCamera = () => {
+    console.log('🛑 Stopping camera...');
+    
+    // Stop streaming first
+    stopStreaming();
+    
+    // Stop all camera tracks
     if (videoRef.current?.srcObject) {
       const tracks = videoRef.current.srcObject.getTracks();
       tracks.forEach(track => {
+        console.log('🛑 Stopping track:', track.kind, track.label);
         track.stop();
         track.enabled = false;
       });
       videoRef.current.srcObject = null;
       videoRef.current.src = '';
+      videoRef.current.load(); // Force reload to clear any cached stream
     }
+    
     setIsActive(false);
-    stopStreaming();
+    globalCameraActive = false;
+    console.log('✅ Camera stopped successfully');
   };
 
   const handleMouseDown = (e) => {
