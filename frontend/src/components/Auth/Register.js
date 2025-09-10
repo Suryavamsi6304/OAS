@@ -31,7 +31,7 @@ const Register = () => {
       try {
         // Create axios instance without auth headers for public endpoint
         const publicAxios = axios.create({
-          baseURL: 'http://localhost:3001'
+          baseURL: 'https://oas-sy6r.onrender.com'
         });
         const response = await publicAxios.get('/api/batches');
         setAvailableBatches(response.data.data || []);
