@@ -2,7 +2,7 @@ import axios from 'axios';
 
 // Create axios instance with base configuration
 const api = axios.create({
-  baseURL: process.env.REACT_APP_API_URL ? `${process.env.REACT_APP_API_URL}/api` : 'http://localhost:3001/api',
+  baseURL: 'https://oas-sy6r.onrender.com/api',
   headers: {
     'Content-Type': 'application/json'
   }
