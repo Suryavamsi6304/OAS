@@ -5,7 +5,7 @@ const { authenticateToken, authorizeRoles } = require('../middleware/auth');
 const router = express.Router();
 
 // Get all batches
-router.get('/', authenticateToken, async (req, res) => {
+router.get('/', async (req, res) => {
   try {
     const batches = await Batch.findAll({
       where: { isActive: true },
