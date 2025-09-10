@@ -44,7 +44,7 @@ const LiveMonitorDashboard = () => {
 
   const fetchActiveStreams = async () => {
     try {
-      const response = await fetch('/api/streaming/active-streams', {
+      const response = await fetch('http://localhost:3001/api/streaming/active-streams', {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`
         }
@@ -214,10 +214,10 @@ const StreamCard = ({ stream, onWatch }) => {
       }}>
         <div>
           <h3 style={{ fontSize: '16px', fontWeight: '600', margin: 0, color: '#1f2937' }}>
-            Student {stream.studentId}
+            {stream.studentName || `Student ${stream.studentId}`}
           </h3>
           <p style={{ color: '#6b7280', fontSize: '14px', margin: '4px 0 0 0' }}>
-            Session: {stream.sessionId}
+            ID: {stream.studentId}
           </p>
         </div>
         
@@ -298,12 +298,19 @@ const LiveStreamViewer = ({ stream, onClose, socket }) => {
       mentorId: 'mentor-' + Date.now()
     });
 
-    // Listen for video frames
+      // Listen for video frames
     socket.on('video-frame', (data) => {
       if (data.sessionId === stream.sessionId) {
         displayFrame(data.frameData);
         setIsReceivingFrames(true);
         setLastFrameTime(new Date());
+      }
+    });
+    
+    // Listen for stream updates
+    socket.on('stream-updated', (data) => {
+      if (data.sessionId === stream.sessionId) {
+        // Update stream info if needed
       }
     });
 
@@ -329,7 +336,7 @@ const LiveStreamViewer = ({ stream, onClose, socket }) => {
 
   const flagStudent = async () => {
     try {
-      await fetch(`/api/proctoring/${stream.sessionId}/flag`, {
+      await fetch(`http://localhost:3001/api/proctoring/${stream.sessionId}/flag`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -348,7 +355,7 @@ const LiveStreamViewer = ({ stream, onClose, socket }) => {
   const terminateSession = async () => {
     if (window.confirm('Are you sure you want to terminate this exam session?')) {
       try {
-        await fetch(`/api/proctoring/${stream.sessionId}/terminate`, {
+        await fetch(`http://localhost:3001/api/proctoring/${stream.sessionId}/terminate`, {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${localStorage.getItem('token')}`
@@ -396,10 +403,10 @@ const LiveStreamViewer = ({ stream, onClose, socket }) => {
         }}>
           <div>
             <h2 style={{ fontSize: '20px', fontWeight: 'bold', margin: 0 }}>
-              Live Stream - Student {stream.studentId}
+              Live Stream - {stream.studentName || `Student ${stream.studentId}`}
             </h2>
             <p style={{ color: '#6b7280', margin: '4px 0 0 0', fontSize: '14px' }}>
-              Session: {stream.sessionId} • {lastFrameTime ? lastFrameTime.toLocaleTimeString() : 'No signal'}
+              {stream.examTitle} • {lastFrameTime ? lastFrameTime.toLocaleTimeString() : 'No signal'}
             </p>
           </div>
           

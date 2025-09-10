@@ -77,14 +77,30 @@ const ExamCamera = forwardRef(({ onCameraReady, examId, studentId }, ref) => {
   };
 
   const initializeSocket = () => {
-    socketRef.current = io(process.env.REACT_APP_API_URL);
+    socketRef.current = io('http://localhost:3001');
     
     socketRef.current.on('connect', () => {
+      // Get actual user info from localStorage or context
+      const token = localStorage.getItem('token');
+      let actualStudentId = studentId;
+      let actualStudentName = 'Unknown Student';
+      
+      if (token) {
+        try {
+          const payload = JSON.parse(atob(token.split('.')[1]));
+          actualStudentId = payload.userId || payload.id;
+          actualStudentName = payload.name || payload.username;
+        } catch (e) {
+          console.error('Failed to parse token:', e);
+        }
+      }
+      
       socketRef.current.emit('student-start-stream', {
         sessionId,
-        studentId: studentId || 'student-' + Date.now(),
-        examId: examId || 'exam-' + Date.now(),
-        examTitle: 'Live Exam'
+        studentId: actualStudentId,
+        studentName: actualStudentName,
+        examId: examId,
+        examTitle: 'Live Exam Session'
       });
     });
 
@@ -437,12 +453,35 @@ const ExamCamera = forwardRef(({ onCameraReady, examId, studentId }, ref) => {
     return sum / (data.length / 4);
   };
 
-  const addViolation = (message) => {
+  const addViolation = async (message) => {
     const violation = {
       id: Date.now(),
       message,
       time: new Date().toLocaleTimeString()
     };
+    
+    // Log violation to backend
+    try {
+      const token = localStorage.getItem('token');
+      await fetch(`http://localhost:3001/api/proctoring/log-violation`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          sessionId,
+          violationType: message.includes('VIOLATION:') ? message.split('VIOLATION: ')[1] : message,
+          severity: 'medium',
+          details: message,
+          riskScore: 10,
+          examId: examId || 'unknown'
+        })
+      });
+      console.log('✅ Violation logged to backend:', message);
+    } catch (error) {
+      console.error('❌ Failed to log violation:', error);
+    }
     
     setViolations(prev => {
       const newViolations = [...prev, violation];

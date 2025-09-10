@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Shield, Eye, AlertTriangle, Clock, User, Filter } from 'lucide-react';
-import axios from 'axios';
+import api from '../../utils/api';
+import toast from 'react-hot-toast';
 
 const ProctoringLogs = () => {
   const [logs, setLogs] = useState([]);
@@ -15,10 +16,13 @@ const ProctoringLogs = () => {
 
   const fetchLogs = async () => {
     try {
-      const response = await axios.get(`/api/proctoring/logs?filter=${filter}`);
+      console.log('🔍 Fetching proctoring logs with filter:', filter);
+      const response = await api.get(`/proctoring/logs?filter=${filter}`);
+      console.log('📋 Proctoring logs response:', response.data);
       setLogs(response.data.data || []);
     } catch (error) {
-      console.error('Failed to fetch proctoring logs:', error);
+      console.error('❌ Failed to fetch proctoring logs:', error);
+      console.error('Error details:', error.response?.data || error.message);
     } finally {
       setLoading(false);
     }
@@ -63,6 +67,28 @@ const ProctoringLogs = () => {
         </div>
         
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <button
+            onClick={async () => {
+              try {
+                await api.post('/create-test-proctoring');
+                toast.success('Test session created!');
+                fetchLogs();
+              } catch (error) {
+                toast.error('Failed to create test session');
+              }
+            }}
+            style={{
+              padding: '6px 12px',
+              backgroundColor: '#10b981',
+              color: 'white',
+              border: 'none',
+              borderRadius: '4px',
+              fontSize: '12px',
+              cursor: 'pointer'
+            }}
+          >
+            Create Test Data
+          </button>
           <Filter size={16} style={{ color: '#6b7280' }} />
           <select
             value={filter}

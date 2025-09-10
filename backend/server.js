@@ -27,9 +27,17 @@ const app = express();
 const server = http.createServer(app);
 
 // Middleware
-const allowedOrigins = process.env.NODE_ENV === 'production' 
-  ? ['https://monumental-kataifi-3b4c02.netlify.app']
-  : ['http://localhost:3000', 'http://127.0.0.1:3000', 'https://monumental-kataifi-3b4c02.netlify.app'];
+const allowedOrigins = [
+  'http://localhost:3000',
+  'http://127.0.0.1:3000',
+  'http://localhost:3001',
+  'https://monumental-kataifi-3b4c02.netlify.app'
+];
+
+// Add development origins if in development
+if (process.env.NODE_ENV === 'development') {
+  allowedOrigins.push('http://localhost:3000', 'http://127.0.0.1:3000');
+}
 
 app.use(cors({
   origin: allowedOrigins,
@@ -56,50 +64,11 @@ app.get('/api/test', (req, res) => {
   res.json({ success: true, message: 'Server is running!' });
 });
 
-// Create initial users endpoint
-app.post('/api/create-users', async (req, res) => {
-  try {
-    const { User } = require('./models');
-    
-    // Create admin user
-    const [admin] = await User.findOrCreate({
-      where: { username: 'admin' },
-      defaults: {
-        username: 'admin',
-        email: 'admin@test.com',
-        password: 'password',
-        name: 'Admin User',
-        role: 'admin',
-        isApproved: true
-      }
-    });
 
-    // Create learner user
-    const [learner] = await User.findOrCreate({
-      where: { username: 'learner1' },
-      defaults: {
-        username: 'learner1',
-        email: 'learner1@test.com',
-        password: 'password',
-        name: 'Alice Johnson',
-        role: 'learner',
-        batchCode: 'BATCH001',
-        isApproved: true
-      }
-    });
 
-    res.json({
-      success: true,
-      message: 'Users created successfully',
-      users: [
-        { username: 'admin', role: 'admin' },
-        { username: 'learner1', role: 'learner' }
-      ]
-    });
-  } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
-  }
-});
+
+
+
 
 // CSRF token endpoint
 app.get('/api/csrf-token', auth, getCSRFToken);
@@ -231,12 +200,99 @@ app.get('/api/skill-assessments', auth, async (req, res) => {
 
 // Proctoring routes
 app.post('/api/proctoring/start', auth, proctoringController.startSession);
+app.get('/api/proctoring/sessions', auth, mentorOrAdmin, proctoringController.getSessions);
+app.get('/api/proctoring/logs', auth, mentorOrAdmin, async (req, res) => {
+  try {
+    const { ProctoringLog, User, Exam } = require('./models');
+    const { filter } = req.query;
+    
+    console.log('🔍 Fetching proctoring logs from ProctoringLogs table...');
+    
+    let whereClause = {};
+    if (filter && filter !== 'all') {
+      switch (filter) {
+        case 'active':
+          whereClause.status = 'active';
+          break;
+        case 'flagged':
+          whereClause.status = 'flagged';
+          break;
+        case 'violations':
+          whereClause.severity = ['high', 'critical'];
+          break;
+      }
+    }
+    
+    const logs = await ProctoringLog.findAll({
+      where: whereClause,
+      include: [
+        {
+          model: User,
+          as: 'student',
+          attributes: ['id', 'name', 'email'],
+          required: false
+        },
+        {
+          model: Exam,
+          as: 'exam',
+          attributes: ['id', 'title'],
+          required: false
+        }
+      ],
+      order: [['createdAt', 'DESC']],
+      limit: 50
+    });
+    
+    console.log(`📊 Found ${logs.length} proctoring logs in database`);
+    
+    // Transform data to match frontend expectations
+    const transformedLogs = logs.map(log => ({
+      id: log.id,
+      sessionId: log.sessionId,
+      studentName: log.student?.name || 'Unknown Student',
+      studentEmail: log.student?.email || 'unknown@email.com',
+      examTitle: log.exam?.title || 'Unknown Exam',
+      violations: 1,
+      riskScore: log.riskScore || 0,
+      status: log.status,
+      duration: Math.floor((new Date() - new Date(log.createdAt)) / 1000),
+      startTime: log.createdAt,
+      recentViolations: [{
+        type: log.violationType,
+        severity: log.severity,
+        details: log.details,
+        timestamp: log.createdAt
+      }]
+    }));
+    
+    console.log('✅ Returning proctoring logs:', transformedLogs.length);
+    res.json({ success: true, data: transformedLogs });
+  } catch (error) {
+    console.error('❌ Failed to fetch proctoring logs:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+app.post('/api/proctoring/mentor-request', auth, proctoringController.sendMentorRequest);
+app.get('/api/proctoring/mentor-response/:sessionId', auth, proctoringController.checkMentorResponse);
+app.put('/api/proctoring/mentor-request/:sessionId', auth, mentorOrAdmin, proctoringController.handleMentorRequest);
+app.post('/api/proctoring/:sessionId/violation', auth, proctoringController.reportViolation);
+app.put('/api/proctoring/:sessionId/behavior', auth, proctoringController.updateBehavior);
+app.put('/api/proctoring/:sessionId/end', auth, proctoringController.endSession);
 app.post('/api/proctoring/log-violation', auth, async (req, res) => {
   try {
     const { ProctoringLog } = require('./models');
     const { sessionId, violationType, severity, details, riskScore, examId } = req.body;
     
+    console.log('📝 Violation logging request:', {
+      sessionId,
+      violationType,
+      severity,
+      studentId: req.user.id,
+      examId
+    });
+    
     if (!sessionId || !violationType || !severity || !examId) {
+      console.log('❌ Missing required fields for violation logging');
       return res.status(400).json({ 
         success: false, 
         message: 'Missing required fields: sessionId, violationType, severity, examId' 
@@ -253,9 +309,10 @@ app.post('/api/proctoring/log-violation', auth, async (req, res) => {
       riskScore: riskScore || 0
     });
     
+    console.log('✅ Violation logged successfully:', log.id);
     res.json({ success: true, data: log });
   } catch (error) {
-    console.error('Error logging violation:', error);
+    console.error('❌ Error logging violation:', error);
     res.status(500).json({ success: false, message: 'Failed to log violation', error: error.message });
   }
 });
@@ -264,50 +321,15 @@ app.put('/api/proctoring/:sessionId/behavior', auth, proctoringController.update
 app.post('/api/proctoring/:sessionId/end', auth, proctoringController.endSession);
 app.get('/api/proctoring/sessions', auth, mentorOrAdmin, proctoringController.getSessions);
 
-// Proctoring logs endpoint
-app.get('/api/proctoring/logs', auth, mentorOrAdmin, async (req, res) => {
-  try {
-    const { ProctoringLog, User, Exam } = require('./models');
-    const { filter = 'all' } = req.query;
-    
-    let whereClause = {};
-    if (filter === 'flagged') whereClause.status = 'flagged';
-    if (filter === 'violations') {
-      const { Op } = require('sequelize');
-      whereClause.severity = { [Op.in]: ['high', 'critical'] };
-    }
-    
-    const logs = await ProctoringLog.findAll({
-      where: whereClause,
-      include: [
-        { model: User, as: 'student', attributes: ['name', 'username'] },
-        { model: Exam, as: 'exam', attributes: ['title'] }
-      ],
-      order: [['createdAt', 'DESC']]
-    });
-    
-    res.json({ success: true, data: logs });
-  } catch (error) {
-    console.error('Error fetching proctoring logs:', error);
-    res.status(500).json({ success: false, message: 'Failed to fetch logs', error: error.message });
-  }
-});
+
+
+
 
 // Active sessions endpoint
 app.get('/api/proctoring/active-sessions', auth, mentorOrAdmin, async (req, res) => {
   try {
-    const mockSessions = [
-      {
-        sessionId: 'session_' + Date.now(),
-        studentName: 'Jane Smith',
-        examTitle: 'React Development',
-        riskScore: 45,
-        violations: 1,
-        duration: 900,
-        lastViolation: 'Multiple faces detected'
-      }
-    ];
-    res.json({ success: true, data: mockSessions });
+    const streams = req.app.get('streamingSocket')?.getActiveStreams() || [];
+    res.json({ success: true, data: streams });
   } catch (error) {
     res.status(500).json({ success: false, message: 'Failed to fetch active sessions' });
   }
@@ -588,7 +610,7 @@ app.put('/api/admin/users/:id', auth, adminOnly, async (req, res) => {
 // Delete user
 app.delete('/api/admin/users/:id', auth, adminOnly, async (req, res) => {
   try {
-    const User = require('./models/User');
+    const { User } = require('./models');
     
     // Check if user exists
     const user = await User.findByPk(req.params.id);
@@ -601,7 +623,7 @@ app.delete('/api/admin/users/:id', auth, adminOnly, async (req, res) => {
       return res.status(403).json({ success: false, message: 'Cannot delete admin users' });
     }
     
-    await User.destroy({ where: { id: req.params.id } });
+    await user.destroy();
     res.json({ success: true, message: 'User deleted successfully' });
   } catch (error) {
     console.error('Delete user error:', error);
@@ -809,156 +831,7 @@ app.put('/api/profile', auth, async (req, res) => {
   }
 });
 
-// Seed data route (development only)
-if (process.env.NODE_ENV === 'development') {
-  app.post('/api/seed', async (req, res) => {
-    try {
-      const { User, Exam, JobPosting } = require('./models');
-      
-      // Create admin user
-      const [admin] = await User.findOrCreate({
-        where: { username: 'admin' },
-        defaults: {
-          username: 'admin',
-          email: 'admin@test.com',
-          password: 'password',
-          name: 'Admin User',
-          role: 'admin'
-        }
-      });
 
-      // Create mentor user
-      const [mentor] = await User.findOrCreate({
-        where: { username: 'mentor' },
-        defaults: {
-          username: 'mentor',
-          email: 'mentor@test.com',
-          password: 'password',
-          name: 'Mentor User',
-          role: 'mentor'
-        }
-      });
-
-      // Create learner users
-      const [learner1] = await User.findOrCreate({
-        where: { username: 'learner1' },
-        defaults: {
-          username: 'learner1',
-          email: 'learner1@test.com',
-          password: 'password',
-          name: 'Alice Johnson',
-          role: 'learner',
-          batchCode: 'BATCH001'
-        }
-      });
-
-      const [learner2] = await User.findOrCreate({
-        where: { username: 'learner2' },
-        defaults: {
-          username: 'learner2',
-          email: 'learner2@test.com',
-          password: 'password',
-          name: 'Bob Smith',
-          role: 'learner',
-          batchCode: 'BATCH001'
-        }
-      });
-
-      const [learner3] = await User.findOrCreate({
-        where: { username: 'learner3' },
-        defaults: {
-          username: 'learner3',
-          email: 'learner3@test.com',
-          password: 'password',
-          name: 'Carol Davis',
-          role: 'learner',
-          batchCode: 'BATCH002'
-        }
-      });
-
-      // Create sample exam
-      const [sampleExam] = await Exam.findOrCreate({
-        where: { title: 'Sample Quiz' },
-        defaults: {
-          title: 'Sample Quiz',
-          description: 'A sample quiz for testing',
-          duration: 30,
-          questions: [
-            {
-              _id: '1',
-              type: 'multiple-choice',
-              question: 'What is 2 + 2?',
-              options: [
-                { _id: 'a', text: '3', isCorrect: false },
-                { _id: 'b', text: '4', isCorrect: true },
-                { _id: 'c', text: '5', isCorrect: false }
-              ],
-              points: 1
-            },
-            {
-              _id: '2',
-              type: 'true-false',
-              question: 'The sky is blue.',
-              correctAnswer: 'true',
-              points: 1
-            }
-          ],
-          createdBy: admin.id,
-          isActive: true,
-          batchCode: 'BATCH001'
-        }
-      });
-
-      // Create sample batches
-      const { Batch } = require('./models');
-      const [batch1] = await Batch.findOrCreate({
-        where: { code: 'BATCH001' },
-        defaults: {
-          code: 'BATCH001',
-          name: 'Full Stack Development - Batch 1',
-          description: 'Complete full stack development program covering React, Node.js, and databases',
-          createdBy: admin.id
-        }
-      });
-
-      const [batch2] = await Batch.findOrCreate({
-        where: { code: 'BATCH002' },
-        defaults: {
-          code: 'BATCH002',
-          name: 'Data Science - Batch 1',
-          description: 'Data science program covering Python, machine learning, and analytics',
-          createdBy: admin.id
-        }
-      });
-
-      // Create sample job posting
-      const [sampleJob] = await JobPosting.findOrCreate({
-        where: { title: 'Software Developer' },
-        defaults: {
-          title: 'Software Developer',
-          description: 'We are looking for a skilled software developer to join our team.',
-          requirements: 'Bachelor degree in Computer Science, 2+ years experience',
-          location: 'Remote',
-          salary: '$60,000 - $80,000',
-          department: 'Engineering',
-          createdBy: admin.id,
-          status: 'active'
-        }
-      });
-
-      res.json({
-        success: true,
-        message: 'Seed data created',
-        data: { admin, mentor, learner1, learner2, learner3, sampleExam, sampleJob, batch1, batch2 }
-      });
-    } catch (error) {
-      res.status(500).json({
-        success: false,
-        message: error.message
-      });
-    }
-  });
-}
 
 // Single Socket.IO setup with proper error handling
 const io = require('socket.io')(server, {
@@ -1011,15 +884,26 @@ io.on('connection', (socket) => {
   
   // Streaming handlers
   socket.on('student-start-stream', (data) => {
-    const { sessionId, studentId, examId, examTitle } = data;
+    const { sessionId, studentId, studentName, examId, examTitle } = data;
     
     activeStreams.set(sessionId, {
-      sessionId, studentId, examId, examTitle,
-      startTime: new Date(), mentorCount: 0
+      sessionId, 
+      studentId, 
+      studentName: studentName || `Student ${studentId}`,
+      examId, 
+      examTitle: examTitle || 'Live Exam',
+      startTime: new Date(), 
+      mentorCount: 0
     });
     
+    console.log(`📺 New stream started: ${studentName || studentId} - ${examTitle}`);
+    
     io.emit('new-stream-started', {
-      sessionId, studentId, examId, examTitle,
+      sessionId, 
+      studentId, 
+      studentName: studentName || `Student ${studentId}`,
+      examId, 
+      examTitle: examTitle || 'Live Exam',
       startTime: new Date()
     });
   });

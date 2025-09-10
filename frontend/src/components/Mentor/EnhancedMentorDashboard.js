@@ -2,13 +2,14 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { Users, BookOpen, Clock, Plus, Code, Target, Edit, Trash2, RefreshCw, Shield, AlertTriangle, Eye, Trophy, Video as VideoIcon } from 'lucide-react';
-import axios from 'axios';
+import api from '../../utils/api';
 import toast from 'react-hot-toast';
 import ReAttemptRequests from './ReAttemptRequests';
 import NotificationBell from '../Notifications/NotificationBell';
 import LiveMonitorDashboard from './LiveMonitorDashboard';
 import BatchPerformance from './BatchPerformance';
 import BatchManagement from './BatchManagement';
+import ProctoringLogs from './ProctoringLogs';
 
 
 const EnhancedMentorDashboard = () => {
@@ -34,17 +35,17 @@ const EnhancedMentorDashboard = () => {
 
   const fetchData = async () => {
     try {
-      const resultsRes = await axios.get('/api/results/all');
+      const resultsRes = await api.get('/results/all');
       setResults(resultsRes.data.data || []);
       
-      const requestsRes = await axios.get('/api/re-attempt/requests');
+      const requestsRes = await api.get('/re-attempt/requests');
       setReAttemptRequests(requestsRes.data.data || []);
       
-      const practiceRes = await axios.get('/api/practice-tests');
+      const practiceRes = await api.get('/practice-tests');
       const allPracticeTests = practiceRes.data.data || [];
       setPracticeTests(allPracticeTests.filter(test => test.createdBy === user.id));
       
-      const skillRes = await axios.get('/api/skill-assessments');
+      const skillRes = await api.get('/skill-assessments');
       const allSkillAssessments = skillRes.data.data || [];
       setSkillAssessments(allSkillAssessments.filter(assessment => assessment.createdBy === user.id));
       
@@ -101,7 +102,7 @@ const EnhancedMentorDashboard = () => {
 
   const deletePracticeTest = async (id) => {
     try {
-      await axios.delete(`/api/exams/${id}`);
+      await api.delete(`/exams/${id}`);
       setPracticeTests(practiceTests.filter(test => test.id !== id));
       toast.success('Practice test deleted');
     } catch (error) {
@@ -112,7 +113,7 @@ const EnhancedMentorDashboard = () => {
 
   const deleteSkillAssessment = async (id) => {
     try {
-      await axios.delete(`/api/exams/${id}`);
+      await api.delete(`/exams/${id}`);
       setSkillAssessments(skillAssessments.filter(assessment => assessment.id !== id));
       toast.success('Skill assessment deleted');
     } catch (error) {
@@ -577,12 +578,7 @@ const EnhancedMentorDashboard = () => {
         {activeTab === 'practice' && renderPracticeTests()}
         {activeTab === 'skills' && renderSkillAssessments()}
         {activeTab === 'requests' && <ReAttemptRequests />}
-        {activeTab === 'proctoring' && (
-          <div style={{ backgroundColor: 'white', padding: '24px', borderRadius: '8px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}>
-            <h2 style={{ fontSize: '20px', fontWeight: 'bold', marginBottom: '20px' }}>Proctoring Logs</h2>
-            <p>View proctoring session logs and violations here.</p>
-          </div>
-        )}
+        {activeTab === 'proctoring' && <ProctoringLogs />}
         {activeTab === 'live' && <LiveMonitorDashboard />}
         {activeTab === 'approvals' && (
           <div style={{ backgroundColor: 'white', padding: '24px', borderRadius: '8px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}>

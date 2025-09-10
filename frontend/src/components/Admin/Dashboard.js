@@ -34,12 +34,8 @@ const AdminDashboard = () => {
   });
 
   const { data: pendingApprovals, isLoading: approvalsLoading, refetch: refetchApprovals } = useQuery('pending-approvals', async () => {
-    console.log('Fetching pending approvals...');
     const response = await axios.get('/api/admin/pending-approvals');
-    console.log('Pending approvals response:', response.data);
     return response.data.data || [];
-  }, {
-    refetchInterval: 5000 // Refetch every 5 seconds
   });
 
   const { data: batches } = useQuery('batches', async () => {
@@ -155,7 +151,6 @@ const AdminDashboard = () => {
   const renderUsersView = () => (
     <>
       {/* Pending Approvals */}
-      {console.log('Pending approvals in render:', pendingApprovals)}
       {pendingApprovals?.length > 0 && (
         <div className="card" style={{ marginBottom: '24px', border: '2px solid #f59e0b' }}>
           <h2 style={{ fontSize: '20px', fontWeight: 'bold', marginBottom: '16px', color: '#f59e0b' }}>
