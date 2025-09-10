@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from 'react-query';
 import { Plus, Edit, Trash2, Users } from 'lucide-react';
-import axios from 'axios';
+import api from '../../utils/api';
 import toast from 'react-hot-toast';
 
 const BatchManagement = () => {
@@ -15,12 +15,12 @@ const BatchManagement = () => {
   });
 
   const { data: batches, isLoading } = useQuery('batches', async () => {
-    const response = await axios.get('/api/batches');
+    const response = await api.get('/batches');
     return response.data.data || [];
   });
 
   const createBatchMutation = useMutation(
-    (batchData) => axios.post('/api/batches', batchData),
+    (batchData) => api.post('/batches', batchData),
     {
       onSuccess: () => {
         toast.success('Batch created successfully');
@@ -35,7 +35,7 @@ const BatchManagement = () => {
   );
 
   const updateBatchMutation = useMutation(
-    ({ id, ...batchData }) => axios.put(`/api/batches/${id}`, batchData),
+    ({ id, ...batchData }) => api.put(`/batches/${id}`, batchData),
     {
       onSuccess: () => {
         toast.success('Batch updated successfully');
@@ -51,7 +51,7 @@ const BatchManagement = () => {
   );
 
   const deleteBatchMutation = useMutation(
-    (id) => axios.delete(`/api/batches/${id}`),
+    (id) => api.delete(`/batches/${id}`),
     {
       onSuccess: () => {
         toast.success('Batch deleted successfully');
