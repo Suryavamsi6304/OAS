@@ -71,7 +71,7 @@ const LiveStreamViewer = ({ sessionId, onClose }) => {
   };
 
   const terminateSession = () => {
-    if (confirm('Are you sure you want to terminate this exam session?')) {
+    if (window.confirm('Are you sure you want to terminate this exam session?')) {
       fetch(`/api/proctoring/${sessionId}/terminate`, {
         method: 'POST',
         headers: {
