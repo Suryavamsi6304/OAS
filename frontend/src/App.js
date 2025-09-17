@@ -12,7 +12,7 @@ import BatchManagement from './components/Admin/BatchManagement';
 import EnhancedMentorDashboard from './components/Mentor/EnhancedMentorDashboard';
 import CreatePracticeTest from './components/Mentor/CreatePracticeTest';
 import CreateSkillAssessment from './components/Mentor/CreateSkillAssessment';
-import ProctoringLogsPage from './components/Mentor/ProctoringLogsPage';
+
 import LiveStreamMonitor from './components/Mentor/LiveStreamMonitor';
 import ApprovalRequestsPage from './components/Mentor/ApprovalRequestsPage';
 import ReAttemptRequests from './components/Mentor/ReAttemptRequests';
@@ -30,7 +30,7 @@ import ReAttemptRequest from './components/Learner/ReAttemptRequest';
 import PracticeTests from './components/Learner/PracticeTests';
 import SkillAssessments from './components/Learner/SkillAssessments';
 import Jobs from './components/Learner/Jobs';
-import CameraDebug from './components/CameraDebug';
+
 import LiveStreamTest from './components/Test/LiveStreamTest';
 import MeetingPage from './components/Meeting/MeetingPage';
 import CommunicationHub from './components/Communication/CommunicationHub';
@@ -181,14 +181,7 @@ function App() {
                   </ProtectedRoute>
                 } 
               />
-              <Route 
-                path="/mentor/proctoring-logs" 
-                element={
-                  <ProtectedRoute allowedRoles={['mentor']}>
-                    <ProctoringLogsPage />
-                  </ProtectedRoute>
-                } 
-              />
+
               <Route 
                 path="/mentor/live-monitor" 
                 element={
@@ -354,8 +347,7 @@ function App() {
                 } 
               />
               
-              {/* Camera Debug Route */}
-              <Route path="/camera-debug" element={<CameraDebug />} />
+
               
               {/* Live Stream Test Route */}
               <Route path="/live-stream-test" element={<LiveStreamTest />} />

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Play, Eye, Users, Activity } from 'lucide-react';
 import LiveStreamMonitor from '../Mentor/LiveStreamMonitor';
-import CameraStream from '../Student/CameraStream';
+
 
 const LiveStreamTest = () => {
   const [isStudentView, setIsStudentView] = useState(true);
@@ -200,14 +200,10 @@ const LiveStreamTest = () => {
               </div>
             </div>
 
-            {/* Camera Stream Component */}
-            <CameraStream
-              examId={mockExam.id}
-              examTitle={mockExam.title}
-              isExamActive={true}
-              onStreamStart={handleStreamStart}
-              onStreamEnd={handleStreamEnd}
-            />
+            {/* Camera Stream Component - Removed */}
+            <div className="card" style={{ padding: '24px', textAlign: 'center' }}>
+              <p style={{ color: '#6b7280' }}>Camera streaming functionality has been removed.</p>
+            </div>
           </div>
         ) : (
           <div>

@@ -3,8 +3,7 @@ const Exam = require('./Exam');
 const Result = require('./Result');
 const JobPosting = require('./JobPosting');
 const Application = require('./Application');
-const ProctoringSession = require('./ProctoringSession');
-const ProctoringLog = require('./ProctoringLog');
+
 const ReAttemptRequest = require('./ReAttemptRequest');
 const Notification = require('./Notification');
 const Batch = require('./Batch');
@@ -34,11 +33,7 @@ Application.belongsTo(User, { foreignKey: 'candidateId', as: 'candidate' });
 Application.belongsTo(User, { foreignKey: 'mentorId', as: 'mentor' });
 Application.belongsTo(JobPosting, { foreignKey: 'jobId', as: 'job' });
 
-// ProctoringSession associations
-ProctoringSession.belongsTo(User, { foreignKey: 'candidateId', as: 'candidate' });
-ProctoringSession.belongsTo(Exam, { foreignKey: 'examId', as: 'exam' });
-User.hasMany(ProctoringSession, { foreignKey: 'candidateId', as: 'proctoringSessions' });
-Exam.hasMany(ProctoringSession, { foreignKey: 'examId', as: 'proctoringSessions' });
+
 
 // Exam associations (existing)
 Exam.belongsTo(User, { foreignKey: 'createdBy', as: 'creator' });
@@ -61,11 +56,7 @@ Result.hasOne(ReAttemptRequest, { foreignKey: 'resultId', as: 'reAttemptRequest'
 Notification.belongsTo(User, { foreignKey: 'userId', as: 'user' });
 User.hasMany(Notification, { foreignKey: 'userId', as: 'notifications' });
 
-// ProctoringLog associations
-ProctoringLog.belongsTo(User, { foreignKey: 'studentId', as: 'student' });
-ProctoringLog.belongsTo(Exam, { foreignKey: 'examId', as: 'exam' });
-User.hasMany(ProctoringLog, { foreignKey: 'studentId', as: 'proctoringLogs' });
-Exam.hasMany(ProctoringLog, { foreignKey: 'examId', as: 'proctoringLogs' });
+
 
 // CodingQuestion associations (temporarily disabled)
 // CodingQuestion.belongsTo(User, { foreignKey: 'createdBy', as: 'creator' });
@@ -77,8 +68,7 @@ module.exports = {
   Result,
   JobPosting,
   Application,
-  ProctoringSession,
-  ProctoringLog,
+
   ReAttemptRequest,
   Notification,
   Batch

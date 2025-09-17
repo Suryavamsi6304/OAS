@@ -1,11 +1,14 @@
 import React from 'react';
 import DashboardLayout from '../Layout/DashboardLayout';
-import ProctoringRequests from './ProctoringRequests';
+
 
 const ApprovalRequestsPage = () => {
   return (
     <DashboardLayout title="Approval Requests">
-      <ProctoringRequests />
+      <div style={{ padding: '20px', textAlign: 'center' }}>
+        <h2>Approval Requests</h2>
+        <p>No approval requests at this time.</p>
+      </div>
     </DashboardLayout>
   );
 };
