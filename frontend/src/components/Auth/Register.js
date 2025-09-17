@@ -29,11 +29,7 @@ const Register = () => {
   useEffect(() => {
     const fetchBatches = async () => {
       try {
-        // Create axios instance without auth headers for public endpoint
-        const publicAxios = axios.create({
-          baseURL: 'https://oas-sy6r.onrender.com'
-        });
-        const response = await publicAxios.get('/api/batches');
+        const response = await axios.get('/api/batches');
         setAvailableBatches(response.data.data || []);
       } catch (error) {
         console.error('Failed to fetch batches:', error);
