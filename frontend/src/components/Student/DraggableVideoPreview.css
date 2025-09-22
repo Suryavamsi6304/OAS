@@ -1,0 +1,37 @@
+@keyframes pulse {
+  0% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+.video-preview-container {
+  transition: all 0.2s ease;
+}
+
+.video-preview-container:hover {
+  box-shadow: 0 8px 20px rgba(0,0,0,0.4);
+}
+
+.recording-indicator {
+  animation: pulse 2s infinite;
+}
+
+.dragging {
+  cursor: grabbing !important;
+  user-select: none;
+}
+
+.video-controls button:hover {
+  background-color: rgba(255,255,255,0.2) !important;
+  transform: scale(1.1);
+}
+
+.video-controls button {
+  transition: all 0.2s ease;
+}

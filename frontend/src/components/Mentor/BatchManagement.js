@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useQuery } from 'react-query';
 import { Plus, Edit, Trash2, Users } from 'lucide-react';
-import axios from 'axios';
+import api from '../../utils/api';
 import toast from 'react-hot-toast';
 
 const BatchManagement = () => {
@@ -14,14 +14,14 @@ const BatchManagement = () => {
   });
 
   const { data: batches, isLoading, refetch } = useQuery('mentor-batches', async () => {
-    const response = await axios.get('/api/batches');
+    const response = await api.get('/api/batches');
     return response.data.data || [];
   });
 
   const handleCreateBatch = async (e) => {
     e.preventDefault();
     try {
-      await axios.post('/api/batches', batchForm);
+      await api.post('/api/batches', batchForm);
       toast.success('Batch created successfully');
       setShowBatchForm(false);
       setBatchForm({ code: '', name: '', description: '' });
@@ -34,7 +34,7 @@ const BatchManagement = () => {
   const handleUpdateBatch = async (e) => {
     e.preventDefault();
     try {
-      await axios.put(`/api/batches/${editingBatch.id}`, batchForm);
+      await api.put(`/api/batches/${editingBatch.id}`, batchForm);
       toast.success('Batch updated successfully');
       setEditingBatch(null);
       setShowBatchForm(false);
@@ -48,7 +48,7 @@ const BatchManagement = () => {
   const handleDeleteBatch = async (batchId) => {
     if (!window.confirm('Are you sure you want to delete this batch?')) return;
     try {
-      await axios.delete(`/api/batches/${batchId}`);
+      await api.delete(`/api/batches/${batchId}`);
       toast.success('Batch deleted successfully');
       refetch();
     } catch (error) {

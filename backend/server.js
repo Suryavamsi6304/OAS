@@ -34,14 +34,36 @@ const allowedOrigins = [
   'https://monumental-kataifi-3b4c02.netlify.app'
 ];
 
+// Add network IPs dynamically
+const os = require('os');
+const networkInterfaces = os.networkInterfaces();
+console.log('🌐 Detected network interfaces:');
+for (const interfaceName in networkInterfaces) {
+  const interfaces = networkInterfaces[interfaceName];
+  for (const iface of interfaces) {
+    if (iface.family === 'IPv4' && !iface.internal) {
+      console.log(`   - ${interfaceName}: ${iface.address}`);
+      allowedOrigins.push(`http://${iface.address}:3000`);
+      allowedOrigins.push(`http://${iface.address}:3001`);
+    }
+  }
+}
+
+// Add wildcard for development
+allowedOrigins.push('*');
+
+console.log('🔒 Allowed CORS origins:', allowedOrigins);
+
 // Add development origins if in development
 if (process.env.NODE_ENV === 'development') {
   allowedOrigins.push('http://localhost:3000', 'http://127.0.0.1:3000');
 }
 
 app.use(cors({
-  origin: allowedOrigins,
-  credentials: true
+  origin: true,
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
 }));
 app.use(express.json());
 
@@ -63,6 +85,19 @@ app.get('/', (req, res) => {
 app.get('/api/test', (req, res) => {
   res.json({ success: true, message: 'Server is running!' });
 });
+
+// Debug data endpoint
+app.get('/api/debug/data', async (req, res) => {
+  try {
+    const { checkData } = require('./debug-data');
+    const data = await checkData();
+    res.json({ success: true, data });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+
 
 
 
@@ -587,7 +622,7 @@ const io = require('socket.io')(server, {
     methods: ["GET", "POST"],
     credentials: true
   },
-  transports: ['polling', 'websocket'],
+  transports: ['websocket', 'polling'],
   allowEIO3: true
 });
 
@@ -601,16 +636,35 @@ const userRooms = new Map();
 
 // Store streaming socket reference
 app.set('streamingSocket', {
-  getActiveStreams: () => Array.from(activeStreams.values()),
+  getActiveStreams: () => {
+    const streams = [];
+    for (const [sessionId, stream] of activeStreams.entries()) {
+      const duration = Math.floor((Date.now() - new Date(stream.startTime).getTime()) / 1000);
+      streams.push({
+        sessionId,
+        studentId: stream.studentId,
+        studentName: stream.studentName || `Student ${stream.studentId}`,
+        examId: stream.examId,
+        examTitle: stream.examTitle || `Exam ${stream.examId}`,
+        startTime: stream.startTime,
+        mentorCount: stream.mentorCount || 0,
+        violations: stream.violations || 0,
+        riskScore: stream.riskScore || 0,
+        duration,
+        status: 'active',
+        isActive: true
+      });
+    }
+    return streams;
+  },
   terminateStream: (sessionId) => {
     const stream = activeStreams.get(sessionId);
     if (stream) {
-      io.emit('exam-terminated', {
+      io.emit('stream-terminated', {
         sessionId,
         reason: 'Terminated by mentor'
       });
       activeStreams.delete(sessionId);
-      io.emit('stream-ended', { sessionId });
       return true;
     }
     return false;
@@ -640,12 +694,14 @@ io.on('connection', (socket) => {
       examId, 
       examTitle: examTitle || 'Live Exam',
       startTime: new Date(), 
-      mentorCount: 0
+      mentorCount: 0,
+      violations: 0,
+      riskScore: 0
     });
     
-    console.log(`📺 New stream started: ${studentName || studentId} - ${examTitle}`);
+    console.log(`📺 Stream started: ${studentName || studentId} - ${examTitle || examId}`);
     
-    io.emit('new-stream-started', {
+    socket.broadcast.emit('new-stream-started', {
       sessionId, 
       studentId, 
       studentName: studentName || `Student ${studentId}`,
@@ -789,7 +845,21 @@ const PORT = process.env.PORT || 3001;
 server.listen(PORT, '0.0.0.0', () => {
   console.log(`🚀 Server running on port ${PORT}`);
   console.log(`🔌 Socket.IO server initialized`);
-  console.log(`📡 WebSocket available at ws://localhost:${PORT}`);
+  console.log(`📡 Server accessible at http://0.0.0.0:${PORT}`);
+  
+  // Show actual network IPs
+  const os = require('os');
+  const networkInterfaces = os.networkInterfaces();
+  console.log('🌐 Access from other devices:');
+  for (const interfaceName in networkInterfaces) {
+    const interfaces = networkInterfaces[interfaceName];
+    for (const iface of interfaces) {
+      if (iface.family === 'IPv4' && !iface.internal) {
+        console.log(`   Frontend: http://${iface.address}:3000`);
+        console.log(`   Backend:  http://${iface.address}:3001`);
+      }
+    }
+  }
 });
 
 // Handle server errors

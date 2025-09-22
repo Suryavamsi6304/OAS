@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
-import { Users, BookOpen, Clock, Plus, Code, Target, Edit, Trash2, RefreshCw, AlertTriangle, Trophy, Video as VideoIcon } from 'lucide-react';
+import { Users, BookOpen, Clock, Plus, Code, Target, Edit, Trash2, RefreshCw, AlertTriangle, Trophy, Video as VideoIcon, Eye } from 'lucide-react';
 import api from '../../utils/api';
 import toast from 'react-hot-toast';
 import ReAttemptRequests from './ReAttemptRequests';
@@ -35,17 +35,17 @@ const EnhancedMentorDashboard = () => {
 
   const fetchData = async () => {
     try {
-      const resultsRes = await api.get('/results/all');
+      const resultsRes = await api.get('/api/results/all');
       setResults(resultsRes.data.data || []);
       
-      const requestsRes = await api.get('/re-attempt/requests');
+      const requestsRes = await api.get('/api/re-attempt/requests');
       setReAttemptRequests(requestsRes.data.data || []);
       
-      const practiceRes = await api.get('/practice-tests');
+      const practiceRes = await api.get('/api/practice-tests');
       const allPracticeTests = practiceRes.data.data || [];
       setPracticeTests(allPracticeTests.filter(test => test.createdBy === user.id));
       
-      const skillRes = await api.get('/skill-assessments');
+      const skillRes = await api.get('/api/skill-assessments');
       const allSkillAssessments = skillRes.data.data || [];
       setSkillAssessments(allSkillAssessments.filter(assessment => assessment.createdBy === user.id));
       
@@ -102,7 +102,7 @@ const EnhancedMentorDashboard = () => {
 
   const deletePracticeTest = async (id) => {
     try {
-      await api.delete(`/exams/${id}`);
+      await api.delete(`/api/exams/${id}`);
       setPracticeTests(practiceTests.filter(test => test.id !== id));
       toast.success('Practice test deleted');
     } catch (error) {
@@ -113,7 +113,7 @@ const EnhancedMentorDashboard = () => {
 
   const deleteSkillAssessment = async (id) => {
     try {
-      await api.delete(`/exams/${id}`);
+      await api.delete(`/api/exams/${id}`);
       setSkillAssessments(skillAssessments.filter(assessment => assessment.id !== id));
       toast.success('Skill assessment deleted');
     } catch (error) {
@@ -531,9 +531,8 @@ const EnhancedMentorDashboard = () => {
               { id: 'performance', label: 'Performance', icon: Trophy },
               { id: 'practice', label: 'Practice', icon: Target },
               { id: 'skills', label: 'Skills', icon: Code },
+              { id: 'live-monitor', label: 'Live Monitor', icon: Eye },
               { id: 'requests', label: 'Requests', icon: RefreshCw },
-
-
               { id: 'approvals', label: 'Approvals', icon: AlertTriangle }
             ].map(tab => {
               const Icon = tab.icon;
@@ -577,9 +576,42 @@ const EnhancedMentorDashboard = () => {
         {activeTab === 'performance' && <BatchPerformance />}
         {activeTab === 'practice' && renderPracticeTests()}
         {activeTab === 'skills' && renderSkillAssessments()}
+        {activeTab === 'live-monitor' && (
+          <div style={{ backgroundColor: 'white', padding: '24px', borderRadius: '8px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+              <h2 style={{ fontSize: '20px', fontWeight: 'bold', margin: 0 }}>Live Proctoring Monitor</h2>
+              <button
+                onClick={() => navigate('/mentor/live-monitor')}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  padding: '10px 16px',
+                  backgroundColor: '#3b82f6',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '6px',
+                  cursor: 'pointer',
+                  fontSize: '14px'
+                }}
+              >
+                <Eye size={16} />
+                Open Live Monitor
+              </button>
+            </div>
+            <p style={{ color: '#6b7280', marginBottom: '16px' }}>Monitor students taking exams in real-time with live video streaming.</p>
+            <div style={{ padding: '20px', backgroundColor: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+              <h4 style={{ fontSize: '16px', fontWeight: '600', marginBottom: '12px' }}>Features:</h4>
+              <ul style={{ color: '#6b7280', lineHeight: '1.6' }}>
+                <li>Real-time video monitoring of students during exams</li>
+                <li>Flag students for suspicious behavior</li>
+                <li>Terminate exam sessions if needed</li>
+                <li>View violation reports and risk scores</li>
+              </ul>
+            </div>
+          </div>
+        )}
         {activeTab === 'requests' && <ReAttemptRequests />}
-
-
         {activeTab === 'approvals' && (
           <div style={{ backgroundColor: 'white', padding: '24px', borderRadius: '8px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}>
             <h2 style={{ fontSize: '20px', fontWeight: 'bold', marginBottom: '20px' }}>Approval Requests</h2>

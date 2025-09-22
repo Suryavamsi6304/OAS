@@ -12,7 +12,8 @@ const LiveStreamViewer = ({ sessionId, onClose }) => {
 
   useEffect(() => {
     // Initialize socket connection
-    socketRef.current = io('http://localhost:3001');
+    const { getSocketUrl } = require('../../utils/networkConfig');
+    socketRef.current = io(getSocketUrl());
     
     socketRef.current.on('connect', () => {
       setIsConnected(true);

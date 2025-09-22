@@ -32,6 +32,7 @@ import SkillAssessments from './components/Learner/SkillAssessments';
 import Jobs from './components/Learner/Jobs';
 
 import LiveStreamTest from './components/Test/LiveStreamTest';
+import VideoStreamTest from './components/Test/VideoStreamTest';
 import MeetingPage from './components/Meeting/MeetingPage';
 import CommunicationHub from './components/Communication/CommunicationHub';
 
@@ -351,6 +352,7 @@ function App() {
               
               {/* Live Stream Test Route */}
               <Route path="/live-stream-test" element={<LiveStreamTest />} />
+              <Route path="/video-stream-test" element={<VideoStreamTest />} />
               
               <Route path="/unauthorized" element={
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh' }}>

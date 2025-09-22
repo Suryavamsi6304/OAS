@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { RefreshCw, Clock, CheckCircle, XCircle, AlertCircle, ArrowLeft, Plus } from 'lucide-react';
-import axios from 'axios';
+import api from '../../utils/api';
 import toast from 'react-hot-toast';
 import { useNotifications } from '../../contexts/NotificationContext';
 
@@ -35,7 +35,7 @@ const ReAttempts = () => {
 
   const fetchReAttemptRequests = async () => {
     try {
-      const response = await axios.get('/api/re-attempt/my-requests');
+      const response = await api.get('/api/re-attempt/my-requests');
       setRequests(response.data.data || []);
     } catch (error) {
       console.error('Error fetching re-attempt requests:', error);
@@ -47,7 +47,7 @@ const ReAttempts = () => {
 
   const fetchFailedExams = async () => {
     try {
-      const response = await axios.get('/api/results/failed-skill-assessments');
+      const response = await api.get('/api/results/failed-skill-assessments');
       setFailedExams(response.data.data || []);
     } catch (error) {
       console.error('Error fetching failed exams:', error);
@@ -62,7 +62,7 @@ const ReAttempts = () => {
 
     setSubmitting(true);
     try {
-      const response = await axios.post('/api/re-attempt/request', {
+      const response = await api.post('/api/re-attempt/request', {
         examId: selectedExam,
         reason: reason.trim()
       });

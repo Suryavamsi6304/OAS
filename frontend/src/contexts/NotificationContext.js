@@ -25,7 +25,8 @@ export const NotificationProvider = ({ children }) => {
       const token = localStorage.getItem('token');
       
       // Initialize socket connection with error handling
-      const backendUrl = process.env.REACT_APP_API_URL || 'http://localhost:3001';
+      const { getApiUrl } = require('../utils/networkConfig');
+      const backendUrl = getApiUrl();
       const newSocket = io(backendUrl, {
         auth: {
           token: token

@@ -20,7 +20,8 @@ const LiveMonitorDashboard = () => {
   }, []);
 
   const initializeSocket = () => {
-    socketRef.current = io('http://localhost:3001');
+    const { getSocketUrl } = require('../../utils/networkConfig');
+    socketRef.current = io(getSocketUrl());
     
     socketRef.current.on('connect', () => {
       setIsConnected(true);
@@ -44,7 +45,8 @@ const LiveMonitorDashboard = () => {
 
   const fetchActiveStreams = async () => {
     try {
-      const response = await fetch('http://localhost:3001/api/streaming/active-streams', {
+      const { getApiUrl } = require('../../utils/networkConfig');
+      const response = await fetch(`${getApiUrl()}/api/streaming/active-streams`, {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`
         }
@@ -336,7 +338,7 @@ const LiveStreamViewer = ({ stream, onClose, socket }) => {
 
   const flagStudent = async () => {
     try {
-      await fetch(`http://localhost:3001/api/proctoring/${stream.sessionId}/flag`, {
+      await fetch(`${getApiUrl()}/api/proctoring/${stream.sessionId}/flag`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -355,7 +357,7 @@ const LiveStreamViewer = ({ stream, onClose, socket }) => {
   const terminateSession = async () => {
     if (window.confirm('Are you sure you want to terminate this exam session?')) {
       try {
-        await fetch(`http://localhost:3001/api/proctoring/${stream.sessionId}/terminate`, {
+        await fetch(`${getApiUrl()}/api/proctoring/${stream.sessionId}/terminate`, {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${localStorage.getItem('token')}`

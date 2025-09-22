@@ -31,7 +31,8 @@ const MeetingPage = () => {
     try {
       // Initialize Socket.IO
       const io = await import('socket.io-client');
-      socketRef.current = io.default('http://localhost:3001');
+      const { getSocketUrl } = require('../../utils/networkConfig');
+      socketRef.current = io.default(getSocketUrl());
       
       // Get user media
       const stream = await navigator.mediaDevices.getUserMedia({

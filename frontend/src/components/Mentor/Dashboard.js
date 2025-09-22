@@ -8,19 +8,19 @@ import ViolationRequests from './ViolationRequests';
 import ProctoringLogs from './ProctoringLogs';
 import LiveProctoring from './LiveProctoring';
 import BatchPerformance from './BatchPerformance';
-import axios from 'axios';
+import api from '../../utils/api';
 import toast from 'react-hot-toast';
 
 const MentorDashboard = () => {
   const [activeTab, setActiveTab] = useState('dashboard');
   
   const { data: results, isLoading: resultsLoading } = useQuery('mentor-results', async () => {
-    const response = await axios.get('/api/results/all');
+    const response = await api.get('/api/results/all');
     return response.data.data || [];
   });
   
   const { data: proctoringRequests } = useQuery('proctoring-requests', async () => {
-    const response = await axios.get('/api/proctoring/mentor-requests');
+    const response = await api.get('/api/proctoring/mentor-requests');
     return response.data.data || [];
   }, {
     refetchInterval: 10000
@@ -28,7 +28,7 @@ const MentorDashboard = () => {
 
   const { data: pendingApprovals, refetch: refetchApprovals } = useQuery('mentor-pending-approvals', async () => {
     console.log('Mentor fetching pending approvals...');
-    const response = await axios.get('/api/admin/pending-approvals');
+    const response = await api.get('/api/admin/pending-approvals');
     console.log('Mentor pending approvals response:', response.data);
     return response.data.data || [];
   }, {
@@ -37,7 +37,7 @@ const MentorDashboard = () => {
 
   const handleApproveUser = async (userId, approved) => {
     try {
-      await axios.put(`/api/admin/approve-user/${userId}`, { approved });
+      await api.put(`/api/admin/approve-user/${userId}`, { approved });
       toast.success(approved ? 'User approved successfully' : 'User rejected successfully');
       refetchApprovals();
     } catch (error) {
@@ -47,7 +47,7 @@ const MentorDashboard = () => {
 
   const handleGradeEssay = async (resultId, questionId, points) => {
     try {
-      await axios.put(`/api/results/${resultId}/grade`, {
+      await api.put(`/api/results/${resultId}/grade`, {
         questionId,
         points
       });

@@ -1,11 +1,11 @@
 import React from 'react';
 import { useQuery } from 'react-query';
 import { Trophy, Medal, Award, Users } from 'lucide-react';
-import axios from 'axios';
+import api from '../../utils/api';
 
 const Leaderboard = () => {
   const { data: response, isLoading, error } = useQuery('batch-leaderboard', async () => {
-    const res = await axios.get('/api/results/my-batch-leaderboard');
+    const res = await api.get('/api/results/my-batch-leaderboard');
     return res.data;
   }, {
     retry: 2,
@@ -80,9 +80,9 @@ const Leaderboard = () => {
               </tr>
             </thead>
             <tbody>
-              {leaderboard.map((student) => (
+              {leaderboard.map((student, index) => (
                 <tr 
-                  key={student.name} 
+                  key={student.id || `${student.name}-${student.rank}-${index}`} 
                   style={{ 
                     borderBottom: '1px solid #f3f4f6',
                     backgroundColor: student.isCurrentUser ? '#f0f9ff' : 'transparent'

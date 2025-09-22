@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Award, Clock, BookOpen, Play, Star, TrendingUp, AlertCircle, X, Send } from 'lucide-react';
 import DashboardLayout from '../Layout/DashboardLayout';
-import axios from 'axios';
+import api from '../../utils/api';
 import toast from 'react-hot-toast';
 
 const SkillAssessments = () => {
@@ -18,7 +18,7 @@ const SkillAssessments = () => {
 
   const fetchSkillAssessments = async () => {
     try {
-      const response = await axios.get('/api/skill-assessments');
+      const response = await api.get('/api/skill-assessments');
       setAssessments(response.data.data || []);
     } catch (error) {
       console.error('Error fetching skill assessments:', error);
@@ -30,7 +30,7 @@ const SkillAssessments = () => {
   const startAssessment = async (assessmentId) => {
     try {
       // Check if exam can be accessed
-      const response = await axios.get(`/api/exams/${assessmentId}`);
+      const response = await api.get(`/api/exams/${assessmentId}`);
       if (response.data.success) {
         window.location.href = `/learner/assessment/${assessmentId}`;
       }
@@ -54,7 +54,7 @@ const SkillAssessments = () => {
 
     setSubmitting(true);
     try {
-      const response = await axios.post('/api/re-attempt/request', {
+      const response = await api.post('/api/re-attempt/request', {
         examId: selectedExam.id,
         reason: reason.trim()
       });

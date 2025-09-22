@@ -3,14 +3,14 @@ import { useQuery } from 'react-query';
 import { useNavigate } from 'react-router-dom';
 import { Clock, BookOpen, Award, TrendingUp, Play, Eye } from 'lucide-react';
 import DashboardLayout from '../Layout/DashboardLayout';
-import axios from 'axios';
+import api from '../../utils/api';
 
 const StudentDashboard = () => {
   const navigate = useNavigate();
 
   const { data: exams, isLoading, error: examsError } = useQuery('exams', async () => {
     try {
-      const response = await axios.get('/api/exams');
+      const response = await api.get('/api/exams');
       return response.data.data || [];
     } catch (error) {
       console.error('Failed to fetch exams:', error);
@@ -20,7 +20,7 @@ const StudentDashboard = () => {
 
   const { data: results } = useQuery('student-results', async () => {
     try {
-      const response = await axios.get('/api/results/student');
+      const response = await api.get('/api/results/student');
       return response.data.data || [];
     } catch (error) {
       console.error('Failed to fetch results:', error);

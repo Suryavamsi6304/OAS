@@ -17,7 +17,7 @@ Before you begin, ensure you have the following installed:
 
 ```bash
 git clone <repository-url>
-cd assessment-platform
+cd OAS
 ```
 
 ### 2. Backend Setup

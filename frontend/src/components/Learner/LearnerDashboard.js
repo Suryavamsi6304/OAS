@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { BookOpen, Clock, Award, Play, Eye, User, LogOut, Code, Target, TrendingUp, Calendar, Download, Star } from 'lucide-react';
-import axios from 'axios';
+import api from '../../utils/api';
 import toast from 'react-hot-toast';
 
 const LearnerDashboard = () => {
@@ -23,10 +23,10 @@ const LearnerDashboard = () => {
   const fetchData = async () => {
     try {
       const [examsRes, resultsRes, practiceRes, skillsRes] = await Promise.all([
-        axios.get('/api/exams'),
-        axios.get('/api/results/student'),
-        axios.get('/api/practice-tests').catch(() => ({ data: { data: [] } })),
-        axios.get('/api/skills/assessment').catch(() => ({ data: { data: [] } }))
+        api.get('/api/exams'),
+        api.get('/api/results/student'),
+        api.get('/api/practice-tests').catch(() => ({ data: { data: [] } })),
+        api.get('/api/skills/assessment').catch(() => ({ data: { data: [] } }))
       ]);
       
       setExams(examsRes.data.data || []);

@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { Video, MessageSquare, Users, Calendar, Phone, Settings, ArrowLeft } from 'lucide-react';
-import axios from 'axios';
+import api from '../../utils/api';
 import io from 'socket.io-client';
 
 const CommunicationHub = () => {
@@ -40,7 +40,8 @@ const CommunicationHub = () => {
 
   const setupRealTimeUpdates = () => {
     // Socket.IO for real-time notifications
-    socketRef.current = io('http://localhost:3001');
+    const { getSocketUrl } = require('../../utils/networkConfig');
+    socketRef.current = io(getSocketUrl());
     
     socketRef.current.on('meeting-started', (data) => {
       if (user?.role === 'learner' && data.batch === user?.batchCode) {
@@ -67,7 +68,7 @@ const CommunicationHub = () => {
   const checkMeetingInvites = async () => {
     if (user?.role === 'learner' && user?.batchCode) {
       try {
-        const response = await axios.get(`/api/meetings/invites/${user.batchCode}`);
+        const response = await api.get(`/api/meetings/invites/${user.batchCode}`);
         if (response.data.data) {
           setMeetings([response.data.data]);
         } else {
@@ -82,7 +83,7 @@ const CommunicationHub = () => {
 
   const startMeeting = async (meetingData) => {
     try {
-      const response = await axios.post('/api/meetings/invite', meetingData);
+      const response = await api.post('/api/meetings/invite', meetingData);
       if (response.data.success) {
         // Navigate to meeting immediately
         navigate(`/meeting/${meetingData.meetingId}`);

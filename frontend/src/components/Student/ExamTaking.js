@@ -2,12 +2,13 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery } from 'react-query';
 import { useAuth } from '../../contexts/AuthContext';
-import { Clock, ChevronLeft, ChevronRight, Send, Code } from 'lucide-react';
-import axios from 'axios';
+import { Clock, ChevronLeft, ChevronRight, Send, Code, Camera, CameraOff } from 'lucide-react';
+import api from '../../utils/api';
 import toast from 'react-hot-toast';
 
-
 import CodeEditor from './CodeEditor';
+import DraggableVideoPreview from './DraggableVideoPreview';
+import proctoringService from '../../utils/proctoringService';
 
 
 const ExamTaking = () => {
@@ -20,9 +21,12 @@ const ExamTaking = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showCameraRules, setShowCameraRules] = useState(false);
   const [startTime] = useState(Date.now());
+  const [proctoringStream, setProctoringStream] = useState(null);
+  const [isProctoringActive, setIsProctoringActive] = useState(false);
+  const [showProctoringSetup, setShowProctoringSetup] = useState(true);
 
   const { data: exam, isLoading, error } = useQuery(['exam', id], async () => {
-    const response = await axios.get(`/api/exams/${id}`);
+    const response = await api.get(`/api/exams/${id}`);
     return response.data.data;
   }, {
     retry: 1,
@@ -38,6 +42,44 @@ const ExamTaking = () => {
     }
   }, [exam, timeLeft]);
 
+  // Initialize proctoring when exam loads
+  useEffect(() => {
+    if (exam && user && !proctoringStream) {
+      initializeProctoring();
+    }
+    
+    return () => {
+      if (proctoringStream) {
+        proctoringService.stopStreaming();
+      }
+    };
+  }, [exam, user]);
+
+  const initializeProctoring = async () => {
+    try {
+      const stream = await proctoringService.initialize(exam.id, user.id);
+      setProctoringStream(stream);
+      toast.success('Camera access granted for proctoring');
+    } catch (error) {
+      console.error('Failed to initialize proctoring:', error);
+      toast.error('Camera access required for this exam');
+    }
+  };
+
+  const startProctoring = async () => {
+    try {
+      await proctoringService.startStreaming(exam.id, user.id, user.name || user.username, exam.title);
+      setIsProctoringActive(true);
+      setShowProctoringSetup(false);
+      toast.success('Proctoring started - you are now being monitored');
+    } catch (error) {
+      console.error('Failed to start proctoring:', error);
+      toast.error('Failed to start proctoring');
+    }
+  };
+
+
+
 
 
   const handleSubmit = useCallback(async () => {
@@ -45,7 +87,11 @@ const ExamTaking = () => {
     
     setIsSubmitting(true);
     
-
+    // Stop proctoring before submission
+    if (isProctoringActive) {
+      proctoringService.stopStreaming();
+      setIsProctoringActive(false);
+    }
     
     try {
       const submissionData = {
@@ -57,7 +103,7 @@ const ExamTaking = () => {
         timeSpent: Math.floor((Date.now() - startTime) / 1000)
       };
 
-      const response = await axios.post('/api/exams/submit', submissionData);
+      const response = await api.post('/api/exams/submit', submissionData);
       if (response.data.success) {
         toast.success('Test submitted successfully!');
 
@@ -142,6 +188,91 @@ const ExamTaking = () => {
     );
   }
 
+  // Show proctoring setup modal
+  if (showProctoringSetup && proctoringStream) {
+    return (
+      <div style={{
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        backgroundColor: 'rgba(0,0,0,0.8)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        zIndex: 2000
+      }}>
+        <div style={{
+          backgroundColor: 'white',
+          borderRadius: '12px',
+          padding: '32px',
+          maxWidth: '500px',
+          width: '90%',
+          textAlign: 'center'
+        }}>
+          <Camera size={48} style={{ color: '#3b82f6', margin: '0 auto 16px' }} />
+          <h2 style={{ fontSize: '24px', fontWeight: 'bold', marginBottom: '16px' }}>Proctoring Setup</h2>
+          <p style={{ color: '#6b7280', marginBottom: '24px', lineHeight: '1.6' }}>
+            This exam requires proctoring. Your video will be monitored by mentors during the test. 
+            Please ensure you are in a quiet, well-lit environment and remain visible throughout the exam.
+          </p>
+          
+          <div style={{
+            backgroundColor: '#f8fafc',
+            border: '1px solid #e2e8f0',
+            borderRadius: '8px',
+            padding: '16px',
+            marginBottom: '24px',
+            textAlign: 'left'
+          }}>
+            <h4 style={{ fontSize: '16px', fontWeight: '600', marginBottom: '12px' }}>Proctoring Rules:</h4>
+            <ul style={{ fontSize: '14px', color: '#6b7280', lineHeight: '1.6', paddingLeft: '20px' }}>
+              <li>Keep your face visible at all times</li>
+              <li>Do not leave your seat during the exam</li>
+              <li>No additional people should be in the room</li>
+              <li>Keep your hands visible while typing</li>
+              <li>Do not use external devices or materials</li>
+            </ul>
+          </div>
+          
+          <div style={{ display: 'flex', gap: '12px', justifyContent: 'center' }}>
+            <button
+              onClick={() => navigate('/learner')}
+              style={{
+                padding: '12px 24px',
+                backgroundColor: '#6b7280',
+                color: 'white',
+                border: 'none',
+                borderRadius: '6px',
+                cursor: 'pointer'
+              }}
+            >
+              Cancel
+            </button>
+            <button
+              onClick={startProctoring}
+              style={{
+                padding: '12px 24px',
+                backgroundColor: '#10b981',
+                color: 'white',
+                border: 'none',
+                borderRadius: '6px',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px'
+              }}
+            >
+              <Camera size={16} />
+              Start Proctored Exam
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
 
 
   const question = exam.questions[currentQuestion];
@@ -149,6 +280,13 @@ const ExamTaking = () => {
 
   return (
     <div style={{ minHeight: '100vh', backgroundColor: '#f8fafc' }}>
+      {/* Draggable Video Preview */}
+      {proctoringStream && (
+        <DraggableVideoPreview
+          stream={proctoringStream}
+          isRecording={isProctoringActive}
+        />
+      )}
 
       
 
@@ -179,6 +317,26 @@ const ExamTaking = () => {
           </div>
           
           <div style={{ display: 'flex', alignItems: 'center', gap: '24px' }}>
+            {/* Proctoring Status */}
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              padding: '8px 16px',
+              backgroundColor: isProctoringActive ? '#f0fdf4' : '#fef2f2',
+              borderRadius: '8px',
+              border: `1px solid ${isProctoringActive ? '#bbf7d0' : '#fecaca'}`
+            }}>
+              {isProctoringActive ? <Camera size={16} /> : <CameraOff size={16} />}
+              <span style={{
+                marginLeft: '8px',
+                fontSize: '12px',
+                fontWeight: 'bold',
+                color: isProctoringActive ? '#059669' : '#dc2626'
+              }}>
+                {isProctoringActive ? 'MONITORED' : 'NOT MONITORED'}
+              </span>
+            </div>
+            
             <div style={{ 
               display: 'flex', 
               alignItems: 'center', 

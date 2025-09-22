@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Eye, Video, AlertTriangle, User, Clock, Shield, Play, Pause, Volume2, VolumeX } from 'lucide-react';
-import axios from 'axios';
 import { io } from 'socket.io-client';
 import toast from 'react-hot-toast';
 import DashboardLayout from '../Layout/DashboardLayout';
+import { getApiUrl } from '../../utils/networkConfig';
+import api from '../../utils/api';
 
 const LiveStreamMonitor = () => {
   const [activeStreams, setActiveStreams] = useState([]);
@@ -13,6 +14,12 @@ const LiveStreamMonitor = () => {
   const [streamStats, setStreamStats] = useState({});
   const videoRef = useRef(null);
   const socketRef = useRef(null);
+  const selectedStreamRef = useRef(null);
+
+  // Keep selectedStreamRef in sync with selectedStream
+  useEffect(() => {
+    selectedStreamRef.current = selectedStream;
+  }, [selectedStream]);
 
   useEffect(() => {
     initializeSocket();
@@ -32,9 +39,10 @@ const LiveStreamMonitor = () => {
   }, []);
 
   const initializeSocket = () => {
-    const apiUrl = process.env.REACT_APP_API_URL || 'http://localhost:3001';
+    const apiUrl = getApiUrl();
+    console.log('Connecting to socket server at:', apiUrl);
     socketRef.current = io(apiUrl, {
-      transports: ['polling', 'websocket']
+      transports: ['websocket', 'polling']
     });
 
     socketRef.current.on('connect', () => {
@@ -49,18 +57,26 @@ const LiveStreamMonitor = () => {
 
     socketRef.current.on('new-stream-started', (data) => {
       console.log('🎥 New stream started:', data);
-      setActiveStreams(prev => [...prev, {
-        sessionId: data.sessionId,
-        studentId: data.studentId,
-        studentName: data.studentName || `Student ${data.studentId}`,
-        examTitle: data.examTitle || 'Unknown Exam',
-        examId: data.examId,
-        startTime: data.startTime,
-        riskScore: 0,
-        violations: 0,
-        duration: 0,
-        status: 'active'
-      }]);
+      setActiveStreams(prev => {
+        // Check if stream already exists
+        const existingIndex = prev.findIndex(s => s.sessionId === data.sessionId);
+        if (existingIndex >= 0) {
+          return prev; // Don't add duplicate
+        }
+        
+        return [...prev, {
+          sessionId: data.sessionId,
+          studentId: data.studentId,
+          studentName: data.studentName || `Student ${data.studentId}`,
+          examTitle: data.examTitle || 'Unknown Exam',
+          examId: data.examId,
+          startTime: data.startTime,
+          riskScore: 0,
+          violations: 0,
+          duration: 0,
+          status: 'active'
+        }];
+      });
     });
 
     socketRef.current.on('stream-ended', (data) => {
@@ -71,8 +87,18 @@ const LiveStreamMonitor = () => {
       }
     });
 
+    socketRef.current.on('stream-terminated', (data) => {
+      console.log('🚫 Stream terminated:', data);
+      setActiveStreams(prev => prev.filter(s => s.sessionId !== data.sessionId));
+      if (selectedStream?.sessionId === data.sessionId) {
+        setSelectedStream(null);
+      }
+    });
+
     socketRef.current.on('video-frame', (data) => {
-      if (selectedStream && data.sessionId === selectedStream.sessionId) {
+      // Use a ref to get current selectedStream value
+      const currentSelected = selectedStreamRef.current;
+      if (currentSelected && data.sessionId === currentSelected.sessionId) {
         displayVideoFrame(data.frameData);
       }
     });
@@ -87,29 +113,13 @@ const LiveStreamMonitor = () => {
     if (!videoRef.current) return;
     
     try {
-      // Create a blob URL from the frame data
-      const blob = new Blob([frameData], { type: 'image/jpeg' });
-      const url = URL.createObjectURL(blob);
-      
-      const img = new Image();
-      img.onload = () => {
-        const canvas = document.createElement('canvas');
-        const ctx = canvas.getContext('2d');
-        canvas.width = img.width;
-        canvas.height = img.height;
-        ctx.drawImage(img, 0, 0);
-        
-        // Convert to video-compatible format
-        canvas.toBlob((blob) => {
-          const videoUrl = URL.createObjectURL(blob);
-          if (videoRef.current) {
-            videoRef.current.src = videoUrl;
-          }
-        });
-        
-        URL.revokeObjectURL(url);
-      };
-      img.src = url;
+      if (typeof frameData === 'string' && frameData.startsWith('data:')) {
+        // Revoke previous URL to prevent memory leaks
+        if (videoRef.current.src && videoRef.current.src.startsWith('data:')) {
+          URL.revokeObjectURL(videoRef.current.src);
+        }
+        videoRef.current.src = frameData;
+      }
     } catch (error) {
       console.error('Error displaying video frame:', error);
     }
@@ -130,13 +140,7 @@ const LiveStreamMonitor = () => {
 
   const fetchActiveStreams = async () => {
     try {
-      const token = localStorage.getItem('token');
-      const response = await axios.get('/api/streaming/active-streams', {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
+      const response = await api.get('/api/streaming/active-streams');
       
       if (response.data && response.data.success) {
         const streams = response.data.data || [];
@@ -206,19 +210,15 @@ const LiveStreamMonitor = () => {
   };
 
   const connectToStream = (stream) => {
+    console.log('Connecting to stream:', stream.sessionId);
     setSelectedStream(stream);
     
     if (socketRef.current && socketRef.current.connected) {
       socketRef.current.emit('mentor-join-stream', { 
         sessionId: stream.sessionId,
-        mentorId: 'current_mentor' // Replace with actual mentor ID
+        mentorId: 'current_mentor'
       });
       console.log('🔗 Joined stream:', stream.sessionId);
-    }
-
-    // Simulate video stream for demo
-    if (stream.sessionId.startsWith('mock_')) {
-      simulateVideoStream(stream);
     }
   };
 
@@ -281,13 +281,7 @@ const LiveStreamMonitor = () => {
 
   const flagStudent = async (sessionId, reason) => {
     try {
-      const token = localStorage.getItem('token');
-      await axios.post(`/api/streaming/${sessionId}/flag`, { reason }, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
+      await api.post(`/api/streaming/${sessionId}/flag`, { reason });
       console.log('🚩 Student flagged:', sessionId, reason);
       toast.success('Student flagged successfully');
     } catch (error) {
@@ -297,21 +291,24 @@ const LiveStreamMonitor = () => {
   };
 
   const terminateSession = async (sessionId) => {
+    if (!window.confirm('Are you sure you want to terminate this exam session? This action cannot be undone.')) {
+      return;
+    }
+    
     try {
-      const token = localStorage.getItem('token');
-      await axios.post(`/api/streaming/${sessionId}/terminate`, {}, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
-      setSelectedStream(null);
-      fetchActiveStreams();
-      console.log('🛑 Session terminated:', sessionId);
-      toast.success('Session terminated successfully');
+      const response = await api.post(`/api/streaming/${sessionId}/terminate`);
+      
+      if (response.data.success) {
+        setSelectedStream(null);
+        setActiveStreams(prev => prev.filter(s => s.sessionId !== sessionId));
+        console.log('🛑 Session terminated:', sessionId);
+        toast.success('Session terminated successfully');
+      } else {
+        toast.error(response.data.message || 'Failed to terminate session');
+      }
     } catch (error) {
       console.error('Failed to terminate session:', error);
-      toast.error('Failed to terminate session');
+      toast.error(error.response?.data?.message || 'Failed to terminate session');
     }
   };
 
@@ -525,6 +522,9 @@ const LiveStreamMonitor = () => {
                         backgroundColor: '#000'
                       }}
                       alt="Student Stream"
+                      onError={(e) => {
+                        console.log('Image load error:', e);
+                      }}
                     />
                     
                     {/* Status Overlays */}

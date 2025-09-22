@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery } from 'react-query';
 import { Clock, FileText, AlertTriangle, CheckCircle, ArrowLeft, Play } from 'lucide-react';
-import axios from 'axios';
+import api from '../../utils/api';
 import toast from 'react-hot-toast';
 
 const TestInstructions = () => {
@@ -11,7 +11,7 @@ const TestInstructions = () => {
   const [agreed, setAgreed] = useState(false);
 
   const { data: exam, isLoading, error } = useQuery(['exam', id], async () => {
-    const response = await axios.get(`/api/exams/${id}`);
+    const response = await api.get(`/api/exams/${id}`);
     return response.data.data;
   }, {
     retry: false,

@@ -3,7 +3,7 @@ import { useQuery } from 'react-query';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Users, BookOpen, Award, TrendingUp, Plus, Eye, Edit, Trash2, UserCheck, UserX } from 'lucide-react';
 import DashboardLayout from '../Layout/DashboardLayout';
-import axios from 'axios';
+import api from '../../utils/api';
 import toast from 'react-hot-toast';
 
 const AdminDashboard = () => {
@@ -12,40 +12,40 @@ const AdminDashboard = () => {
   const currentView = location.pathname.split('/')[2] || 'dashboard';
 
   const { data: analytics } = useQuery('analytics', async () => {
-    const response = await axios.get('/api/analytics');
+    const response = await api.get('/api/analytics');
     return response.data.data || {};
   });
 
   const { data: exams, isLoading: examsLoading, refetch: refetchExams } = useQuery('admin-exams', async () => {
-    const response = await axios.get('/api/exams');
+    const response = await api.get('/api/exams');
     return response.data.data || [];
   });
 
   const { data: results } = useQuery('all-results', async () => {
-    const response = await axios.get('/api/results/all');
+    const response = await api.get('/api/results/all');
     return response.data.data || [];
   });
 
   const { data: users, isLoading: usersLoading, refetch: refetchUsers } = useQuery('admin-users', async () => {
-    const response = await axios.get('/api/admin/users');
+    const response = await api.get('/api/admin/users');
     return response.data.data || [];
   }, {
     enabled: currentView === 'users'
   });
 
   const { data: pendingApprovals, isLoading: approvalsLoading, refetch: refetchApprovals } = useQuery('pending-approvals', async () => {
-    const response = await axios.get('/api/admin/pending-approvals');
+    const response = await api.get('/api/admin/pending-approvals');
     return response.data.data || [];
   });
 
   const { data: batches } = useQuery('batches', async () => {
-    const response = await axios.get('/api/batches');
+    const response = await api.get('/api/batches');
     return response.data.data || [];
   });
 
   const handleApproveUser = async (userId, approved) => {
     try {
-      await axios.put(`/api/admin/approve-user/${userId}`, { approved });
+      await api.put(`/api/admin/approve-user/${userId}`, { approved });
       toast.success(approved ? 'User approved successfully' : 'User rejected successfully');
       refetchApprovals();
       refetchUsers();
@@ -58,7 +58,7 @@ const AdminDashboard = () => {
     if (!window.confirm('Are you sure you want to delete this exam?')) return;
     
     try {
-      await axios.delete(`/api/exams/${examId}`);
+      await api.delete(`/api/exams/${examId}`);
       toast.success('Exam deleted successfully');
       refetchExams();
     } catch (error) {
@@ -79,7 +79,7 @@ const AdminDashboard = () => {
 
   const handleToggleUserStatus = async (userId, currentStatus) => {
     try {
-      await axios.put(`/api/admin/users/${userId}/status`, {
+      await api.put(`/api/admin/users/${userId}/status`, {
         isActive: !currentStatus
       });
       toast.success('User status updated successfully');
@@ -92,7 +92,7 @@ const AdminDashboard = () => {
   const handleCreateUser = async (e) => {
     e.preventDefault();
     try {
-      await axios.post('/api/admin/users', userForm);
+      await api.post('/api/admin/users', userForm);
       toast.success('User created successfully');
       setShowUserForm(false);
       setUserForm({ username: '', email: '', password: '', name: '', role: 'learner', batchCode: '' });
@@ -105,7 +105,7 @@ const AdminDashboard = () => {
   const handleUpdateUser = async (e) => {
     e.preventDefault();
     try {
-      await axios.put(`/api/admin/users/${editingUser.id}`, userForm);
+      await api.put(`/api/admin/users/${editingUser.id}`, userForm);
       toast.success('User updated successfully');
       setEditingUser(null);
       setShowUserForm(false);
@@ -119,7 +119,7 @@ const AdminDashboard = () => {
   const handleDeleteUser = async (userId) => {
     if (!window.confirm('Are you sure you want to delete this user?')) return;
     try {
-      await axios.delete(`/api/admin/users/${userId}`);
+      await api.delete(`/api/admin/users/${userId}`);
       toast.success('User deleted successfully');
       refetchUsers();
     } catch (error) {

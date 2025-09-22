@@ -4,7 +4,7 @@ import { useForm, useFieldArray } from 'react-hook-form';
 import { Plus, Trash2, Save, ArrowLeft } from 'lucide-react';
 import DashboardLayout from '../Layout/DashboardLayout';
 import CodingQuestionForm from './CodingQuestionForm';
-import axios from 'axios';
+import api from '../../utils/api';
 import toast from 'react-hot-toast';
 
 const ExamForm = () => {
@@ -75,7 +75,7 @@ const ExamForm = () => {
         }))
       };
 
-      await axios.post('/api/exams', examData);
+      await api.post('/api/exams', examData);
       toast.success('Exam created successfully!');
       navigate('/admin');
     } catch (error) {

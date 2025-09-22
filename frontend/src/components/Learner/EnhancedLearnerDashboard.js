@@ -5,7 +5,7 @@ import { BookOpen, Clock, Award, Play, Eye, User, LogOut, Code, Target, Trending
 import NotificationBell from '../Notifications/NotificationBell';
 import Leaderboard from './Leaderboard';
 
-import axios from 'axios';
+import api from '../../utils/api';
 import toast from 'react-hot-toast';
 import io from 'socket.io-client';
 
@@ -32,7 +32,8 @@ const EnhancedLearnerDashboard = () => {
   }, [user?.batchCode]);
 
   const setupMeetingNotifications = () => {
-    const apiUrl = process.env.REACT_APP_API_URL || 'http://localhost:3001';
+    const { getApiUrl } = require('../../utils/networkConfig');
+    const apiUrl = getApiUrl();
     const socket = io(apiUrl, {
       transports: ['polling', 'websocket']
     });
@@ -68,11 +69,11 @@ const EnhancedLearnerDashboard = () => {
   const fetchData = async () => {
     try {
       const [examsRes, resultsRes, practiceRes, skillRes, requestsRes] = await Promise.all([
-        axios.get('/api/exams'),
-        axios.get('/api/results/student'),
-        axios.get('/api/practice-tests'),
-        axios.get('/api/skill-assessments'),
-        axios.get('/api/re-attempt/my-requests').catch(() => ({ data: { data: [] } }))
+        api.get('/api/exams'),
+        api.get('/api/results/student'),
+        api.get('/api/practice-tests'),
+        api.get('/api/skill-assessments'),
+        api.get('/api/re-attempt/my-requests').catch(() => ({ data: { data: [] } }))
       ]);
       
       setExams(examsRes.data.data || []);

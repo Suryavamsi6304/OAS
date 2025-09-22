@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { CheckCircle, XCircle, Clock, User, FileText, Calendar } from 'lucide-react';
-import axios from 'axios';
+import api from '../../utils/api';
 import toast from 'react-hot-toast';
 import { useNotifications } from '../../contexts/NotificationContext';
 
@@ -30,7 +30,7 @@ const ReAttemptRequests = () => {
 
   const fetchRequests = async () => {
     try {
-      const response = await axios.get('/api/re-attempt/requests');
+      const response = await api.get('/api/re-attempt/requests');
       setRequests(response.data.data || []);
     } catch (error) {
       toast.error('Failed to load re-attempt requests');
@@ -42,7 +42,7 @@ const ReAttemptRequests = () => {
   const reviewRequest = async (requestId, status) => {
     setSubmitting(true);
     try {
-      const response = await axios.put(`/api/re-attempt/requests/${requestId}/review`, {
+      const response = await api.put(`/api/re-attempt/requests/${requestId}/review`, {
         status,
         comment: reviewComment
       });

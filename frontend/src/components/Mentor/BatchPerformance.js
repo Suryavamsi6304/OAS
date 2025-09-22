@@ -1,11 +1,11 @@
 import React from 'react';
 import { useQuery } from 'react-query';
 import { Users, Trophy } from 'lucide-react';
-import axios from 'axios';
+import api from '../../utils/api';
 
 const BatchPerformance = () => {
   const { data: performanceData, isLoading } = useQuery('batch-performance', async () => {
-    const response = await axios.get('/api/results/batch-performance');
+    const response = await api.get('/api/results/batch-performance');
     return response.data.data || { batches: {}, stats: {} };
   });
 

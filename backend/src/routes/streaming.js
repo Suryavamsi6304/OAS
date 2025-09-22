@@ -19,10 +19,16 @@ router.post('/:sessionId/flag', (req, res) => {
 router.post('/:sessionId/terminate', (req, res) => {
   const { sessionId } = req.params;
   const streamingSocket = req.app.get('streamingSocket');
-  if (streamingSocket) {
-    streamingSocket.terminateStream?.(sessionId);
+  if (streamingSocket && streamingSocket.terminateStream) {
+    const terminated = streamingSocket.terminateStream(sessionId);
+    if (terminated) {
+      res.json({ success: true, message: 'Session terminated successfully' });
+    } else {
+      res.status(404).json({ success: false, message: 'Session not found' });
+    }
+  } else {
+    res.status(500).json({ success: false, message: 'Streaming service unavailable' });
   }
-  res.json({ success: true, message: 'Session terminated' });
 });
 
 module.exports = router;

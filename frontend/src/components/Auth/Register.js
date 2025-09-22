@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useMutation } from 'react-query';
 import { useNavigate, Link } from 'react-router-dom';
 import { User, Mail, Lock, UserCheck, Eye, EyeOff } from 'lucide-react';
-import axios from 'axios';
+import api from '../../utils/api';
 import toast from 'react-hot-toast';
 import { useAuth } from '../../contexts/AuthContext';
 
@@ -29,7 +29,7 @@ const Register = () => {
   useEffect(() => {
     const fetchBatches = async () => {
       try {
-        const response = await axios.get('/api/batches');
+        const response = await api.get('/api/batches');
         setAvailableBatches(response.data.data || []);
       } catch (error) {
         console.error('Failed to fetch batches:', error);
@@ -42,7 +42,7 @@ const Register = () => {
   const registerMutation = useMutation(
     async (userData) => {
       console.log('Sending registration data:', userData);
-      const response = await axios.post('/api/auth/register', userData);
+      const response = await api.post('/api/auth/register', userData);
       console.log('Registration response:', response.data);
       return response.data;
     },
