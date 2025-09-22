@@ -6,6 +6,7 @@ import {
   FileText, Search, Home, Shield, Eye, AlertTriangle, Layers
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
+import NotificationBell from '../Notifications/NotificationBell';
 
 /**
  * Role-based Navigation Configuration
@@ -260,26 +261,7 @@ const DashboardLayout = ({ children, title }) => {
             
             <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
               {/* Notifications */}
-              <button style={{
-                padding: '8px',
-                color: '#9ca3af',
-                borderRadius: '50%',
-                border: 'none',
-                background: 'none',
-                cursor: 'pointer',
-                position: 'relative'
-              }}>
-                <Bell size={20} />
-                <span style={{
-                  position: 'absolute',
-                  top: 0,
-                  right: 0,
-                  width: '8px',
-                  height: '8px',
-                  backgroundColor: '#ef4444',
-                  borderRadius: '50%'
-                }}></span>
-              </button>
+              <NotificationBell />
               
               {/* Profile */}
               <div style={{

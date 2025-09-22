@@ -1,0 +1,25 @@
+.card {
+  background-color: white;
+  border-radius: 8px;
+  border: 1px solid #e5e7eb;
+}
+
+.card-shadow {
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.card-padding-none {
+  padding: 0;
+}
+
+.card-padding-small {
+  padding: 16px;
+}
+
+.card-padding-medium {
+  padding: 24px;
+}
+
+.card-padding-large {
+  padding: 32px;
+}

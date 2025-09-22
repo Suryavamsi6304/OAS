@@ -44,7 +44,8 @@ const NotificationBell = () => {
           cursor: 'pointer',
           display: 'flex',
           alignItems: 'center',
-          justifyContent: 'center'
+          justifyContent: 'center',
+          zIndex: 1000
         }}
       >
         <Bell size={20} style={{ color: '#6b7280' }} />
@@ -72,16 +73,16 @@ const NotificationBell = () => {
       {/* Dropdown */}
       {showDropdown && (
         <div style={{
-          position: 'absolute',
-          top: '100%',
-          right: 0,
+          position: 'fixed',
+          top: '60px',
+          right: '20px',
           width: '350px',
           maxHeight: '400px',
           backgroundColor: 'white',
           border: '1px solid #e5e7eb',
           borderRadius: '8px',
           boxShadow: '0 10px 25px rgba(0,0,0,0.15)',
-          zIndex: 1000,
+          zIndex: 9999,
           overflow: 'hidden'
         }}>
           {/* Header */}

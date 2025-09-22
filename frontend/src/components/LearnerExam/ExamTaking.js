@@ -24,6 +24,7 @@ const ExamTaking = () => {
   const [proctoringStream, setProctoringStream] = useState(null);
   const [isProctoringActive, setIsProctoringActive] = useState(false);
   const [showProctoringSetup, setShowProctoringSetup] = useState(true);
+  const [violations, setViolations] = useState([]);
 
   const { data: exam, isLoading, error } = useQuery(['exam', id], async () => {
     const response = await api.get(`/api/exams/${id}`);
@@ -54,6 +55,124 @@ const ExamTaking = () => {
       }
     };
   }, [exam, user]);
+
+  // Keyboard violation detection
+  useEffect(() => {
+    const handleKeyDown = (event) => {
+      const { ctrlKey, altKey, key, metaKey } = event;
+      
+      // Detect prohibited key combinations
+      if (ctrlKey || altKey || metaKey) {
+        const violation = {
+          id: Date.now(),
+          type: 'keyboard_violation',
+          timestamp: new Date().toISOString(),
+          details: `Prohibited key combination: ${ctrlKey ? 'Ctrl+' : ''}${altKey ? 'Alt+' : ''}${metaKey ? 'Cmd+' : ''}${key}`,
+          severity: 'high'
+        };
+        
+        setViolations(prev => [...prev, violation]);
+        
+        // Show warning toast
+        toast.error(`⚠️ Violation detected: ${violation.details}`, {
+          duration: 3000,
+          style: {
+            background: '#fef2f2',
+            color: '#dc2626',
+            border: '1px solid #fecaca'
+          }
+        });
+        
+        // Prevent the action
+        event.preventDefault();
+        event.stopPropagation();
+        
+        // Log violation to backend if proctoring is active
+        if (isProctoringActive) {
+          logViolation(violation);
+        }
+      }
+    };
+    
+    // Add event listener
+    document.addEventListener('keydown', handleKeyDown, true);
+    
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown, true);
+    };
+  }, [isProctoringActive]);
+
+  // Fullscreen monitoring
+  useEffect(() => {
+    const enterFullscreen = async () => {
+      try {
+        const elem = document.documentElement;
+        if (elem.requestFullscreen) {
+          await elem.requestFullscreen();
+        } else if (elem.webkitRequestFullscreen) {
+          await elem.webkitRequestFullscreen();
+        } else if (elem.msRequestFullscreen) {
+          await elem.msRequestFullscreen();
+        }
+      } catch (error) {
+        console.log('Fullscreen request failed:', error.message);
+      }
+    };
+
+    const handleFullscreenChange = () => {
+      const isFullscreen = !!(document.fullscreenElement || document.webkitFullscreenElement || document.msFullscreenElement);
+      
+      if (!isFullscreen && exam && !showProctoringSetup) {
+        // User exited fullscreen during exam
+        const violation = {
+          id: Date.now(),
+          type: 'fullscreen_violation',
+          timestamp: new Date().toISOString(),
+          details: 'Exited fullscreen mode during exam',
+          severity: 'high'
+        };
+        
+        console.log('Fullscreen violation detected:', violation);
+        setViolations(prev => [...prev, violation]);
+        
+        if (isProctoringActive) {
+          logViolation(violation);
+        }
+        
+        // Force back to fullscreen after 3 seconds
+        setTimeout(() => {
+          console.log('Forcing back to fullscreen');
+          enterFullscreen();
+        }, 3000);
+      }
+    };
+
+    // Store enterFullscreen function globally for user interaction
+    window.enterExamFullscreen = enterFullscreen;
+
+    // Listen for fullscreen changes
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
+    document.addEventListener('msfullscreenchange', handleFullscreenChange);
+
+    return () => {
+      document.removeEventListener('fullscreenchange', handleFullscreenChange);
+      document.removeEventListener('webkitfullscreenchange', handleFullscreenChange);
+      document.removeEventListener('msfullscreenchange', handleFullscreenChange);
+    };
+  }, [exam, showProctoringSetup, isProctoringActive]);
+  
+  const logViolation = async (violation) => {
+    try {
+      await api.post('/api/violations/log', {
+        examId: id,
+        studentId: user.id,
+        violation
+      });
+    } catch (error) {
+      console.error('Failed to log violation:', error);
+    }
+  };
 
   const initializeProctoring = async () => {
     try {
@@ -91,6 +210,15 @@ const ExamTaking = () => {
     if (isProctoringActive) {
       proctoringService.stopStreaming();
       setIsProctoringActive(false);
+    }
+    
+    // Exit fullscreen on submission
+    if (document.exitFullscreen) {
+      document.exitFullscreen();
+    } else if (document.webkitExitFullscreen) {
+      document.webkitExitFullscreen();
+    } else if (document.msExitFullscreen) {
+      document.msExitFullscreen();
     }
     
     try {
@@ -251,7 +379,10 @@ const ExamTaking = () => {
               Cancel
             </button>
             <button
-              onClick={startProctoring}
+              onClick={async () => {
+                await window.enterExamFullscreen?.();
+                startProctoring();
+              }}
               style={{
                 padding: '12px 24px',
                 backgroundColor: '#10b981',
@@ -336,6 +467,26 @@ const ExamTaking = () => {
                 {isProctoringActive ? 'MONITORED' : 'NOT MONITORED'}
               </span>
             </div>
+            
+            {/* Violations Counter */}
+            {violations.length > 0 && (
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                padding: '8px 16px',
+                backgroundColor: '#fef2f2',
+                borderRadius: '8px',
+                border: '1px solid #fecaca'
+              }}>
+                <span style={{
+                  fontSize: '12px',
+                  fontWeight: 'bold',
+                  color: '#dc2626'
+                }}>
+                  ⚠️ {violations.length} Violation{violations.length !== 1 ? 's' : ''}
+                </span>
+              </div>
+            )}
             
             <div style={{ 
               display: 'flex', 

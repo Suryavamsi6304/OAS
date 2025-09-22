@@ -19,8 +19,14 @@ const EnhancedMentorDashboard = () => {
   const [practiceTests, setPracticeTests] = useState([]);
   const [skillAssessments, setSkillAssessments] = useState([]);
   const [reAttemptRequests, setReAttemptRequests] = useState([]);
+  const [violations, setViolations] = useState([]);
+  const [batches, setBatches] = useState([]);
+  const [selectedBatch, setSelectedBatch] = useState('');
+  const [selectedStudent, setSelectedStudent] = useState('');
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState(() => {
+    const path = window.location.pathname;
+    if (path.includes('proctoring-logs')) return 'violations';
     return localStorage.getItem('mentorActiveTab') || 'dashboard';
   });
   const [showCreatePractice, setShowCreatePractice] = useState(false);
@@ -49,6 +55,12 @@ const EnhancedMentorDashboard = () => {
       const allSkillAssessments = skillRes.data.data || [];
       setSkillAssessments(allSkillAssessments.filter(assessment => assessment.createdBy === user.id));
       
+      const violationsRes = await api.get('/api/violations');
+      setViolations(violationsRes.data.data || []);
+      
+      const batchesRes = await api.get('/api/batches');
+      setBatches(batchesRes.data.data || []);
+      
     } catch (error) {
       console.error('Error fetching data:', error);
       toast.error('Failed to load data');
@@ -67,7 +79,8 @@ const EnhancedMentorDashboard = () => {
     needsGrading: needsGrading.length,
     pendingRequests: reAttemptRequests.filter(r => r.status === 'pending').length,
     practiceTestsCreated: practiceTests.length,
-    skillAssessmentsCreated: skillAssessments.length
+    skillAssessmentsCreated: skillAssessments.length,
+    totalViolations: violations.length
   };
 
   const handleCreatePracticeTest = (formData) => {
@@ -532,6 +545,7 @@ const EnhancedMentorDashboard = () => {
               { id: 'practice', label: 'Practice', icon: Target },
               { id: 'skills', label: 'Skills', icon: Code },
               { id: 'live-monitor', label: 'Live Monitor', icon: Eye },
+              { id: 'violations', label: 'Violations', icon: AlertTriangle },
               { id: 'requests', label: 'Requests', icon: RefreshCw },
               { id: 'approvals', label: 'Approvals', icon: AlertTriangle }
             ].map(tab => {
@@ -609,6 +623,180 @@ const EnhancedMentorDashboard = () => {
                 <li>View violation reports and risk scores</li>
               </ul>
             </div>
+          </div>
+        )}
+        {activeTab === 'violations' && (
+          <div style={{ backgroundColor: 'white', padding: '24px', borderRadius: '8px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}>
+            <h2 style={{ fontSize: '20px', fontWeight: 'bold', marginBottom: '20px' }}>Proctoring Violations</h2>
+            
+            {/* Filters */}
+            <div style={{ display: 'flex', gap: '16px', marginBottom: '24px' }}>
+              <div style={{ flex: 1 }}>
+                <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', marginBottom: '8px' }}>Select Batch</label>
+                <select
+                  value={selectedBatch}
+                  onChange={(e) => {
+                    setSelectedBatch(e.target.value);
+                    setSelectedStudent('');
+                  }}
+                  style={{
+                    width: '100%',
+                    padding: '8px 12px',
+                    border: '1px solid #d1d5db',
+                    borderRadius: '6px',
+                    fontSize: '14px'
+                  }}
+                >
+                  <option value="">All Batches</option>
+                  {batches.map(batch => (
+                    <option key={batch.id} value={batch.code}>{batch.name} ({batch.code})</option>
+                  ))}
+                </select>
+              </div>
+              
+              {selectedBatch && (
+                <div style={{ flex: 1 }}>
+                  <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', marginBottom: '8px' }}>Select Student</label>
+                  <select
+                    value={selectedStudent}
+                    onChange={(e) => setSelectedStudent(e.target.value)}
+                    style={{
+                      width: '100%',
+                      padding: '8px 12px',
+                      border: '1px solid #d1d5db',
+                      borderRadius: '6px',
+                      fontSize: '14px'
+                    }}
+                  >
+                    <option value="">All Students</option>
+                    {[...new Set(violations
+                      .filter(v => {
+                        console.log('Violation batch:', v.student?.batchCode, 'Selected batch:', selectedBatch);
+                        return v.student?.batchCode === selectedBatch;
+                      })
+                      .map(v => v.student?.name)
+                      .filter(Boolean)
+                    )].map(name => (
+                      <option key={name} value={name}>{name}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
+            </div>
+            
+            {violations.length === 0 ? (
+              <div style={{ textAlign: 'center', padding: '40px', color: '#6b7280' }}>
+                <AlertTriangle size={48} style={{ margin: '0 auto 16px', opacity: 0.5 }} />
+                <p>No violations detected yet.</p>
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                {Object.entries(
+                  violations
+                    .filter(v => !selectedBatch || v.student?.batchCode === selectedBatch)
+                    .filter(v => !selectedStudent || v.student?.name === selectedStudent)
+                    .reduce((acc, violation) => {
+                      const examKey = `${violation.examId}-${violation.exam?.title}`;
+                      if (!acc[examKey]) {
+                        acc[examKey] = {
+                          exam: violation.exam,
+                          violations: []
+                        };
+                      }
+                      acc[examKey].violations.push(violation);
+                      return acc;
+                    }, {})
+                ).map(([examKey, examData]) => (
+                  <div key={examKey} style={{
+                    border: '1px solid #e5e7eb',
+                    borderRadius: '8px',
+                    padding: '16px'
+                  }}>
+                    <div style={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      marginBottom: '16px'
+                    }}>
+                      <h3 style={{ fontSize: '16px', fontWeight: '600', margin: 0, color: '#1f2937' }}>
+                        📝 {examData.exam?.title}
+                      </h3>
+                      <span style={{
+                        padding: '4px 8px',
+                        borderRadius: '12px',
+                        fontSize: '12px',
+                        fontWeight: 'bold',
+                        backgroundColor: '#fef2f2',
+                        color: '#dc2626'
+                      }}>
+                        {examData.violations.length} violation{examData.violations.length !== 1 ? 's' : ''}
+                      </span>
+                    </div>
+                    
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                      {Object.entries(
+                        examData.violations.reduce((acc, violation) => {
+                          const key = `${violation.student?.name}-${violation.details}`;
+                          if (!acc[key]) {
+                            acc[key] = {
+                              ...violation,
+                              count: 0,
+                              timestamps: []
+                            };
+                          }
+                          acc[key].count++;
+                          acc[key].timestamps.push(violation.timestamp);
+                          return acc;
+                        }, {})
+                      ).map(([key, groupedViolation]) => (
+                        <div key={key} style={{
+                          padding: '12px',
+                          backgroundColor: '#fef2f2',
+                          borderRadius: '6px',
+                          border: '1px solid #fecaca'
+                        }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                            <div style={{ flex: 1 }}>
+                              <p style={{ fontSize: '13px', fontWeight: '600', color: '#374151', margin: '0 0 4px 0' }}>
+                                👤 {groupedViolation.student?.name}
+                              </p>
+                              <p style={{ fontSize: '13px', color: '#374151', margin: '0 0 4px 0' }}>
+                                {groupedViolation.details}
+                              </p>
+                              <p style={{ fontSize: '11px', color: '#6b7280', margin: 0 }}>
+                                Last: {new Date(groupedViolation.timestamps[groupedViolation.timestamps.length - 1]).toLocaleString()}
+                              </p>
+                            </div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                              <span style={{
+                                padding: '2px 6px',
+                                borderRadius: '8px',
+                                fontSize: '9px',
+                                fontWeight: 'bold',
+                                backgroundColor: '#3b82f6',
+                                color: 'white'
+                              }}>
+                                {groupedViolation.count}x
+                              </span>
+                              <span style={{
+                                padding: '2px 6px',
+                                borderRadius: '8px',
+                                fontSize: '9px',
+                                fontWeight: 'bold',
+                                backgroundColor: groupedViolation.severity === 'high' ? '#dc2626' : groupedViolation.severity === 'medium' ? '#f59e0b' : '#6b7280',
+                                color: 'white'
+                              }}>
+                                {groupedViolation.severity.toUpperCase()}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         )}
         {activeTab === 'requests' && <ReAttemptRequests />}

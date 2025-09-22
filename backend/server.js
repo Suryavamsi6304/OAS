@@ -2,6 +2,7 @@ const express = require('express');
 const cors = require('cors');
 const dotenv = require('dotenv');
 const http = require('http');
+const { Server } = require('socket.io');
 const { connectDB } = require('./config/database');
 const { auth, adminOnly, mentorOrAdmin, learnerOnly } = require('./middleware/auth');
 const { csrfProtection, getCSRFToken } = require('./middleware/csrf');
@@ -25,6 +26,8 @@ connectDB();
 
 const app = express();
 const server = http.createServer(app);
+
+// Socket.IO will be configured later in the file
 
 // Middleware
 const allowedOrigins = [
@@ -280,6 +283,63 @@ app.get('/api/results/failed-skill-assessments', auth, learnerOnly, async (req, 
 app.get('/api/notifications', auth, notificationController.getNotifications);
 app.put('/api/notifications/:id/read', auth, notificationController.markAsRead);
 app.get('/api/notifications/unread-count', auth, notificationController.getUnreadCount);
+
+// Violation logging route
+app.post('/api/violations/log', auth, async (req, res) => {
+  try {
+    const { examId, studentId, violation } = req.body;
+    const { Violation } = require('./models');
+    
+    // Save violation to database
+    const savedViolation = await Violation.create({
+      examId,
+      studentId,
+      type: violation.type,
+      details: violation.details,
+      severity: violation.severity,
+      timestamp: new Date(violation.timestamp)
+    });
+    
+    console.log(`🚨 VIOLATION SAVED:`, savedViolation.toJSON());
+    
+    // Emit to mentors for real-time monitoring
+    const io = req.app.get('io');
+    if (io) {
+      io.emit('violation-detected', {
+        examId,
+        studentId,
+        studentName: req.user.name,
+        violation: savedViolation
+      });
+    }
+    
+    res.json({ success: true, message: 'Violation logged', data: savedViolation });
+  } catch (error) {
+    console.error('Error logging violation:', error);
+    res.status(500).json({ success: false, message: 'Failed to log violation' });
+  }
+});
+
+// Get violations for mentors
+app.get('/api/violations', auth, mentorOrAdmin, async (req, res) => {
+  try {
+    const { Violation, User, Exam } = require('./models');
+    
+    const violations = await Violation.findAll({
+      include: [
+        { model: User, as: 'student', attributes: ['name', 'username', 'batchCode'] },
+        { model: Exam, as: 'exam', attributes: ['title'] }
+      ],
+      order: [['timestamp', 'DESC']],
+      limit: 100
+    });
+    
+    res.json({ success: true, data: violations });
+  } catch (error) {
+    console.error('Error fetching violations:', error);
+    res.status(500).json({ success: false, message: 'Failed to fetch violations' });
+  }
+});
 
 // Admin user management routes
 app.get('/api/admin/users', auth, adminOnly, async (req, res) => {
@@ -681,6 +741,17 @@ io.on('connection', (socket) => {
     socket.join(roomName);
     userRooms.set(socket.id, { userId, userType, roomName });
     console.log(`User ${userId} (${userType}) joined room ${roomName}`);
+  });
+  
+  // Re-attempt notification events
+  socket.on('new-reattempt-request', (data) => {
+    // Broadcast to all mentors
+    socket.broadcast.emit('new-reattempt-request', data);
+  });
+  
+  socket.on('reattempt-response', (data) => {
+    // Send to specific student
+    io.to(`user_${data.studentId}`).emit('reattempt-response', data);
   });
   
   // Streaming handlers

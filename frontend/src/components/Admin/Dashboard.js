@@ -3,6 +3,8 @@ import { useQuery } from 'react-query';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Users, BookOpen, Award, TrendingUp, Plus, Eye, Edit, Trash2, UserCheck, UserX } from 'lucide-react';
 import DashboardLayout from '../Layout/DashboardLayout';
+import { Button, Card, Table, LoadingSpinner } from '../common';
+import NotificationBell from '../Notifications/NotificationBell';
 import api from '../../utils/api';
 import toast from 'react-hot-toast';
 
@@ -207,18 +209,16 @@ const AdminDashboard = () => {
           <h2 style={{ fontSize: '20px', fontWeight: 'bold', margin: 0 }}>
             User Management
           </h2>
-          <button 
+          <Button 
             onClick={() => setShowUserForm(true)}
-            className="btn btn-primary"
-            style={{ display: 'flex', alignItems: 'center' }}
+            icon={<Plus size={16} />}
           >
-            <Plus size={16} style={{ marginRight: '8px' }} />
             Add User
-          </button>
+          </Button>
         </div>
       
       {usersLoading ? (
-        <p>Loading users...</p>
+        <LoadingSpinner message="Loading users..." />
       ) : users?.length > 0 ? (
         <div style={{ overflowX: 'auto' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>

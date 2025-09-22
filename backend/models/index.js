@@ -7,6 +7,7 @@ const Application = require('./Application');
 const ReAttemptRequest = require('./ReAttemptRequest');
 const Notification = require('./Notification');
 const Batch = require('./Batch');
+const Violation = require('./Violation');
 // const CodingQuestion = require('./CodingQuestion');
 
 /**
@@ -56,6 +57,12 @@ Result.hasOne(ReAttemptRequest, { foreignKey: 'resultId', as: 'reAttemptRequest'
 Notification.belongsTo(User, { foreignKey: 'userId', as: 'user' });
 User.hasMany(Notification, { foreignKey: 'userId', as: 'notifications' });
 
+// Violation associations
+Violation.belongsTo(User, { foreignKey: 'studentId', as: 'student' });
+Violation.belongsTo(Exam, { foreignKey: 'examId', as: 'exam' });
+User.hasMany(Violation, { foreignKey: 'studentId', as: 'violations' });
+Exam.hasMany(Violation, { foreignKey: 'examId', as: 'violations' });
+
 
 
 // CodingQuestion associations (temporarily disabled)
@@ -71,6 +78,7 @@ module.exports = {
 
   ReAttemptRequest,
   Notification,
-  Batch
+  Batch,
+  Violation
   // CodingQuestion
 };

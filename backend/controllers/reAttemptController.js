@@ -58,6 +58,17 @@ const requestReAttempt = async (req, res) => {
       relatedId: request.id
     });
     
+    // Emit socket event for real-time notification
+    const io = req.app.get('io');
+    if (io) {
+      io.emit('new-reattempt-request', {
+        studentName: req.user.name,
+        examTitle: exam.title,
+        examId: exam.id,
+        requestId: request.id
+      });
+    }
+    
     res.json({ success: true, data: request });
   } catch (error) {
     console.error('Request re-attempt error:', error);
@@ -143,6 +154,17 @@ const reviewReAttemptRequest = async (req, res) => {
       message,
       relatedId: request.examId
     });
+    
+    // Emit socket event for real-time notification
+    const io = req.app.get('io');
+    if (io) {
+      io.to(`user_${request.studentId}`).emit('reattempt-response', {
+        status,
+        examTitle: request.exam.title,
+        examId: request.examId,
+        studentId: request.studentId
+      });
+    }
     
     res.json({ success: true, data: request });
   } catch (error) {

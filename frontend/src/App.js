@@ -19,7 +19,7 @@ import ReAttemptRequests from './components/Mentor/ReAttemptRequests';
 import EnhancedLearnerDashboard from './components/Learner/EnhancedLearnerDashboard';
 import TestInstructions from './components/Learner/TestInstructions';
 
-import ExamTaking from './components/Student/ExamTaking';
+import ExamTaking from './components/LearnerExam/ExamTaking';
 import Results from './components/Learner/Results';
 import ExamResult from './components/Learner/ExamResult';
 import Profile from './components/Learner/Profile';
@@ -204,6 +204,14 @@ function App() {
                 element={
                   <ProtectedRoute allowedRoles={['mentor']}>
                     <ReAttemptRequests />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="/mentor/proctoring-logs" 
+                element={
+                  <ProtectedRoute allowedRoles={['mentor']}>
+                    <EnhancedMentorDashboard />
                   </ProtectedRoute>
                 } 
               />
