@@ -6,6 +6,7 @@ import api from '../../utils/api';
 import toast from 'react-hot-toast';
 import ReAttemptRequests from './ReAttemptRequests';
 import NotificationBell from '../Notifications/NotificationBell';
+import BlockedExamApprovals from './BlockedExamApprovals';
 
 import BatchPerformance from './BatchPerformance';
 import BatchManagement from './BatchManagement';
@@ -802,8 +803,8 @@ const EnhancedMentorDashboard = () => {
         {activeTab === 'requests' && <ReAttemptRequests />}
         {activeTab === 'approvals' && (
           <div style={{ backgroundColor: 'white', padding: '24px', borderRadius: '8px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}>
-            <h2 style={{ fontSize: '20px', fontWeight: 'bold', marginBottom: '20px' }}>Approval Requests</h2>
-            <p>Handle approval requests from students.</p>
+            <h2 style={{ fontSize: '20px', fontWeight: 'bold', marginBottom: '20px' }}>Exam Approval Requests</h2>
+            <BlockedExamApprovals />
           </div>
         )}
       </div>

@@ -25,6 +25,8 @@ const ExamTaking = () => {
   const [isProctoringActive, setIsProctoringActive] = useState(false);
   const [showProctoringSetup, setShowProctoringSetup] = useState(true);
   const [violations, setViolations] = useState([]);
+  const [showViolations, setShowViolations] = useState(false);
+  const [examBlocked, setExamBlocked] = useState(false);
 
   const { data: exam, isLoading, error } = useQuery(['exam', id], async () => {
     const response = await api.get(`/api/exams/${id}`);
@@ -35,6 +37,14 @@ const ExamTaking = () => {
       console.error('Error fetching exam:', error);
       toast.error('Failed to load exam');
     }
+  });
+
+  // Check if exam is blocked
+  const { data: examStatus } = useQuery(['examBlocked', id], async () => {
+    const response = await api.get(`/api/exams/${id}/blocked`);
+    return response.data;
+  }, {
+    enabled: !!exam
   });
 
   useEffect(() => {
@@ -52,6 +62,7 @@ const ExamTaking = () => {
     return () => {
       if (proctoringStream) {
         proctoringService.stopStreaming();
+        setProctoringStream(null);
       }
     };
   }, [exam, user]);
@@ -161,6 +172,73 @@ const ExamTaking = () => {
       document.removeEventListener('msfullscreenchange', handleFullscreenChange);
     };
   }, [exam, showProctoringSetup, isProctoringActive]);
+
+  // Block exam exit attempts
+  useEffect(() => {
+    const handleBeforeUnload = (e) => {
+      if (exam && !isSubmitting && !examBlocked) {
+        setTimeout(() => blockExamAndRequestApproval(), 100);
+        e.preventDefault();
+        e.returnValue = 'Leaving will block your exam!';
+        return e.returnValue;
+      }
+    };
+
+    const handleKeyDown = (e) => {
+      // Block F5, Ctrl+R, Alt+F4, Ctrl+W
+      if ((e.key === 'F5') || 
+          (e.ctrlKey && e.key === 'r') || 
+          (e.altKey && e.key === 'F4') ||
+          (e.ctrlKey && e.key === 'w')) {
+        if (exam && !isSubmitting && !examBlocked) {
+          e.preventDefault();
+          blockExamAndRequestApproval();
+        }
+      }
+    };
+
+    const handlePopState = (e) => {
+      if (exam && !isSubmitting && !examBlocked) {
+        e.preventDefault();
+        blockExamAndRequestApproval();
+        // Push state back to prevent navigation
+        window.history.pushState(null, null, window.location.pathname);
+      }
+    };
+
+    // Prevent back button
+    if (exam) {
+      window.history.pushState(null, null, window.location.pathname);
+    }
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    window.addEventListener('keydown', handleKeyDown);
+    window.addEventListener('popstate', handlePopState);
+
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+      window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('popstate', handlePopState);
+    };
+  }, [exam, isSubmitting, examBlocked]);
+
+  const blockExamAndRequestApproval = async () => {
+    if (examBlocked) return; // Prevent multiple calls
+    
+    try {
+      setExamBlocked(true);
+      
+      await api.post('/api/exam-exit-requests', {
+        examId: id,
+        studentId: user.id,
+        reason: 'Student attempted to exit exam prematurely'
+      });
+      
+      toast.error('Exam blocked due to exit attempt. Approval required to continue.');
+    } catch (error) {
+      console.error('Failed to create exit request:', error);
+    }
+  };
   
   const logViolation = async (violation) => {
     try {
@@ -210,6 +288,13 @@ const ExamTaking = () => {
     if (isProctoringActive) {
       proctoringService.stopStreaming();
       setIsProctoringActive(false);
+      setProctoringStream(null);
+    }
+    
+    // Stop camera stream
+    if (proctoringStream) {
+      proctoringStream.getTracks().forEach(track => track.stop());
+      setProctoringStream(null);
     }
     
     // Exit fullscreen on submission
@@ -406,6 +491,50 @@ const ExamTaking = () => {
 
 
 
+  // Show blocked/terminated exam screen
+  if (examBlocked || examStatus?.blocked) {
+    const isTerminated = examStatus?.terminated;
+    
+    return (
+      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: '#f8fafc' }}>
+        <div style={{ textAlign: 'center', padding: '40px', backgroundColor: 'white', borderRadius: '12px', boxShadow: '0 4px 20px rgba(0,0,0,0.1)', maxWidth: '500px' }}>
+          <div style={{ fontSize: '48px', marginBottom: '16px' }}>{isTerminated ? '❌' : '🚫'}</div>
+          <h2 style={{ fontSize: '24px', fontWeight: 'bold', marginBottom: '16px', color: '#dc2626' }}>
+            {isTerminated ? 'Exam Terminated' : 'Exam Blocked'}
+          </h2>
+          <p style={{ color: '#6b7280', marginBottom: '24px', lineHeight: '1.6' }}>
+            {isTerminated 
+              ? 'Your exam has been permanently terminated by a mentor due to policy violations. You cannot retake this exam.'
+              : 'Your exam has been blocked due to an attempt to exit prematurely. A mentor approval is required to continue.'
+            }
+          </p>
+          <div style={{ padding: '16px', backgroundColor: isTerminated ? '#fef2f2' : '#fef2f2', borderRadius: '8px', border: '1px solid #fecaca', marginBottom: '24px' }}>
+            <p style={{ fontSize: '14px', color: '#dc2626', margin: 0 }}>
+              {isTerminated 
+                ? 'This action is final and cannot be reversed.'
+                : 'Please wait for mentor approval or contact your instructor.'
+              }
+            </p>
+          </div>
+          <button
+            onClick={() => navigate('/learner')}
+            style={{
+              padding: '12px 24px',
+              backgroundColor: '#6b7280',
+              color: 'white',
+              border: 'none',
+              borderRadius: '6px',
+              cursor: 'pointer'
+            }}
+          >
+            Return to Dashboard
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+
   const question = exam.questions[currentQuestion];
   const progress = ((currentQuestion + 1) / exam.questions.length) * 100;
 
@@ -468,23 +597,67 @@ const ExamTaking = () => {
               </span>
             </div>
             
-            {/* Violations Counter */}
+            {/* Violations Counter with Dropdown */}
             {violations.length > 0 && (
-              <div style={{
-                display: 'flex',
-                alignItems: 'center',
-                padding: '8px 16px',
-                backgroundColor: '#fef2f2',
-                borderRadius: '8px',
-                border: '1px solid #fecaca'
-              }}>
-                <span style={{
-                  fontSize: '12px',
-                  fontWeight: 'bold',
-                  color: '#dc2626'
-                }}>
-                  ⚠️ {violations.length} Violation{violations.length !== 1 ? 's' : ''}
-                </span>
+              <div style={{ position: 'relative' }}>
+                <button
+                  onClick={() => setShowViolations(!showViolations)}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    padding: '8px 16px',
+                    backgroundColor: '#fef2f2',
+                    borderRadius: '8px',
+                    border: '1px solid #fecaca',
+                    cursor: 'pointer'
+                  }}
+                >
+                  <span style={{
+                    fontSize: '12px',
+                    fontWeight: 'bold',
+                    color: '#dc2626'
+                  }}>
+                    ⚠️ {violations.length} Violation{violations.length !== 1 ? 's' : ''}
+                  </span>
+                </button>
+                
+                {showViolations && (
+                  <div style={{
+                    position: 'absolute',
+                    top: '100%',
+                    right: 0,
+                    width: '300px',
+                    maxHeight: '200px',
+                    backgroundColor: 'white',
+                    border: '1px solid #fecaca',
+                    borderRadius: '8px',
+                    boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+                    zIndex: 1000,
+                    overflow: 'auto',
+                    marginTop: '4px'
+                  }}>
+                    <div style={{ padding: '12px', borderBottom: '1px solid #f3f4f6' }}>
+                      <h4 style={{ fontSize: '14px', fontWeight: '600', margin: 0, color: '#dc2626' }}>
+                        Proctoring Violations
+                      </h4>
+                    </div>
+                    <div style={{ maxHeight: '150px', overflowY: 'auto' }}>
+                      {violations.map((violation, index) => (
+                        <div key={violation.id} style={{
+                          padding: '8px 12px',
+                          borderBottom: index < violations.length - 1 ? '1px solid #f9fafb' : 'none'
+                        }}>
+                          <p style={{ fontSize: '12px', color: '#374151', margin: '0 0 4px 0' }}>
+                            {violation.details}
+                          </p>
+                          <p style={{ fontSize: '10px', color: '#6b7280', margin: 0 }}>
+                            {new Date(violation.timestamp).toLocaleTimeString()}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             )}
             

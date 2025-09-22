@@ -8,6 +8,8 @@ const ReAttemptRequest = require('./ReAttemptRequest');
 const Notification = require('./Notification');
 const Batch = require('./Batch');
 const Violation = require('./Violation');
+const BlockedExam = require('./BlockedExam');
+const TerminatedExam = require('./TerminatedExam');
 // const CodingQuestion = require('./CodingQuestion');
 
 /**
@@ -63,6 +65,20 @@ Violation.belongsTo(Exam, { foreignKey: 'examId', as: 'exam' });
 User.hasMany(Violation, { foreignKey: 'studentId', as: 'violations' });
 Exam.hasMany(Violation, { foreignKey: 'examId', as: 'violations' });
 
+// BlockedExam associations
+BlockedExam.belongsTo(User, { foreignKey: 'studentId', as: 'student' });
+BlockedExam.belongsTo(Exam, { foreignKey: 'examId', as: 'exam' });
+BlockedExam.belongsTo(User, { foreignKey: 'approvedBy', as: 'approver' });
+User.hasMany(BlockedExam, { foreignKey: 'studentId', as: 'blockedExams' });
+Exam.hasMany(BlockedExam, { foreignKey: 'examId', as: 'blockedExams' });
+
+// TerminatedExam associations
+TerminatedExam.belongsTo(User, { foreignKey: 'studentId', as: 'student' });
+TerminatedExam.belongsTo(Exam, { foreignKey: 'examId', as: 'exam' });
+TerminatedExam.belongsTo(User, { foreignKey: 'terminatedBy', as: 'terminator' });
+User.hasMany(TerminatedExam, { foreignKey: 'studentId', as: 'terminatedExams' });
+Exam.hasMany(TerminatedExam, { foreignKey: 'examId', as: 'terminatedExams' });
+
 
 
 // CodingQuestion associations (temporarily disabled)
@@ -79,6 +95,8 @@ module.exports = {
   ReAttemptRequest,
   Notification,
   Batch,
-  Violation
+  Violation,
+  BlockedExam,
+  TerminatedExam
   // CodingQuestion
 };

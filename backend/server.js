@@ -320,8 +320,220 @@ app.post('/api/violations/log', auth, async (req, res) => {
   }
 });
 
+// Exam exit request routes
+app.post('/api/exam-exit-requests', auth, learnerOnly, async (req, res) => {
+  try {
+    const { examId, reason } = req.body;
+    const { Notification, Exam } = require('./models');
+    const BlockedExam = require('./models/BlockedExam');
+    
+    const exam = await Exam.findByPk(examId);
+    if (!exam) {
+      return res.status(404).json({ success: false, message: 'Exam not found' });
+    }
+    
+    // Check if blocked exam already exists
+    const existingBlocked = await BlockedExam.findOne({
+      where: {
+        examId,
+        studentId: req.user.id,
+        status: 'blocked'
+      }
+    });
+    
+    if (!existingBlocked) {
+      // Create blocked exam record only if it doesn't exist
+      await BlockedExam.create({
+        examId,
+        studentId: req.user.id,
+        reason,
+        status: 'blocked'
+      });
+    }
+    
+    // Create notification for mentors
+    await Notification.create({
+      userId: exam.createdBy,
+      type: 'exam_exit_request',
+      title: 'Exam Exit Request',
+      message: `${req.user.name} requested approval to continue blocked exam: ${exam.title}`,
+      relatedId: examId
+    });
+    
+    // Emit real-time notification
+    const io = req.app.get('io');
+    if (io) {
+      io.emit('exam-exit-request', {
+        studentId: req.user.id,
+        studentName: req.user.name,
+        examId,
+        examTitle: exam.title,
+        reason
+      });
+    }
+    
+    res.json({ success: true, message: 'Exit request submitted' });
+  } catch (error) {
+    console.error('Error creating exam exit request:', error);
+    res.status(500).json({ success: false, message: 'Failed to create exit request' });
+  }
+});
+
+// Check if exam is blocked for student
+app.get('/api/exams/:id/blocked', auth, async (req, res) => {
+  try {
+    const { BlockedExam, Result } = require('./models');
+    
+    const blockedExam = await BlockedExam.findOne({
+      where: {
+        examId: req.params.id,
+        studentId: req.user.id,
+        status: 'blocked'
+      }
+    });
+    
+    // Check if exam was terminated
+    const TerminatedExam = require('./models/TerminatedExam');
+    const terminatedExam = await TerminatedExam.findOne({
+      where: {
+        examId: req.params.id,
+        studentId: req.user.id
+      }
+    });
+    
+    if (terminatedExam) {
+      return res.json({ success: true, blocked: true, terminated: true });
+    }
+    
+    res.json({ success: true, blocked: !!blockedExam, terminated: false });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Failed to check exam status' });
+  }
+});
+
+// Get blocked exams for approval
+app.get('/api/blocked-exams', auth, async (req, res) => {
+  // Check if user is mentor or admin
+  if (req.user.role !== 'mentor' && req.user.role !== 'admin') {
+    return res.status(403).json({ success: false, message: 'Access denied' });
+  }
+  try {
+    const { BlockedExam, User, Exam } = require('./models');
+    const TerminatedExam = require('./models/TerminatedExam');
+    
+    // Get all blocked exams
+    const blockedExams = await BlockedExam.findAll({
+      where: { status: 'blocked' },
+      include: [
+        { model: User, as: 'student', attributes: ['name', 'username'] },
+        { model: Exam, as: 'exam', attributes: ['title'] }
+      ],
+      order: [['createdAt', 'DESC']]
+    });
+    
+    // Filter out terminated exams
+    const terminatedExams = await TerminatedExam.findAll({
+      attributes: ['examId', 'studentId']
+    });
+    
+    const terminatedSet = new Set(
+      terminatedExams.map(t => `${t.examId}-${t.studentId}`)
+    );
+    
+    const activeBlockedExams = blockedExams.filter(blocked => 
+      !terminatedSet.has(`${blocked.examId}-${blocked.studentId}`)
+    );
+    
+    res.json({ success: true, data: activeBlockedExams });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Failed to fetch blocked exams' });
+  }
+});
+
+// Approve blocked exam
+app.put('/api/blocked-exams/:id/approve', auth, async (req, res) => {
+  // Check if user is mentor or admin
+  if (req.user.role !== 'mentor' && req.user.role !== 'admin') {
+    return res.status(403).json({ success: false, message: 'Access denied' });
+  }
+  try {
+    const BlockedExam = require('./models/BlockedExam');
+    
+    await BlockedExam.update(
+      {
+        status: 'approved',
+        approvedBy: req.user.id,
+        approvedAt: new Date()
+      },
+      { where: { id: req.params.id } }
+    );
+    
+    res.json({ success: true, message: 'Exam approved successfully' });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Failed to approve exam' });
+  }
+});
+
+// Terminate blocked exam
+app.delete('/api/blocked-exams/:id/terminate', auth, async (req, res) => {
+  console.log('Terminate route hit with ID:', req.params.id);
+  
+  if (req.user.role !== 'mentor' && req.user.role !== 'admin') {
+    return res.status(403).json({ success: false, message: 'Access denied' });
+  }
+  
+  try {
+    const { BlockedExam, Notification } = require('./models');
+    const TerminatedExam = require('./models/TerminatedExam');
+    
+    // Get blocked exam details before deleting
+    const blockedExam = await BlockedExam.findByPk(req.params.id);
+    
+    if (!blockedExam) {
+      return res.status(404).json({ success: false, message: 'Blocked exam not found' });
+    }
+    
+    // Create terminated exam record
+    await TerminatedExam.create({
+      examId: blockedExam.examId,
+      studentId: blockedExam.studentId,
+      terminatedBy: req.user.id,
+      reason: 'Exam terminated by mentor due to policy violations'
+    });
+    
+    // Create notification for student
+    try {
+      await Notification.create({
+        userId: blockedExam.studentId,
+        type: 'exam_terminated',
+        title: 'Exam Terminated',
+        message: 'Your exam has been terminated by a mentor due to policy violations.',
+        relatedId: blockedExam.examId
+      });
+    } catch (notificationError) {
+      console.log('Notification creation failed:', notificationError.message);
+    }
+    
+    // Delete the blocked exam record
+    const deleteResult = await BlockedExam.destroy({ where: { id: req.params.id } });
+    console.log('BlockedExam delete result:', deleteResult);
+    
+    res.json({ success: true, message: 'Exam terminated successfully' });
+  } catch (error) {
+    console.error('Error terminating exam:', error);
+    console.error('Error details:', error.message);
+    res.status(500).json({ success: false, message: error.message || 'Failed to terminate exam' });
+  }
+});
+
+
+
 // Get violations for mentors
-app.get('/api/violations', auth, mentorOrAdmin, async (req, res) => {
+app.get('/api/violations', auth, async (req, res) => {
+  // Check if user is mentor or admin
+  if (req.user.role !== 'mentor' && req.user.role !== 'admin') {
+    return res.status(403).json({ success: false, message: 'Access denied' });
+  }
   try {
     const { Violation, User, Exam } = require('./models');
     

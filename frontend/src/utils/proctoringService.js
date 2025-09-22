@@ -24,12 +24,13 @@ class ProctoringService {
       // Set up socket event listeners
       this.setupSocketListeners();
 
-      // Get user media
+      // Get user media with high quality settings
       this.localStream = await navigator.mediaDevices.getUserMedia({
         video: {
-          width: { ideal: 640 },
-          height: { ideal: 480 },
-          frameRate: { ideal: 15 }
+          width: { ideal: 1280, min: 720 },
+          height: { ideal: 720, min: 480 },
+          frameRate: { ideal: 30, min: 15 },
+          facingMode: 'user'
         },
         audio: false
       });
@@ -139,7 +140,7 @@ class ProctoringService {
         
         ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
         
-        const dataURL = canvas.toDataURL('image/jpeg', 0.5);
+        const dataURL = canvas.toDataURL('image/jpeg', 0.8);
         
         if (this.socket && this.socket.connected) {
           this.socket.emit('video-frame', {
@@ -150,7 +151,7 @@ class ProctoringService {
         }
       }
 
-      setTimeout(captureFrame, 333); // 3 FPS
+      setTimeout(captureFrame, 100); // 10 FPS for smoother streaming
     };
 
     video.addEventListener('loadeddata', () => {
