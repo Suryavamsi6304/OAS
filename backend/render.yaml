@@ -1,0 +1,42 @@
+services:
+  - type: web
+    name: oas-backend
+    env: node
+    plan: free
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
+      - key: HOST
+        value: 0.0.0.0
+      - key: JWT_SECRET
+        generateValue: true
+      - key: JWT_EXPIRES_IN
+        value: 24h
+      - key: DB_HOST
+        fromDatabase:
+          name: oas-postgres
+          property: host
+      - key: DB_PORT
+        fromDatabase:
+          name: oas-postgres
+          property: port
+      - key: DB_NAME
+        fromDatabase:
+          name: oas-postgres
+          property: database
+      - key: DB_USER
+        fromDatabase:
+          name: oas-postgres
+          property: user
+      - key: DB_PASSWORD
+        fromDatabase:
+          name: oas-postgres
+          property: password
+
+databases:
+  - name: oas-postgres
+    plan: free
