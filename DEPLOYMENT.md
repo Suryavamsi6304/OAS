@@ -16,6 +16,7 @@ git push origin main
 4. Configure:
    - **Name**: `oas-backend`
    - **Environment**: `Node`
+   - **Root Directory**: `backend`
    - **Build Command**: `npm install`
    - **Start Command**: `npm start`
    - **Plan**: Free

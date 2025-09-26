@@ -1,38 +1,16 @@
 {
-  "name": "assessment-platform",
+  "name": "oas-backend",
   "version": "1.0.0",
-  "description": "Online Assessment Platform - Complete web-based testing solution",
-  "main": "backend/server.js",
+  "description": "Online Assessment System Backend",
+  "main": "server.js",
   "scripts": {
     "start": "cd backend && npm start",
     "dev": "cd backend && npm run dev",
-    "dev:react": "cd frontend-react && npm start",
     "install-backend": "cd backend && npm install",
-    "install-frontend": "cd frontend-react && npm install",
-    "setup": "npm run install-backend && npm run install-frontend",
-    "test": "cd backend && npm test",
-    "build": "cd frontend-react && npm run build",
-    "deploy": "echo 'Deploying application...'"
+    "build": "cd backend && npm install"
   },
-  "keywords": [
-    "assessment",
-    "online-testing",
-    "education",
-    "nodejs",
-    "postgresql",
-    "jwt-authentication"
-  ],
-  "author": "Assessment Platform Team",
-  "license": "MIT",
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/your-org/assessment-platform.git"
-  },
+  "dependencies": {},
   "engines": {
-    "node": ">=14.0.0",
-    "npm": ">=6.0.0"
-  },
-  "dependencies": {
-    "axios": "^1.11.0"
+    "node": ">=14.0.0"
   }
 }

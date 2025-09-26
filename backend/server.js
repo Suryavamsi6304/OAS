@@ -120,6 +120,33 @@ app.post('/api/auth/register', authController.register);
 app.post('/api/auth/login', authController.login);
 app.get('/api/auth/verify', auth, authController.verifyToken);
 
+// Admin creation route (production only)
+app.post('/api/auth/create-admin', async (req, res) => {
+  try {
+    const { User } = require('./models');
+    const { username, email, password, name } = req.body;
+    
+    // Check if any admin exists
+    const existingAdmin = await User.findOne({ where: { role: 'admin' } });
+    if (existingAdmin) {
+      return res.status(403).json({ success: false, message: 'Admin already exists' });
+    }
+    
+    const admin = await User.create({
+      username: username || 'admin',
+      email: email || 'admin@oas.com',
+      password: password || 'password',
+      name: name || 'System Administrator',
+      role: 'admin',
+      isApproved: true
+    });
+    
+    res.json({ success: true, message: 'Admin created successfully', username: admin.username });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
 // Exam routes (includes practice tests and skill assessments)
 app.post('/api/exams', auth, adminOnly, examController.createExam);
 app.get('/api/exams', auth, examController.getExams);
