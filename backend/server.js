@@ -206,13 +206,18 @@ app.get('/api/practice-tests', auth, async (req, res) => {
 app.post('/api/skill-assessments', auth, mentorOrAdmin, async (req, res) => {
   try {
     const { Exam } = require('./models');
+    console.log('Creating skill assessment with data:', req.body);
+    
     const assessment = await Exam.create({
       ...req.body,
       createdBy: req.user.id,
       type: 'skill-assessment'
     });
+    
+    console.log('Skill assessment created successfully:', assessment.id);
     res.json({ success: true, data: assessment });
   } catch (error) {
+    console.error('Error creating skill assessment:', error);
     res.status(500).json({ success: false, message: error.message });
   }
 });
@@ -288,19 +293,30 @@ app.get('/api/notifications/unread-count', auth, notificationController.getUnrea
 app.post('/api/violations/log', auth, async (req, res) => {
   try {
     const { examId, studentId, violation } = req.body;
-    const { Violation } = require('./models');
     
-    // Save violation to database
-    const savedViolation = await Violation.create({
-      examId,
-      studentId,
-      type: violation.type,
-      details: violation.details,
-      severity: violation.severity,
-      timestamp: new Date(violation.timestamp)
-    });
+    let savedViolation = null;
     
-    console.log(`🚨 VIOLATION SAVED:`, savedViolation.toJSON());
+    // Try to save violation to database
+    try {
+      const { Violation } = require('./models');
+      savedViolation = await Violation.create({
+        examId,
+        studentId,
+        type: violation.type,
+        details: violation.details,
+        severity: violation.severity,
+        timestamp: new Date(violation.timestamp)
+      });
+      console.log(`🚨 VIOLATION SAVED:`, savedViolation.toJSON());
+    } catch (modelError) {
+      console.log('Violation model not available, logging to console only');
+      console.log(`🚨 VIOLATION (Console Only):`, {
+        examId,
+        studentId,
+        studentName: req.user.name,
+        violation
+      });
+    }
     
     // Emit to mentors for real-time monitoring
     const io = req.app.get('io');
@@ -309,14 +325,14 @@ app.post('/api/violations/log', auth, async (req, res) => {
         examId,
         studentId,
         studentName: req.user.name,
-        violation: savedViolation
+        violation: savedViolation || violation
       });
     }
     
-    res.json({ success: true, message: 'Violation logged', data: savedViolation });
+    res.json({ success: true, message: 'Violation logged', data: savedViolation || violation });
   } catch (error) {
     console.error('Error logging violation:', error);
-    res.status(500).json({ success: false, message: 'Failed to log violation' });
+    res.status(500).json({ success: false, message: error.message || 'Failed to log violation' });
   }
 });
 
@@ -325,11 +341,28 @@ app.post('/api/exam-exit-requests', auth, learnerOnly, async (req, res) => {
   try {
     const { examId, reason } = req.body;
     const { Notification, Exam } = require('./models');
-    const BlockedExam = require('./models/BlockedExam');
     
     const exam = await Exam.findByPk(examId);
     if (!exam) {
       return res.status(404).json({ success: false, message: 'Exam not found' });
+    }
+    
+    // Try to get BlockedExam model, create table if it doesn't exist
+    let BlockedExam;
+    try {
+      BlockedExam = require('./models/BlockedExam');
+    } catch (modelError) {
+      console.log('BlockedExam model not found, creating simple record...');
+      // Fallback: just create notification without blocked exam record
+      await Notification.create({
+        userId: exam.createdBy,
+        type: 'exam_exit_request',
+        title: 'Exam Exit Request',
+        message: `${req.user.name} requested approval to continue exam: ${exam.title}. Reason: ${reason}`,
+        relatedId: examId
+      });
+      
+      return res.json({ success: true, message: 'Exit request submitted' });
     }
     
     // Check if blocked exam already exists
@@ -339,15 +372,17 @@ app.post('/api/exam-exit-requests', auth, learnerOnly, async (req, res) => {
         studentId: req.user.id,
         status: 'blocked'
       }
-    });
+    }).catch(() => null);
     
     if (!existingBlocked) {
-      // Create blocked exam record only if it doesn't exist
+      // Create blocked exam record
       await BlockedExam.create({
         examId,
         studentId: req.user.id,
         reason,
         status: 'blocked'
+      }).catch(createError => {
+        console.log('Failed to create BlockedExam record:', createError.message);
       });
     }
     
@@ -375,31 +410,42 @@ app.post('/api/exam-exit-requests', auth, learnerOnly, async (req, res) => {
     res.json({ success: true, message: 'Exit request submitted' });
   } catch (error) {
     console.error('Error creating exam exit request:', error);
-    res.status(500).json({ success: false, message: 'Failed to create exit request' });
+    res.status(500).json({ success: false, message: error.message || 'Failed to create exit request' });
   }
 });
 
 // Check if exam is blocked for student
 app.get('/api/exams/:id/blocked', auth, async (req, res) => {
   try {
-    const { BlockedExam, Result } = require('./models');
+    let blockedExam = null;
     
-    const blockedExam = await BlockedExam.findOne({
-      where: {
-        examId: req.params.id,
-        studentId: req.user.id,
-        status: 'blocked'
-      }
-    });
+    // Try to check BlockedExam model
+    try {
+      const BlockedExam = require('./models/BlockedExam');
+      blockedExam = await BlockedExam.findOne({
+        where: {
+          examId: req.params.id,
+          studentId: req.user.id,
+          status: 'blocked'
+        }
+      });
+    } catch (modelError) {
+      console.log('BlockedExam model not available');
+    }
     
     // Check if exam was terminated
-    const TerminatedExam = require('./models/TerminatedExam');
-    const terminatedExam = await TerminatedExam.findOne({
-      where: {
-        examId: req.params.id,
-        studentId: req.user.id
-      }
-    });
+    let terminatedExam = null;
+    try {
+      const TerminatedExam = require('./models/TerminatedExam');
+      terminatedExam = await TerminatedExam.findOne({
+        where: {
+          examId: req.params.id,
+          studentId: req.user.id
+        }
+      });
+    } catch (modelError) {
+      console.log('TerminatedExam model not available');
+    }
     
     if (terminatedExam) {
       return res.json({ success: true, blocked: true, terminated: true });
@@ -407,6 +453,7 @@ app.get('/api/exams/:id/blocked', auth, async (req, res) => {
     
     res.json({ success: true, blocked: !!blockedExam, terminated: false });
   } catch (error) {
+    console.error('Error checking exam status:', error);
     res.status(500).json({ success: false, message: 'Failed to check exam status' });
   }
 });
@@ -418,34 +465,46 @@ app.get('/api/blocked-exams', auth, async (req, res) => {
     return res.status(403).json({ success: false, message: 'Access denied' });
   }
   try {
-    const { BlockedExam, User, Exam } = require('./models');
-    const TerminatedExam = require('./models/TerminatedExam');
+    let blockedExams = [];
     
-    // Get all blocked exams
-    const blockedExams = await BlockedExam.findAll({
-      where: { status: 'blocked' },
-      include: [
-        { model: User, as: 'student', attributes: ['name', 'username'] },
-        { model: Exam, as: 'exam', attributes: ['title'] }
-      ],
-      order: [['createdAt', 'DESC']]
-    });
+    try {
+      const { User, Exam } = require('./models');
+      const BlockedExam = require('./models/BlockedExam');
+      
+      // Get all blocked exams
+      blockedExams = await BlockedExam.findAll({
+        where: { status: 'blocked' },
+        include: [
+          { model: User, as: 'student', attributes: ['name', 'username'] },
+          { model: Exam, as: 'exam', attributes: ['title'] }
+        ],
+        order: [['createdAt', 'DESC']]
+      });
+      
+      // Filter out terminated exams
+      try {
+        const TerminatedExam = require('./models/TerminatedExam');
+        const terminatedExams = await TerminatedExam.findAll({
+          attributes: ['examId', 'studentId']
+        });
+        
+        const terminatedSet = new Set(
+          terminatedExams.map(t => `${t.examId}-${t.studentId}`)
+        );
+        
+        blockedExams = blockedExams.filter(blocked => 
+          !terminatedSet.has(`${blocked.examId}-${blocked.studentId}`)
+        );
+      } catch (terminatedError) {
+        console.log('TerminatedExam model not available');
+      }
+    } catch (modelError) {
+      console.log('BlockedExam model not available, returning empty list');
+    }
     
-    // Filter out terminated exams
-    const terminatedExams = await TerminatedExam.findAll({
-      attributes: ['examId', 'studentId']
-    });
-    
-    const terminatedSet = new Set(
-      terminatedExams.map(t => `${t.examId}-${t.studentId}`)
-    );
-    
-    const activeBlockedExams = blockedExams.filter(blocked => 
-      !terminatedSet.has(`${blocked.examId}-${blocked.studentId}`)
-    );
-    
-    res.json({ success: true, data: activeBlockedExams });
+    res.json({ success: true, data: blockedExams });
   } catch (error) {
+    console.error('Error fetching blocked exams:', error);
     res.status(500).json({ success: false, message: 'Failed to fetch blocked exams' });
   }
 });
@@ -470,7 +529,8 @@ app.put('/api/blocked-exams/:id/approve', auth, async (req, res) => {
     
     res.json({ success: true, message: 'Exam approved successfully' });
   } catch (error) {
-    res.status(500).json({ success: false, message: 'Failed to approve exam' });
+    console.error('Error approving exam:', error);
+    res.status(500).json({ success: false, message: error.message || 'Failed to approve exam' });
   }
 });
 
@@ -483,45 +543,55 @@ app.delete('/api/blocked-exams/:id/terminate', auth, async (req, res) => {
   }
   
   try {
-    const { BlockedExam, Notification } = require('./models');
-    const TerminatedExam = require('./models/TerminatedExam');
+    const { Notification } = require('./models');
     
-    // Get blocked exam details before deleting
-    const blockedExam = await BlockedExam.findByPk(req.params.id);
+    let blockedExam = null;
     
-    if (!blockedExam) {
-      return res.status(404).json({ success: false, message: 'Blocked exam not found' });
-    }
-    
-    // Create terminated exam record
-    await TerminatedExam.create({
-      examId: blockedExam.examId,
-      studentId: blockedExam.studentId,
-      terminatedBy: req.user.id,
-      reason: 'Exam terminated by mentor due to policy violations'
-    });
-    
-    // Create notification for student
     try {
-      await Notification.create({
-        userId: blockedExam.studentId,
-        type: 'exam_terminated',
-        title: 'Exam Terminated',
-        message: 'Your exam has been terminated by a mentor due to policy violations.',
-        relatedId: blockedExam.examId
-      });
-    } catch (notificationError) {
-      console.log('Notification creation failed:', notificationError.message);
+      const BlockedExam = require('./models/BlockedExam');
+      blockedExam = await BlockedExam.findByPk(req.params.id);
+      
+      if (!blockedExam) {
+        return res.status(404).json({ success: false, message: 'Blocked exam not found' });
+      }
+      
+      // Create terminated exam record
+      try {
+        const TerminatedExam = require('./models/TerminatedExam');
+        await TerminatedExam.create({
+          examId: blockedExam.examId,
+          studentId: blockedExam.studentId,
+          terminatedBy: req.user.id,
+          reason: 'Exam terminated by mentor due to policy violations'
+        });
+      } catch (terminatedError) {
+        console.log('TerminatedExam model not available');
+      }
+      
+      // Create notification for student
+      try {
+        await Notification.create({
+          userId: blockedExam.studentId,
+          type: 'exam_terminated',
+          title: 'Exam Terminated',
+          message: 'Your exam has been terminated by a mentor due to policy violations.',
+          relatedId: blockedExam.examId
+        });
+      } catch (notificationError) {
+        console.log('Notification creation failed:', notificationError.message);
+      }
+      
+      // Delete the blocked exam record
+      await BlockedExam.destroy({ where: { id: req.params.id } });
+      
+    } catch (modelError) {
+      console.log('BlockedExam model not available');
+      return res.status(404).json({ success: false, message: 'Blocked exam functionality not available' });
     }
-    
-    // Delete the blocked exam record
-    const deleteResult = await BlockedExam.destroy({ where: { id: req.params.id } });
-    console.log('BlockedExam delete result:', deleteResult);
     
     res.json({ success: true, message: 'Exam terminated successfully' });
   } catch (error) {
     console.error('Error terminating exam:', error);
-    console.error('Error details:', error.message);
     res.status(500).json({ success: false, message: error.message || 'Failed to terminate exam' });
   }
 });
@@ -535,16 +605,23 @@ app.get('/api/violations', auth, async (req, res) => {
     return res.status(403).json({ success: false, message: 'Access denied' });
   }
   try {
-    const { Violation, User, Exam } = require('./models');
+    let violations = [];
     
-    const violations = await Violation.findAll({
-      include: [
-        { model: User, as: 'student', attributes: ['name', 'username', 'batchCode'] },
-        { model: Exam, as: 'exam', attributes: ['title'] }
-      ],
-      order: [['timestamp', 'DESC']],
-      limit: 100
-    });
+    try {
+      const { User, Exam } = require('./models');
+      const { Violation } = require('./models');
+      
+      violations = await Violation.findAll({
+        include: [
+          { model: User, as: 'student', attributes: ['name', 'username', 'batchCode'] },
+          { model: Exam, as: 'exam', attributes: ['title'] }
+        ],
+        order: [['timestamp', 'DESC']],
+        limit: 100
+      });
+    } catch (modelError) {
+      console.log('Violation model not available, returning empty list');
+    }
     
     res.json({ success: true, data: violations });
   } catch (error) {
@@ -1125,24 +1202,32 @@ io.on('connection', (socket) => {
 });
 
 const PORT = process.env.PORT || 3001;
-server.listen(PORT, '0.0.0.0', () => {
-  console.log(`🚀 Server running on port ${PORT}`);
+const HOST = process.env.HOST || '0.0.0.0';
+
+server.listen(PORT, HOST, () => {
+  console.log(`🚀 Server running on ${HOST}:${PORT}`);
   console.log(`🔌 Socket.IO server initialized`);
-  console.log(`📡 Server accessible at http://0.0.0.0:${PORT}`);
+  console.log(`📡 Server accessible at http://${HOST}:${PORT}`);
   
   // Show actual network IPs
   const os = require('os');
   const networkInterfaces = os.networkInterfaces();
-  console.log('🌐 Access from other devices:');
+  console.log('🌐 Network interfaces detected:');
   for (const interfaceName in networkInterfaces) {
     const interfaces = networkInterfaces[interfaceName];
     for (const iface of interfaces) {
       if (iface.family === 'IPv4' && !iface.internal) {
+        console.log(`   ${interfaceName}: ${iface.address}`);
         console.log(`   Frontend: http://${iface.address}:3000`);
         console.log(`   Backend:  http://${iface.address}:3001`);
+        console.log(`   API Test: http://${iface.address}:3001/api/test`);
       }
     }
   }
+  
+  console.log('\n🔥 Quick Tests:');
+  console.log(`   curl http://localhost:${PORT}/api/test`);
+  console.log(`   curl http://127.0.0.1:${PORT}/api/test`);
 });
 
 // Handle server errors

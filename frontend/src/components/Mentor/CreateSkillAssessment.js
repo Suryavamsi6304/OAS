@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Plus, Trash2, Save, ArrowLeft } from 'lucide-react';
-import axios from 'axios';
+import api from '../../utils/api';
 import toast from 'react-hot-toast';
 
 const CreateSkillAssessment = () => {
@@ -154,7 +154,8 @@ const CreateSkillAssessment = () => {
         proctoringEnabled: true
       };
 
-      const response = await axios.post('/api/skill-assessments', skillAssessment);
+      console.log('Sending skill assessment data:', skillAssessment);
+      const response = await api.post('/api/skill-assessments', skillAssessment);
       if (response.data.success) {
         toast.success('Skill assessment created successfully!');
         navigate('/mentor');
